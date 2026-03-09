@@ -1,0 +1,10 @@
+{
+  "name": "@plant-care/frontend",
+  "version": "1.0.0",
+  "dependencies": {
+    "@plant-care/shared": "1.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

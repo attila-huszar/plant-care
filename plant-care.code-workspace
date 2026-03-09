@@ -1,0 +1,11 @@
+{
+  "folders": [
+    { "path": "backend" },
+    { "path": "frontend" },
+    { "path": "shared" },
+  ],
+  "settings": {
+    "js/ts.tsdk.path": "node_modules/typescript/lib",
+    "eslint.workingDirectories": [{ "mode": "auto" }],
+  },
+}
