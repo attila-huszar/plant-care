@@ -7,12 +7,28 @@
     "frontend",
     "shared"
   ],
+  "scripts": {
+    "dev": "npm run frontend:dev",
+    "build": "npm run frontend:build",
+    "preview": "npm run frontend:preview",
+    "frontend:dev": "npm run -w @plant-care/frontend dev",
+    "frontend:build": "npm run -w @plant-care/frontend build",
+    "frontend:preview": "npm run -w @plant-care/frontend preview",
+    "lint": "npm run frontend:lint",
+    "format": "npm run frontend:format",
+    "frontend:lint": "npm run -w @plant-care/frontend lint",
+    "frontend:format": "npm run -w @plant-care/frontend format",
+    "frontend:format:check": "npm run -w @plant-care/frontend format:check",
+    "format:check": "npm run frontend:format:check"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^25.4.0",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.0"

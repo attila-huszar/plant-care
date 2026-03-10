@@ -4,26 +4,36 @@ const config: Config = {
   endOfLine: 'lf',
   tabWidth: 2,
   semi: false,
-  bracketSameLine: true,
+  bracketSameLine: false,
   singleQuote: true,
-  plugins: ['@trivago/prettier-plugin-sort-imports'],
+  vueIndentScriptAndStyle: true,
+  singleAttributePerLine: false,
+  plugins: [
+    '@trivago/prettier-plugin-sort-imports',
+    'prettier-plugin-tailwindcss',
+  ],
   importOrder: [
-    '^react(-.*)?$',
+    '<BUILTIN_MODULES>',
+    '^vue$',
+    '^@vueuse(/.*)?$',
     '<THIRD_PARTY_MODULES>',
-    '^@/api(/.*)?$',
-    '^@/routes(/.*)?$',
-    '^@/store(/.*)?$',
-    '^@/pages(/.*)?$',
+
+    // Workspace packages
+    '^@plant-care/shared(/.*)?$',
+
+    // App code (feature-first)
+    '^@/app(/.*)?$',
+    '^@/features(/.*)?$',
     '^@/components(/.*)?$',
-    '^@/hooks(/.*)?$',
+    '^@/composables(/.*)?$',
+    '^@/stores(/.*)?$',
+    '^@/router(/.*)?$',
     '^@/services(/.*)?$',
-    '^@/helpers(/.*)?$',
-    '^@/validation(/.*)?$',
-    '^@/constants(/.*)?$',
-    '^@/errors(/.*)?$',
+    '^@/utils(/.*)?$',
     '^@/types(/.*)?$',
     '^@/assets(/.*)?$',
     '^@/styles(/.*)?$',
+
     '^\\.\\./',
     '^\\./',
     '^.+\\.s?css$',
@@ -31,7 +41,7 @@ const config: Config = {
   importOrderSortSpecifiers: true, // Alphabetically sort named imports inside statements
   importOrderGroupNamespaceSpecifiers: true, // Group namespace imports (* as X) separately
   importOrderCaseInsensitive: true, // Case-insensitive sorting
-  importOrderSideEffects: false, // Keep side-effect imports at the top
+  importOrderSideEffects: false, // Don't reorder side-effect-only imports (e.g. `import './style.css'`)
 }
 
 export default config
