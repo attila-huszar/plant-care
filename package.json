@@ -19,7 +19,8 @@
     "frontend:lint": "npm run -w @plant-care/frontend lint",
     "frontend:format": "npm run -w @plant-care/frontend format",
     "frontend:format:check": "npm run -w @plant-care/frontend format:check",
-    "format:check": "npm run frontend:format:check"
+    "format:check": "npm run frontend:format:check",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
