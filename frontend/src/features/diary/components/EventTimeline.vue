@@ -1,10 +1,7 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue'
   import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
-  import {
-    getActionIcon,
-    getBuiltinActionLabel,
-  } from '../../../constants/actions'
+  import { getActionIcon, getBuiltinActionLabel } from '@/utils'
   import type {
     CustomEventType,
     EventType,

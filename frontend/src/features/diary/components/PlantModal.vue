@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
+  import { PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -12,11 +13,7 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import { BUILTIN_ACTIONS } from '../../../constants/actions'
-  import {
-    toDateInputValue,
-    toIsoFromDateInput,
-  } from '../../../utils/dateInput'
+  import { toDateInputValue, toIsoFromDateInput } from '@/utils'
   import {
     type EventType,
     type OccurrenceRequirement,
@@ -52,7 +49,7 @@
   const typeOptions = computed(() => {
     const options: { id: EventType; label: string }[] = []
 
-    for (const t of BUILTIN_ACTIONS) {
+    for (const t of PLANT_CARE_META) {
       options.push({ id: t.id, label: t.label })
     }
 

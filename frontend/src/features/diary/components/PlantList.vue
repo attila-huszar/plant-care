@@ -1,10 +1,7 @@
 <script setup lang="ts">
   import { computed } from 'vue'
-  import PlantUrl from '../../../assets/svg/plant.svg?url'
-  import {
-    getActionIcon,
-    getBuiltinActionLabel,
-  } from '../../../constants/actions'
+  import { getActionIcon, getBuiltinActionLabel } from '@/utils'
+  import { PlantIcon } from '@/assets/svg'
   import type {
     CustomEventType,
     EventType,
@@ -121,7 +118,7 @@
       <div
         class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-500"
       >
-        <img :src="PlantUrl" alt="" aria-hidden="true" class="h-8 w-8" />
+        <img :src="PlantIcon" alt="" aria-hidden="true" class="h-8 w-8" />
       </div>
       <h3
         class="mb-2 text-lg font-semibold text-emerald-900 dark:text-slate-100"
@@ -148,7 +145,7 @@
         <div
           class="mb-2 flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br from-emerald-100 to-green-100 text-emerald-600 shadow-inner transition-transform duration-300 group-hover:scale-105"
         >
-          <img :src="PlantUrl" alt="" aria-hidden="true" class="h-12 w-12" />
+          <img :src="PlantIcon" alt="" aria-hidden="true" class="h-12 w-12" />
         </div>
         <div>
           <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">
