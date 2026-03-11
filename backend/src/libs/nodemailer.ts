@@ -4,8 +4,8 @@ import { getEmailHtml, getEmailSubject } from '@/utils'
 import {
   emailLogoContentId,
   emailLogoFilename,
+  emailLogoFilePath,
   emailLogoMimeType,
-  emailLogoPath,
   userMessage,
 } from '@/constants'
 import type { SendEmailProps } from '@/types'
@@ -35,7 +35,7 @@ transporter
 const attachments = [
   {
     filename: emailLogoFilename,
-    path: process.cwd() + emailLogoPath,
+    path: emailLogoFilePath,
     contentType: emailLogoMimeType,
     cid: emailLogoContentId,
   },

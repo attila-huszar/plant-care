@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "bun --hot src/app.ts",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "bun --bun tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "migrate": "bun src/database/migrate.ts",

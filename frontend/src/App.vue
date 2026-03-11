@@ -1,21 +1,34 @@
 <script setup lang="ts">
-  import HelloWorld from './components/HelloWorld.vue'
+  import { useAuthStore } from './features/auth/stores/auth'
+  import LoginView from './features/auth/views/LoginView.vue'
+  import DashboardView from './features/diary/views/DashboardView.vue'
+
+  const authStore = useAuthStore()
 </script>
 
 <template>
-  <div class="flex justify-center">
-    <img src="/plant-care.svg" class="logo size-36" alt="logo" />
+  <div
+    class="flex min-h-screen flex-col bg-linear-to-br from-green-50 to-emerald-100 font-sans text-slate-800 selection:bg-emerald-500 selection:text-white dark:from-slate-950 dark:to-slate-900 dark:text-slate-100"
+  >
+    <!-- Main routing equivalent -->
+    <Transition name="fade" mode="out-in">
+      <LoginView v-if="!authStore.isAuthenticated" />
+      <DashboardView v-else />
+    </Transition>
   </div>
-  <HelloWorld msg="Plant Care Diary" />
 </template>
 
 <style scoped>
-  .logo {
-    will-change: filter;
-    transition: filter 300ms;
+  .fade-enter-active,
+  .fade-leave-active {
+    transition:
+      opacity 0.4s ease,
+      transform 0.4s ease;
   }
 
-  .logo:hover {
-    filter: drop-shadow(0 0 2em #42b883aa);
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+    transform: translateY(10px);
   }
 </style>
