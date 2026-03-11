@@ -35,6 +35,18 @@
     return map
   })
 
+  const latestEventMsByPlantAndType = computed(() => {
+    const map = new Map<string, number>()
+    for (const event of props.events) {
+      const ms = new Date(event.date).getTime()
+      if (!Number.isFinite(ms)) continue
+      const key = `${event.plantId}:${event.typeId}`
+      const prev = map.get(key)
+      if (prev === undefined || ms > prev) map.set(key, ms)
+    }
+    return map
+  })
+
   const getTypeLabel = (typeId: EventType) => {
     const builtin = getBuiltinActionLabel(typeId)
     if (builtin) return builtin
@@ -68,6 +80,7 @@
   const upcomingCareAll = computed(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    const todayMs = today.getTime()
 
     const items: UpcomingItem[] = []
 
@@ -76,33 +89,25 @@
       for (const occurrence of occurrences) {
         if (!occurrence || occurrence.days <= 0) continue
 
-        const lastEvent = [...props.events]
-          .filter(
-            (event) =>
-              event.plantId === plant.id && event.typeId === occurrence.typeId,
-          )
-          .sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-          )[0]
+        const key = `${plant.id}:${occurrence.typeId}`
+        const lastEventMs = latestEventMsByPlantAndType.value.get(key)
+        const plantAddedMs = plant.dateAdded
+          ? new Date(plant.dateAdded).getTime()
+          : Number.NaN
 
-        const baseDate = lastEvent
-          ? new Date(lastEvent.date)
-          : new Date(plant.dateAdded ?? Date.now())
-
-        const baseMs = Number.isFinite(baseDate.getTime())
-          ? baseDate.getTime()
-          : today.getTime()
+        const candidateMs =
+          lastEventMs ??
+          (Number.isFinite(plantAddedMs) ? plantAddedMs : Date.now())
+        const baseMs = Number.isFinite(candidateMs) ? candidateMs : todayMs
 
         const dueDate = new Date(baseMs + occurrence.days * DAY_MS)
         const dueDay = new Date(dueDate)
         dueDay.setHours(0, 0, 0, 0)
 
-        const diffDays = Math.round(
-          (dueDay.getTime() - today.getTime()) / DAY_MS,
-        )
+        const diffDays = Math.round((dueDay.getTime() - todayMs) / DAY_MS)
 
         items.push({
-          key: `${plant.id}:${occurrence.typeId}`,
+          key,
           plantId: plant.id,
           plantName: plant.name,
           typeId: occurrence.typeId,
