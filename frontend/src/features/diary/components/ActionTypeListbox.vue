@@ -7,7 +7,7 @@
     ListboxOption,
     ListboxOptions,
   } from '@headlessui/vue'
-  import type { EventType } from '../stores/diary'
+  import type { EventType } from '@/types'
 
   const props = defineProps<{
     modelValue: EventType

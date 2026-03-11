@@ -14,12 +14,8 @@
     TransitionRoot,
   } from '@headlessui/vue'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
-  import {
-    type EventType,
-    type OccurrenceRequirement,
-    type ScheduledCare,
-    useDiaryStore,
-  } from '../stores/diary'
+  import type { EventType, OccurrenceRequirement, ScheduledCare } from '@/types'
+  import { useDiaryStore } from '../stores/diary'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 
   const props = defineProps<{

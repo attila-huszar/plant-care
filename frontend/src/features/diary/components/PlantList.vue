@@ -1,13 +1,8 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { getActionIcon, getBuiltinActionLabel } from '@/utils'
+  import type { CustomEventType, EventType, Plant, PlantEvent } from '@/types'
   import { PlantIcon } from '@/assets/svg'
-  import type {
-    CustomEventType,
-    EventType,
-    Plant,
-    PlantEvent,
-  } from '../stores/diary'
 
   const props = defineProps<{
     plants: Plant[]

@@ -7,7 +7,8 @@
     EventType,
     Plant,
     PlantEvent,
-  } from '../stores/diary'
+    UpcomingItem,
+  } from '@/types'
 
   const props = defineProps<{
     events: PlantEvent[]
@@ -49,30 +50,6 @@
     if (builtin) return builtin
     return customTypeNameById.value.get(typeId) ?? typeId
   }
-
-  type OccurrenceUpcomingItem = {
-    key: string
-    plantId: string
-    plantName: string
-    typeId: EventType
-    dueDate: Date
-    diffDays: number
-    kind: 'occurrence'
-    cadenceDays: number
-  }
-
-  type ScheduledUpcomingItem = {
-    key: string
-    plantId: string
-    plantName: string
-    typeId: EventType
-    dueDate: Date
-    diffDays: number
-    kind: 'scheduled'
-    scheduledCareId: string
-  }
-
-  type UpcomingItem = OccurrenceUpcomingItem | ScheduledUpcomingItem
 
   const upcomingCareAll = computed(() => {
     const today = new Date()

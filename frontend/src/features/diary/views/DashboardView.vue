@@ -2,12 +2,11 @@
   import { ref } from 'vue'
   import { useDark } from '@vueuse/core'
   import { Switch } from '@headlessui/vue'
+  import type { EventType } from '@/types'
   import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
   import { useAuthStore } from '../../auth/stores/auth'
-  import EventTimeline from '../components/EventTimeline.vue'
-  import PlantList from '../components/PlantList.vue'
-  import PlantModal from '../components/PlantModal.vue'
-  import { type EventType, useDiaryStore } from '../stores/diary'
+  import { EventTimeline, PlantList, PlantModal } from '../components'
+  import { useDiaryStore } from '../stores/diary'
 
   const authStore = useAuthStore()
   const diaryStore = useDiaryStore()
