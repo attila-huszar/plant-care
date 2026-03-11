@@ -1,3 +1,5 @@
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import js from '@eslint/js'
 import prettierConfig from 'eslint-config-prettier'
 import prettierPlugin from 'eslint-plugin-prettier'
@@ -6,6 +8,8 @@ import { defineConfig } from 'eslint/config'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import vueParser from 'vue-eslint-parser'
+
+const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig([
   {
@@ -29,6 +33,7 @@ export default defineConfig([
       parser: tseslint.parser,
       parserOptions: {
         projectService: true,
+        tsconfigRootDir,
       },
     },
     rules: {},
@@ -41,6 +46,7 @@ export default defineConfig([
       parserOptions: {
         parser: tseslint.parser,
         projectService: true,
+        tsconfigRootDir,
         extraFileExtensions: ['.vue'],
       },
     },

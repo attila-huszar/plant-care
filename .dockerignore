@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+**/.DS_Store
+
+node_modules
+**/node_modules
+
+frontend
+
+**/db.sqlite
+**/*.template
+
+README.md
+**/README.md

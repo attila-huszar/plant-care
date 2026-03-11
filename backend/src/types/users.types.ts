@@ -1,0 +1,43 @@
+import type { z } from 'zod'
+import type {
+  authJWTPayloadSchema,
+  emailSchema,
+  loginSchema,
+  passwordResetSchema,
+  registerSchema,
+  tokenSchema,
+  userInsertSchema,
+  userSelectSchema,
+  userUpdateSchema,
+} from '@/validation'
+
+export type User = z.infer<typeof userSelectSchema>
+export type UserInsert = z.infer<typeof userInsertSchema>
+export type UserUpdate = z.infer<typeof userUpdateSchema>
+
+export type LoginRequest = z.infer<typeof loginSchema>
+export type RegisterRequest = z.infer<typeof registerSchema>
+export type VerificationRequest = z.infer<typeof tokenSchema>
+export type PasswordResetRequest = z.infer<typeof emailSchema>
+export type PasswordResetToken = z.infer<typeof tokenSchema>
+export type PasswordResetSubmit = z.infer<typeof passwordResetSchema>
+
+export type PublicUser = Omit<
+  User,
+  | 'id'
+  | 'password'
+  | 'verified'
+  | 'verificationToken'
+  | 'verificationExpires'
+  | 'passwordResetToken'
+  | 'passwordResetExpires'
+  | 'createdAt'
+  | 'updatedAt'
+>
+
+export type GetUserBy = Extract<
+  keyof User,
+  'id' | 'uuid' | 'email' | 'verificationToken' | 'passwordResetToken'
+>
+
+export type AuthJWTPayload = z.infer<typeof authJWTPayloadSchema>
