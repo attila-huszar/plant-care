@@ -185,22 +185,3 @@ users.post('/refresh', async (c) => {
     return errorHandler(c, error)
   }
 })
-
-users.get('/country', (c) => {
-  try {
-    const country = c.req.header('cf-ipcountry')?.toLowerCase()
-    return c.json({ country })
-  } catch (error) {
-    return errorHandler(c, error)
-  }
-})
-
-users.get('/country-codes', async (c) => {
-  try {
-    const file = Bun.file('./src/resources/country-codes.json')
-    const content: unknown = await file.json()
-    return c.json(content)
-  } catch (error) {
-    return errorHandler(c, error)
-  }
-})

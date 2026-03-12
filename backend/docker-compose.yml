@@ -8,18 +8,24 @@ services:
       - '${PORT}:${PORT}'
     restart: unless-stopped
     env_file: .env
-    command: >
-      sh -c "
-       set -e
-       if [ -n "$$SETUP" ]; then
-         bun migrate
-       fi
-       if [ "$$NODE_ENV" = "production" ]; then
-         bun src/app.ts
-       else
-         bun dev --watch
-       fi
-       "
+    environment:
+      - SETUP
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+
+        if [ -n "${SETUP:-}" ]; then
+          bun run migrate
+          bun run seed
+        fi
+
+        if [ "${NODE_ENV:-}" = "production" ]; then
+          bun src/app.ts
+        else
+          bun dev --watch
+        fi
 
   redis:
     image: redis:alpine

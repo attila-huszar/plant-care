@@ -100,8 +100,8 @@ export function getEmailHtml(props: SendEmailProps): string {
 }
 
 const subjectMap: Record<EmailJobType, string> = {
-  verification: 'Plant Care Diary - Verify your email address',
-  passwordReset: 'Plant Care Diary - Forgotten Password',
+  verification: 'Verify your email address',
+  passwordReset: 'Forgotten Password',
 }
 
 export function getEmailSubject(props: SendEmailProps): string {

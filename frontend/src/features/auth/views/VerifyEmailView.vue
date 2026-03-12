@@ -44,7 +44,7 @@
 <template>
   <div class="flex flex-1 items-center justify-center p-6">
     <div
-      class="w-full max-w-md transform rounded-3xl border border-white/40 bg-white/60 p-8 text-center shadow-2xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.01] sm:p-12 dark:border-slate-700/50 dark:bg-slate-900/60"
+      class="w-full max-w-md rounded-3xl border border-white/40 bg-white/60 p-8 text-center shadow-2xl backdrop-blur-xl sm:p-12 dark:border-slate-700/50 dark:bg-slate-900/60"
     >
       <span
         class="mx-auto mb-6 inline-flex h-20 w-20 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_24px_currentColor)]"

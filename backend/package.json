@@ -6,9 +6,10 @@
     "dev": "bun --hot src/app.ts",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "fmt": "prettier --write .",
-    "fmt:check": "prettier --check .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "migrate": "bun src/database/migrate.ts",
+    "seed": "bun src/database/seed.ts",
     "worker:email": "bun src/workers/emailWorker.ts"
   },
   "dependencies": {

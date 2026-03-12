@@ -23,6 +23,9 @@ export const useApiFetch = createFetch({
   fetchOptions: {
     credentials: 'include',
   },
+  options: {
+    updateDataOnError: true,
+  },
 })
 
 export function withAuth(
