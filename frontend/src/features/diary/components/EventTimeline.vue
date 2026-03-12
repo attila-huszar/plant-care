@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue'
+  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
-  import { getActionIcon, getBuiltinActionLabel } from '@/utils'
   import type {
     CustomEventType,
     EventType,
@@ -9,6 +9,10 @@
     PlantEvent,
     UpcomingItem,
   } from '@/types'
+
+  const BUILTIN_ACTION_META_BY_ID = new Map(
+    PLANT_CARE_META.map((t) => [t.id, t]),
+  )
 
   const props = defineProps<{
     events: PlantEvent[]
@@ -45,9 +49,13 @@
     return map
   })
 
+  const getTypeIcon = (typeId: EventType) => {
+    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
+  }
+
   const getTypeLabel = (typeId: EventType) => {
-    const builtin = getBuiltinActionLabel(typeId)
-    if (builtin) return builtin
+    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
+    if (builtinLabel) return builtinLabel
     return customTypeNameById.value.get(typeId) ?? typeId
   }
 
@@ -280,7 +288,7 @@
                   <div
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                   >
-                    {{ getActionIcon(item.typeId) }}
+                    {{ getTypeIcon(item.typeId) }}
                   </div>
                   <div class="min-w-0 flex-1">
                     <p
@@ -374,7 +382,7 @@
                   <div
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                   >
-                    {{ getActionIcon(event.typeId) }}
+                    {{ getTypeIcon(event.typeId) }}
                   </div>
                   <div class="min-w-0 flex-1">
                     <p

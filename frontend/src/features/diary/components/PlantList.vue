@@ -1,8 +1,12 @@
 <script setup lang="ts">
   import { computed } from 'vue'
-  import { getActionIcon, getBuiltinActionLabel } from '@/utils'
+  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import type { CustomEventType, EventType, Plant, PlantEvent } from '@/types'
   import { PlantIcon } from '@/assets/svg'
+
+  const BUILTIN_ACTION_META_BY_ID = new Map(
+    PLANT_CARE_META.map((t) => [t.id, t]),
+  )
 
   const props = defineProps<{
     plants: Plant[]
@@ -25,9 +29,13 @@
     return map
   })
 
+  const getTypeIcon = (typeId: EventType) => {
+    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
+  }
+
   const getTypeLabel = (typeId: EventType) => {
-    const builtin = getBuiltinActionLabel(typeId)
-    if (builtin) return builtin
+    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
+    if (builtinLabel) return builtinLabel
     return customTypeNameById.value.get(typeId) ?? typeId
   }
 
@@ -155,7 +163,7 @@
             :title="formatCalendarDate(card.lastEvent.iso)"
           >
             Last:
-            {{ getActionIcon(card.lastEvent.typeId) }}
+            {{ getTypeIcon(card.lastEvent.typeId) }}
             {{ getTypeLabel(card.lastEvent.typeId) }} •
             {{ formatRelativeDay(card.lastEvent.iso) }}
           </p>
