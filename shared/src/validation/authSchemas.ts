@@ -35,11 +35,23 @@ export const registerSchema = z.object({
     .max(100, 'Last name must be less than 100 characters'),
   ...emailSchema.shape,
   ...passwordSchema.shape,
-  country: z
-    .string('Country is required')
-    .length(2, 'Country code must be 2 characters (ISO 3166-1 alpha-2)')
-    .toLowerCase(),
 })
+
+export const registerFormSchema = registerSchema
+  .extend({
+    confirmPassword: z
+      .string('Confirm password is required')
+      .min(1, 'Confirm password is required'),
+  })
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Passwords do not match',
+        path: ['confirmPassword'],
+      })
+    }
+  })
 
 export const passwordResetSchema = z.strictObject({
   ...tokenSchema.shape,
@@ -51,3 +63,13 @@ export const authJWTPayloadSchema = z.looseObject({
   exp: z.number().optional(),
   iat: z.number().optional(),
 })
+
+export type LoginRequest = z.infer<typeof loginSchema>
+export type RegisterRequest = z.infer<typeof registerSchema>
+export type RegisterFormValues = z.infer<typeof registerFormSchema>
+export type VerificationRequest = z.infer<typeof tokenSchema>
+export type PasswordResetRequest = z.infer<typeof emailSchema>
+export type PasswordResetToken = z.infer<typeof tokenSchema>
+export type PasswordResetSubmit = z.infer<typeof passwordResetSchema>
+
+export type AuthJWTPayload = z.infer<typeof authJWTPayloadSchema>

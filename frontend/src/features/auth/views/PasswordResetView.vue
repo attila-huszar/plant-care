@@ -1,17 +1,21 @@
 <script setup lang="ts">
-  import { ref, unref } from 'vue'
-  import type { MaybeRef } from 'vue'
+  import { computed, onMounted, ref } from 'vue'
   import { useForm, useIsFieldTouched } from 'vee-validate'
-  import { RouterLink, useRoute, useRouter } from 'vue-router'
-  import { loginSchema } from '@plant-care/shared'
+  import { RouterLink, useRoute } from 'vue-router'
+  import { passwordResetSchema, tokenSchema } from '@plant-care/shared'
   import { PlantIcon } from '@/assets/svg'
   import { useAuthStore } from '../stores/auth'
 
   const authStore = useAuthStore()
-  const router = useRouter()
   const route = useRoute()
 
   const apiError = ref<string | null>(null)
+  const successMessage = ref<string | null>(null)
+  const tokenStatus = ref<'checking' | 'valid' | 'invalid'>('checking')
+
+  const token = computed(() =>
+    typeof route.query.token === 'string' ? route.query.token : null,
+  )
 
   const {
     handleSubmit,
@@ -20,20 +24,14 @@
     submitCount,
     isSubmitting,
     setFieldError,
+    setFieldValue,
   } = useForm({
-    validationSchema: loginSchema,
+    validationSchema: passwordResetSchema,
     initialValues: {
-      email: '',
+      token: '',
       password: '',
     },
     validateOnMount: false,
-  })
-
-  const [email, emailAttrs] = defineField('email', {
-    validateOnBlur: true,
-    validateOnInput: false,
-    validateOnChange: false,
-    validateOnModelUpdate: false,
   })
 
   const [password, passwordAttrs] = defineField('password', {
@@ -43,36 +41,53 @@
     validateOnModelUpdate: false,
   })
 
-  const isEmailTouched = useIsFieldTouched('email')
   const isPasswordTouched = useIsFieldTouched('password')
 
-  const showFieldError = (
-    touched: MaybeRef<boolean>,
-    name: 'email' | 'password',
-  ) => (unref(touched) || submitCount.value > 0) && Boolean(errors.value[name])
+  const showPasswordError = computed(
+    () =>
+      (isPasswordTouched.value || submitCount.value > 0) &&
+      Boolean(errors.value.password),
+  )
 
-  const onSubmit = handleSubmit(async (values) => {
-    apiError.value = null
+  onMounted(async () => {
+    const parsed = tokenSchema.safeParse({ token: token.value })
+    if (!parsed.success) {
+      tokenStatus.value = 'invalid'
+      apiError.value = 'Invalid password reset token'
+      return
+    }
 
-    const result = await authStore.login(values)
+    setFieldValue('token', parsed.data.token, false)
+    const result = await authStore.validatePasswordResetToken(parsed.data)
 
     if (!result.ok) {
-      if (result.validation?.fieldErrors) {
-        const emailMessage = result.validation.fieldErrors.email?.[0]
-        if (emailMessage) setFieldError('email', emailMessage)
-
-        const passwordMessage = result.validation.fieldErrors.password?.[0]
-        if (passwordMessage) setFieldError('password', passwordMessage)
-      }
-
+      tokenStatus.value = 'invalid'
       apiError.value = result.error
       return
     }
 
-    const redirect =
-      typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    tokenStatus.value = 'valid'
+  })
 
-    await router.push(redirect)
+  const onSubmit = handleSubmit(async (values) => {
+    apiError.value = null
+    successMessage.value = null
+
+    const result = await authStore.submitPasswordReset(values)
+
+    if (!result.ok) {
+      if (result.validation?.fieldErrors) {
+        const tokenMessage = result.validation.fieldErrors.token?.[0]
+        if (tokenMessage) setFieldError('token', tokenMessage)
+
+        const passwordMessage = result.validation.fieldErrors.password?.[0]
+        if (passwordMessage) setFieldError('password', passwordMessage)
+      }
+      apiError.value = result.error
+      return
+    }
+
+    successMessage.value = result.data.message
   })
 </script>
 
@@ -81,8 +96,7 @@
     <div
       class="w-full max-w-md transform rounded-3xl border border-white/40 bg-white/60 p-8 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:scale-[1.01] sm:p-12 dark:border-slate-700/50 dark:bg-slate-900/60"
     >
-      <!-- Brand Header -->
-      <div class="mb-10 text-center">
+      <div class="mb-8 text-center">
         <span
           class="mx-auto mb-6 inline-flex h-20 w-20 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_24px_currentColor)]"
         >
@@ -91,15 +105,51 @@
         <h1
           class="mb-2 text-3xl font-bold tracking-tight text-emerald-900 dark:text-slate-100"
         >
-          Plant Care Diary
+          Reset Password
         </h1>
         <p class="text-emerald-700/70 dark:text-slate-300">
-          Sign in to track your green friends
+          Choose a new password
         </p>
       </div>
 
-      <!-- Login Form -->
-      <form @submit.prevent="onSubmit" class="space-y-6">
+      <div
+        v-if="tokenStatus === 'checking'"
+        class="rounded-2xl border border-slate-200 bg-white/60 px-4 py-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/30 dark:text-slate-200"
+      >
+        Validating reset link...
+      </div>
+
+      <div
+        v-else-if="successMessage"
+        class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-100"
+      >
+        {{ successMessage }}
+        <div class="mt-4">
+          <RouterLink
+            to="/login"
+            class="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500"
+          >
+            Sign in
+          </RouterLink>
+        </div>
+      </div>
+
+      <div
+        v-else-if="tokenStatus === 'invalid'"
+        class="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+      >
+        {{ apiError }}
+        <div class="mt-4">
+          <RouterLink
+            to="/forgot-password"
+            class="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500"
+          >
+            Request a new link
+          </RouterLink>
+        </div>
+      </div>
+
+      <form v-else @submit.prevent="onSubmit" class="space-y-6">
         <p
           v-if="apiError"
           class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
@@ -109,32 +159,9 @@
 
         <div>
           <label
-            for="email"
-            class="mb-2 block text-sm font-medium text-emerald-900 dark:text-slate-200"
-            >Email</label
-          >
-          <input
-            v-model="email"
-            v-bind="emailAttrs"
-            id="email"
-            type="email"
-            required
-            placeholder="you@example.com"
-            class="w-full rounded-xl border border-emerald-100 bg-white/50 px-4 py-3 text-emerald-900 placeholder-emerald-300 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
-          />
-          <p
-            v-if="showFieldError(isEmailTouched, 'email')"
-            class="mt-2 text-sm text-red-700 dark:text-red-200"
-          >
-            {{ errors.email }}
-          </p>
-        </div>
-
-        <div>
-          <label
             for="password"
             class="mb-2 block text-sm font-medium text-emerald-900 dark:text-slate-200"
-            >Password</label
+            >New password</label
           >
           <input
             v-model="password"
@@ -142,11 +169,11 @@
             id="password"
             type="password"
             required
-            placeholder="Your password"
+            placeholder="At least 6 chars, letters + numbers"
             class="w-full rounded-xl border border-emerald-100 bg-white/50 px-4 py-3 text-emerald-900 placeholder-emerald-300 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
           />
           <p
-            v-if="showFieldError(isPasswordTouched, 'password')"
+            v-if="showPasswordError"
             class="mt-2 text-sm text-red-700 dark:text-red-200"
           >
             {{ errors.password }}
@@ -158,21 +185,15 @@
           :disabled="isSubmitting"
           class="flex w-full justify-center rounded-xl border border-transparent bg-emerald-600 px-4 py-3.5 text-sm font-medium text-white shadow-md transition-colors duration-200 hover:bg-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none active:scale-95"
         >
-          {{ isSubmitting ? 'Signing in...' : 'Sign In' }}
+          {{ isSubmitting ? 'Saving...' : 'Set new password' }}
         </button>
 
-        <div class="flex items-center justify-between text-sm">
+        <div class="text-center text-sm">
           <RouterLink
-            to="/forgot-password"
-            class="text-emerald-700 hover:text-emerald-900 dark:text-slate-300 dark:hover:text-white"
-          >
-            Forgot password?
-          </RouterLink>
-          <RouterLink
-            to="/register"
+            to="/login"
             class="font-medium text-emerald-700 hover:text-emerald-900 dark:text-slate-200 dark:hover:text-white"
           >
-            Create account
+            Back to login
           </RouterLink>
         </div>
       </form>

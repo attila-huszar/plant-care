@@ -2,6 +2,7 @@
   import { ref } from 'vue'
   import { useDark } from '@vueuse/core'
   import { Switch } from '@headlessui/vue'
+  import { useRouter } from 'vue-router'
   import type { EventType } from '@/types'
   import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
   import { useAuthStore } from '../../auth/stores/auth'
@@ -9,6 +10,7 @@
   import { useDiaryStore } from '../stores/diary'
 
   const authStore = useAuthStore()
+  const router = useRouter()
   const diaryStore = useDiaryStore()
   const isDark = useDark({
     storageKey: 'plant-care-theme-dark',
@@ -18,8 +20,9 @@
   const isPlantModalOpen = ref(false)
   const plantModalPlantId = ref<string | null>(null)
 
-  const handleLogout = () => {
-    authStore.logout()
+  const handleLogout = async () => {
+    await authStore.logout()
+    await router.push('/login')
   }
 
   const openAddPlantModal = () => {
@@ -101,7 +104,7 @@
         <span
           class="rounded-full border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
         >
-          Hello, {{ authStore.user?.username }}
+          Hello, {{ authStore.profile?.firstName ?? authStore.profile?.email }}
         </span>
         <button
           @click="handleLogout"

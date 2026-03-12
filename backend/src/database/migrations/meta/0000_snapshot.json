@@ -104,16 +104,12 @@
       "indexes": {
         "users_uuid_unique": {
           "name": "users_uuid_unique",
-          "columns": [
-            "uuid"
-          ],
+          "columns": ["uuid"],
           "isUnique": true
         },
         "email_unique_ci": {
           "name": "email_unique_ci",
-          "columns": [
-            "lower(\"email\")"
-          ],
+          "columns": ["lower(\"email\")"],
           "isUnique": true
         }
       },

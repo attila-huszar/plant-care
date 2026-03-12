@@ -1,4 +1,3 @@
-import type { z } from 'zod'
 import type {
   authJWTPayloadSchema,
   emailSchema,
@@ -6,10 +5,13 @@ import type {
   passwordResetSchema,
   registerSchema,
   tokenSchema,
+} from '@plant-care/shared'
+import type { z } from 'zod'
+import type {
   userInsertSchema,
   userSelectSchema,
   userUpdateSchema,
-} from '@/validation'
+} from '@/schemas'
 
 export type User = z.infer<typeof userSelectSchema>
 export type UserInsert = z.infer<typeof userInsertSchema>

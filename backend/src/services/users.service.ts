@@ -1,14 +1,14 @@
-import { env } from '@/config'
-import { usersDB } from '@/repositories'
 import {
   emailSchema,
   loginSchema,
   passwordResetSchema,
   registerSchema,
   tokenSchema,
-  userUpdateSchema,
   validate,
-} from '@/validation'
+} from '@plant-care/shared'
+import { env } from '@/config'
+import { usersDB } from '@/repositories'
+import { userUpdateSchema } from '@/schemas'
 import {
   sendEmail,
   signAccessToken,
