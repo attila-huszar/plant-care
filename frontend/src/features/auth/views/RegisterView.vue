@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, unref } from 'vue'
+  import { computed, ref, unref } from 'vue'
   import type { MaybeRef } from 'vue'
   import { useForm, useIsFieldTouched } from 'vee-validate'
   import { RouterLink } from 'vue-router'
@@ -7,6 +7,7 @@
     registerFormSchema,
     type RegisterFormValues,
   } from '@plant-care/shared'
+  import { getEmailProviderInbox } from '@/utils'
   import { PlantIcon } from '@/assets/svg'
   import { useAuthStore } from '../stores/auth'
 
@@ -14,6 +15,15 @@
 
   const apiError = ref<string | null>(null)
   const createdEmail = ref<string | null>(null)
+
+  const inboxLink = computed(() =>
+    createdEmail.value ? getEmailProviderInbox(createdEmail.value) : null,
+  )
+
+  const inboxUrl = computed(() => inboxLink.value?.url ?? '/login')
+  const inboxLabel = computed(() =>
+    inboxLink.value?.name ? `Open ${inboxLink.value.name}` : 'Back to login',
+  )
 
   const {
     handleSubmit,
@@ -143,12 +153,12 @@
           <span class="font-semibold">{{ createdEmail }}</span
           >.
         </p>
-        <RouterLink
-          to="/login"
+        <a
+          :href="inboxUrl"
           class="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500"
         >
-          Back to login
-        </RouterLink>
+          {{ inboxLabel }}
+        </a>
       </div>
 
       <form v-else @submit.prevent="onSubmit" class="space-y-5">
