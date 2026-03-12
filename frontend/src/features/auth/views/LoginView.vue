@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { ref } from 'vue'
-  import PlantUrl from '../../../assets/svg/plant.svg?url'
+  import { PlantIcon } from '@/assets/svg'
   import { useAuthStore } from '../stores/auth'
 
   const authStore = useAuthStore()
@@ -23,7 +23,7 @@
         <span
           class="mx-auto mb-6 inline-flex h-20 w-20 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_24px_currentColor)]"
         >
-          <img :src="PlantUrl" alt="" aria-hidden="true" class="h-20 w-20" />
+          <img :src="PlantIcon" alt="" aria-hidden="true" class="h-20 w-20" />
         </span>
         <h1
           class="mb-2 text-3xl font-bold tracking-tight text-emerald-900 dark:text-slate-100"

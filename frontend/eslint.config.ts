@@ -36,7 +36,9 @@ export default defineConfig([
         tsconfigRootDir,
       },
     },
-    rules: {},
+    rules: {
+      '@typescript-eslint/consistent-type-definitions': 'off',
+    },
   },
   {
     files: ['**/*.vue'],

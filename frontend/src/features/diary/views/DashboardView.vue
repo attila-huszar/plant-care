@@ -2,14 +2,11 @@
   import { ref } from 'vue'
   import { useDark } from '@vueuse/core'
   import { Switch } from '@headlessui/vue'
-  import MoonUrl from '../../../assets/svg/moon.svg?url'
-  import PlantUrl from '../../../assets/svg/plant.svg?url'
-  import SunUrl from '../../../assets/svg/sun.svg?url'
+  import type { EventType } from '@/types'
+  import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
   import { useAuthStore } from '../../auth/stores/auth'
-  import EventTimeline from '../components/EventTimeline.vue'
-  import PlantList from '../components/PlantList.vue'
-  import PlantModal from '../components/PlantModal.vue'
-  import { type EventType, useDiaryStore } from '../stores/diary'
+  import { EventTimeline, PlantList, PlantModal } from '../components'
+  import { useDiaryStore } from '../stores/diary'
 
   const authStore = useAuthStore()
   const diaryStore = useDiaryStore()
@@ -73,7 +70,7 @@
         <span
           class="inline-flex h-10 w-10 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_20px_currentColor)]"
         >
-          <img :src="PlantUrl" alt="" aria-hidden="true" class="h-10 w-10" />
+          <img :src="PlantIcon" alt="" aria-hidden="true" class="h-10 w-10" />
         </span>
         <h1
           class="hidden text-xl font-bold text-emerald-900 sm:block dark:text-slate-100"
@@ -94,7 +91,7 @@
             :class="isDark ? 'translate-x-7' : 'translate-x-1'"
           >
             <img
-              :src="isDark ? MoonUrl : SunUrl"
+              :src="isDark ? MoonIcon : SunIcon"
               alt=""
               class="h-4 w-4"
               aria-hidden="true"
