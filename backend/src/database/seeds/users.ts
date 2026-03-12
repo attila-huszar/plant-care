@@ -15,11 +15,19 @@ const admin: UserInsert = {
 }
 
 export async function seedUsers() {
-  const { getTableName } = await import('drizzle-orm')
+  const { getTableName, sql } = await import('drizzle-orm')
   const { usersTable } = await import('@/models')
   const { sqlite } = await import('@/db')
 
-  await sqlite.insert(usersTable).values(admin)
+  const existingAdmin = await sqlite
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(sql`lower(${usersTable.email}) = ${admin.email.toLowerCase()}`)
+    .limit(1)
+
+  if (existingAdmin.length === 0) {
+    await sqlite.insert(usersTable).values(admin)
+  }
 
   return {
     [getTableName(usersTable)]: admin.email,

@@ -15,7 +15,7 @@
   "dependencies": {
     "@ngrok/ngrok": "^1.7.0",
     "@plant-care/shared": "file:../shared",
-    "bullmq": "^5.70.4",
+    "bullmq": "^5.71.0",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.12.7",

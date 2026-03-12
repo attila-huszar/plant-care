@@ -9,6 +9,8 @@ import {
 } from '@/features/auth/views'
 import { DashboardView } from '@/features/diary/views'
 
+let bootstrapPromise: Promise<void> | null = null
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -16,7 +18,6 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       component: DashboardView,
-      meta: { requiresAuth: true },
     },
     {
       path: '/login',
@@ -57,11 +58,20 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
-  await authStore.bootstrap()
+
+  bootstrapPromise ??= authStore.bootstrap().catch((err) => {
+    bootstrapPromise = null
+    throw err
+  })
+  await bootstrapPromise
 
   const isAuthed = authStore.isAuthenticated
-  const isPublic = Boolean(to.meta.public) || Boolean(to.meta.publicOnly)
-  const isPublicOnly = Boolean(to.meta.publicOnly)
+  const isPublic = to.matched.some(
+    (record) => Boolean(record.meta.public) || Boolean(record.meta.publicOnly),
+  )
+  const isPublicOnly = to.matched.some((record) =>
+    Boolean(record.meta.publicOnly),
+  )
 
   if (isPublicOnly && isAuthed) {
     return { name: 'dashboard' }

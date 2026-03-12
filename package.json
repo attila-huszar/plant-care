@@ -8,7 +8,7 @@
     "shared"
   ],
   "scripts": {
-    "dev": "npm run dev:backend && npm run dev:frontend",
+    "dev": "concurrently --success=all -n backend,frontend \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run -w @plant-care/frontend dev",
     "dev:backend": "docker compose -f backend/docker-compose.yml up",
     "dev:backend-setup": "cross-env SETUP=true docker compose -f backend/docker-compose.yml up --build",
@@ -23,9 +23,9 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^25.4.0",
+    "@types/node": "^25.5.0",
     "concurrently": "^9.2.1",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.1.0",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
