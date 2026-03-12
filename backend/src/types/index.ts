@@ -1,2 +1,2 @@
-export * from './users.types'
+export * from './user.types'
 export * from './worker.types'

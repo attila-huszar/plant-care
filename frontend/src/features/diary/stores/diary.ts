@@ -6,7 +6,7 @@ import type {
   Plant,
   PlantEvent,
   ScheduledCare,
-} from '@/types'
+} from '@plant-care/shared'
 
 export const useDiaryStore = defineStore('diary', () => {
   const plants = useLocalStorage<Plant[]>('plant-care-plants', [])

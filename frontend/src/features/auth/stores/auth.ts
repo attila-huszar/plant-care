@@ -1,19 +1,17 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type {
+  ApiErrorBody,
+  ApiValidationError,
   LoginRequest,
   PasswordResetRequest,
   PasswordResetSubmit,
   PasswordResetToken,
+  PublicUser,
   RegisterRequest,
   VerificationRequest,
 } from '@plant-care/shared'
-import {
-  type ApiErrorBody,
-  type ApiValidationError,
-  useApiFetch,
-  withAuth,
-} from '@/composables'
+import { useApiFetch, withAuth } from '@/composables'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
@@ -271,13 +269,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
   }
 })
-
-type PublicUser = {
-  uuid: string
-  firstName: string
-  lastName: string
-  email: string
-}
 
 type AuthResult<T> =
   | { ok: true; data: T }

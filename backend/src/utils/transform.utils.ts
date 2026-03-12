@@ -1,4 +1,5 @@
-import type { PublicUser, User } from '@/types'
+import type { PublicUser } from '@plant-care/shared'
+import type { User } from '@/types'
 
 export const stripSensitiveUserFields = (user: User): PublicUser => {
   const {

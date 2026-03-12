@@ -5,16 +5,6 @@ import {
   type UseFetchOptions,
 } from '@vueuse/core'
 
-export type ApiValidationError = {
-  formErrors?: string[]
-  fieldErrors?: Record<string, string[]>
-}
-
-export type ApiErrorBody = {
-  error?: string
-  validation?: ApiValidationError
-}
-
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000/api'
 

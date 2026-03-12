@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
-  import type { CustomEventType, EventType, Plant, PlantEvent } from '@/types'
+  import type {
+    CustomEventType,
+    EventType,
+    Plant,
+    PlantEvent,
+  } from '@plant-care/shared'
   import { PlantIcon } from '@/assets/svg'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(

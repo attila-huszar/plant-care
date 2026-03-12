@@ -1,10 +1,16 @@
 import {
   emailSchema,
+  type LoginRequest,
   loginSchema,
+  type PasswordResetRequest,
   passwordResetSchema,
+  type PasswordResetSubmit,
+  type PasswordResetToken,
+  type PublicUser,
   registerSchema,
   tokenSchema,
   validate,
+  type VerificationRequest,
 } from '@plant-care/shared'
 import { env } from '@/config'
 import { usersDB } from '@/repositories'
@@ -17,16 +23,7 @@ import {
 } from '@/utils'
 import { authMessage, userMessage } from '@/constants'
 import { BadRequest, Forbidden, NotFound, Unauthorized } from '@/errors'
-import {
-  type LoginRequest,
-  type PasswordResetRequest,
-  type PasswordResetSubmit,
-  type PasswordResetToken,
-  type PublicUser,
-  type UserInsert,
-  type UserUpdate,
-  type VerificationRequest,
-} from '@/types'
+import type { UserInsert, UserUpdate } from '@/types'
 
 export async function loginUser(loginRequest: LoginRequest) {
   const { email, password } = validate(loginSchema, loginRequest)

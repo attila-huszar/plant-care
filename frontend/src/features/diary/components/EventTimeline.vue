@@ -7,8 +7,8 @@
     EventType,
     Plant,
     PlantEvent,
-    UpcomingItem,
-  } from '@/types'
+  } from '@plant-care/shared'
+  import type { UpcomingItem } from '@/types'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
     PLANT_CARE_META.map((t) => [t.id, t]),

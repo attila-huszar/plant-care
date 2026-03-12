@@ -13,8 +13,12 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
+  import type {
+    EventType,
+    OccurrenceRequirement,
+    ScheduledCare,
+  } from '@plant-care/shared'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
-  import type { EventType, OccurrenceRequirement, ScheduledCare } from '@/types'
   import { useDiaryStore } from '../stores/diary'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 

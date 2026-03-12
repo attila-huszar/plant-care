@@ -1,3 +1,12 @@
+import type {
+  AuthJWTPayload,
+  LoginRequest,
+  PasswordResetRequest,
+  PasswordResetSubmit,
+  PasswordResetToken,
+  PublicUser,
+  VerificationRequest,
+} from '@plant-care/shared'
 import { Hono } from 'hono'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
 import { cookieOptions, env, REFRESH_TOKEN } from '@/config'
@@ -13,16 +22,7 @@ import {
 } from '@/services'
 import { signAccessToken, signRefreshToken, verifyJWTRefresh } from '@/utils'
 import { errorHandler } from '@/errors'
-import type {
-  AuthJWTPayload,
-  LoginRequest,
-  PasswordResetRequest,
-  PasswordResetSubmit,
-  PasswordResetToken,
-  PublicUser,
-  UserUpdate,
-  VerificationRequest,
-} from '@/types'
+import type { UserUpdate } from '@/types'
 
 type Variables = {
   jwtPayload: {

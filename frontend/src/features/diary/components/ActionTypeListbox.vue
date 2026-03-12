@@ -7,7 +7,7 @@
     ListboxOption,
     ListboxOptions,
   } from '@headlessui/vue'
-  import type { EventType } from '@/types'
+  import type { EventType } from '@plant-care/shared'
 
   const props = defineProps<{
     modelValue: EventType

@@ -3,7 +3,7 @@
   import { useDark } from '@vueuse/core'
   import { Switch } from '@headlessui/vue'
   import { useRouter } from 'vue-router'
-  import type { EventType } from '@/types'
+  import type { EventType } from '@plant-care/shared'
   import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
   import { useAuthStore } from '../../auth/stores/auth'
   import { EventTimeline, PlantList, PlantModal } from '../components'
