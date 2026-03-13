@@ -11,7 +11,7 @@ export const eventsTable = sqliteTable('events', {
   plantId: integer('plant_id')
     .notNull()
     .references(() => plantsTable.id, { onDelete: 'cascade' }),
-  typeId: text('type_id').notNull(),
+  type: text('type').notNull(),
   date: text('date').notNull(),
   notes: text('notes'),
   ...timestamps,

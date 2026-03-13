@@ -1,7 +1,14 @@
-import type { Plant } from '@plant-care/shared'
+import {
+  createEventRequestSchema,
+  createPlantRequestSchema,
+  idSchema,
+  updatePlantRequestSchema,
+  uuidSchema,
+  validate,
+} from '@plant-care/shared'
 import { Hono } from 'hono'
 import httpStatus from 'http-status'
-import { PlantsService } from '@/services'
+import { EventsService, PlantsService } from '@/services'
 import { errorHandler } from '@/errors'
 
 type Variables = {
@@ -12,10 +19,40 @@ type Variables = {
 
 export const plants = new Hono<{ Variables: Variables }>()
 
+plants.post('/:plantId/events', async (c) => {
+  try {
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const body = await c.req.json<unknown>()
+    const plantId = validate(idSchema, c.req.param('plantId'))
+    const payload = validate(createEventRequestSchema, body)
+
+    const data = await EventsService.createEvent(userUuid, plantId, payload)
+
+    return c.json(data, httpStatus.CREATED)
+  } catch (error) {
+    return errorHandler(c, error)
+  }
+})
+
+plants.delete('/:plantId/events/:eventId', async (c) => {
+  try {
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const plantId = validate(idSchema, c.req.param('plantId'))
+    const eventId = validate(idSchema, c.req.param('eventId'))
+
+    await EventsService.deleteEvent(userUuid, plantId, eventId)
+
+    return c.body(null, httpStatus.NO_CONTENT)
+  } catch (error) {
+    return errorHandler(c, error)
+  }
+})
+
 plants.get('/', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const data = await PlantsService.getPlantsWithEventsForUuid(jwtPayload.uuid)
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+
+    const data = await PlantsService.getPlants(userUuid)
 
     return c.json(data)
   } catch (error) {
@@ -25,9 +62,11 @@ plants.get('/', async (c) => {
 
 plants.post('/', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const body = await c.req.json<Plant>()
-    const plant = await PlantsService.createPlantForUuid(jwtPayload.uuid, body)
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const body = await c.req.json<unknown>()
+    const payload = validate(createPlantRequestSchema, body)
+
+    const plant = await PlantsService.createPlant(userUuid, payload)
 
     return c.json(plant, httpStatus.CREATED)
   } catch (error) {
@@ -37,26 +76,12 @@ plants.post('/', async (c) => {
 
 plants.put('/:id', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const body = await c.req.json<Plant>()
-    const id = parseInt(c.req.param('id'), 10)
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const plantId = validate(idSchema, c.req.param('id'))
+    const body = await c.req.json<unknown>()
+    const payload = validate(updatePlantRequestSchema, body)
 
-    if (isNaN(id)) {
-      return c.json({ error: 'Invalid ID' }, httpStatus.BAD_REQUEST)
-    }
-
-    const plant = await PlantsService.updatePlantForUuid(
-      id,
-      jwtPayload.uuid,
-      body,
-    )
-
-    if (!plant) {
-      return c.json(
-        { error: 'Not found or unauthorized' },
-        httpStatus.NOT_FOUND,
-      )
-    }
+    const plant = await PlantsService.updatePlant(userUuid, plantId, payload)
 
     return c.json(plant)
   } catch (error) {
@@ -66,21 +91,10 @@ plants.put('/:id', async (c) => {
 
 plants.delete('/:id', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const id = parseInt(c.req.param('id'), 10)
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const plantId = validate(idSchema, c.req.param('id'))
 
-    if (isNaN(id)) {
-      return c.json({ error: 'Invalid ID' }, httpStatus.BAD_REQUEST)
-    }
-
-    const success = await PlantsService.deletePlantForUuid(id, jwtPayload.uuid)
-    if (!success) {
-      return c.json(
-        { error: 'Not found or unauthorized' },
-        httpStatus.NOT_FOUND,
-      )
-    }
-
+    await PlantsService.deletePlant(userUuid, plantId)
     return c.body(null, httpStatus.NO_CONTENT)
   } catch (error) {
     return errorHandler(c, error)

@@ -1,22 +1,25 @@
-import type { Event, Plant } from '@plant-care/shared'
-import { validate } from '@plant-care/shared'
-import { EventsRepository, PlantsRepository } from '@/repositories'
-import { plantInsertSchema, plantUpdateSchema } from '@/schemas'
-import { requireUserByUuid } from './helpers/requireUserByUuid'
+import type { CreatePlantRequest, UpdatePlantRequest } from '@plant-care/shared'
+import {
+  EventsRepository,
+  PlantsRepository,
+  UsersRepository,
+} from '@/repositories'
+import { toPublicEvent, toPublicPlant } from '@/utils'
+import { Internal, NotFound, Unauthorized } from '@/errors'
+import type { Event, PlantInsert } from '@/types'
 
-export const getPlantsByUserId = async (userId: number) => {
-  return PlantsRepository.getPlantsByUserId(userId)
-}
+export const getPlants = async (uuid: string) => {
+  const user = await UsersRepository.getUserBy('uuid', uuid)
+  if (!user) throw new Unauthorized()
 
-export const getPlantsWithEventsForUuid = async (uuid: string) => {
-  const user = await requireUserByUuid(uuid)
   const [plants, events] = await Promise.all([
     PlantsRepository.getPlantsByUserId(user.id),
     EventsRepository.getEventsByUserId(user.id),
   ])
 
   const eventsByPlantId = new Map<number, Event[]>()
-  for (const event of events as unknown as Event[]) {
+
+  for (const event of events) {
     const list = eventsByPlantId.get(event.plantId)
     if (list) {
       list.push(event)
@@ -25,40 +28,61 @@ export const getPlantsWithEventsForUuid = async (uuid: string) => {
     }
   }
 
-  const plantsWithEvents = (plants as unknown as Plant[]).map((plant) => ({
-    ...plant,
-    events: eventsByPlantId.get(plant.id) ?? [],
+  const plantsWithHistory = plants.map((plant) => ({
+    ...toPublicPlant(plant),
+    history: (eventsByPlantId.get(plant.id) ?? []).map(toPublicEvent),
   }))
 
-  return { plants: plantsWithEvents }
+  return { plants: plantsWithHistory }
 }
 
-export const createPlantForUuid = async (uuid: string, payload: unknown) => {
-  const user = await requireUserByUuid(uuid)
-  const data = validate(plantInsertSchema.omit({ userId: true }), payload)
-  const plant = await PlantsRepository.insertPlant({ ...data, userId: user.id })
-  return { ...plant, events: [] }
-}
-
-export const updatePlantForUuid = async (
-  id: number,
-  uuid: string,
-  payload: unknown,
+export const createPlant = async (
+  userUuid: string,
+  payload: CreatePlantRequest,
 ) => {
-  const user = await requireUserByUuid(uuid)
-  const data = validate(plantUpdateSchema.omit({ userId: true }), payload)
-  const plant = await PlantsRepository.updatePlant(id, user.id, data)
-  if (!plant) return null
+  const user = await UsersRepository.getUserBy('uuid', userUuid)
+  if (!user) throw new Unauthorized()
 
-  const events = await EventsRepository.getEventsByPlantIdAndUserId(
-    plant.id,
-    user.id,
-  )
+  const insertPayload: PlantInsert = {
+    ...payload,
+    userId: user.id,
+  }
 
-  return { ...plant, events }
+  const plant = await PlantsRepository.insertPlant(insertPayload)
+  if (!plant) throw new Internal('Failed to create plant')
+
+  return { ...toPublicPlant(plant), history: [] }
 }
 
-export const deletePlantForUuid = async (id: number, uuid: string) => {
-  const user = await requireUserByUuid(uuid)
-  return PlantsRepository.deletePlant(id, user.id)
+export const updatePlant = async (
+  userUuid: string,
+  plantId: number,
+  payload: UpdatePlantRequest,
+) => {
+  const user = await UsersRepository.getUserBy('uuid', userUuid)
+  if (!user) throw new Unauthorized()
+
+  const existing = await PlantsRepository.getPlantById(plantId)
+  if (existing?.userId !== user.id) throw new NotFound()
+
+  const [plant, events] = await Promise.all([
+    PlantsRepository.updatePlant(plantId, payload),
+    EventsRepository.getEventsByPlantId(plantId),
+  ])
+  if (!plant) throw new NotFound()
+
+  return {
+    ...toPublicPlant(plant),
+    history: events.map(toPublicEvent),
+  }
+}
+
+export const deletePlant = async (userUuid: string, plantId: number) => {
+  const user = await UsersRepository.getUserBy('uuid', userUuid)
+  if (!user) throw new Unauthorized()
+
+  const existing = await PlantsRepository.getPlantById(plantId)
+  if (existing?.userId !== user.id) throw new NotFound()
+
+  return PlantsRepository.deletePlant(plantId)
 }

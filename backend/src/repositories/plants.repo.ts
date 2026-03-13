@@ -7,47 +7,37 @@ export const getPlantsByUserId = async (userId: number) => {
   return sqlite.select().from(plantsTable).where(eq(plantsTable.userId, userId))
 }
 
-export const getPlantByIdAndUserId = async (id: number, userId: number) => {
+export const getPlantById = async (plantId: number) => {
   const plants = await sqlite
     .select()
     .from(plantsTable)
-    .where(eq(plantsTable.id, id))
+    .where(eq(plantsTable.id, plantId))
     .limit(1)
 
-  const plant = plants[0]
-  if (plant?.userId === userId) {
-    return plant
-  }
-  return null
+  return plants[0] ?? null
 }
 
 export const insertPlant = async (data: PlantInsert) => {
   const result = await sqlite.insert(plantsTable).values(data).returning()
-  return result[0]
+
+  return result[0] ?? null
 }
 
-export const updatePlant = async (
-  id: number,
-  userId: number,
-  data: PlantUpdate,
-) => {
+export const updatePlant = async (plantId: number, data: PlantUpdate) => {
   const result = await sqlite
     .update(plantsTable)
     .set({ ...data, updatedAt: new Date() })
-    .where(eq(plantsTable.id, id))
+    .where(eq(plantsTable.id, plantId))
     .returning()
 
-  const updated = result[0]
-  if (updated?.userId === userId) {
-    return updated
-  }
-  return null
+  return result[0] ?? null
 }
 
-export const deletePlant = async (id: number, userId: number) => {
-  const plant = await getPlantByIdAndUserId(id, userId)
-  if (!plant) return false
+export const deletePlant = async (plantId: number) => {
+  const result = await sqlite
+    .delete(plantsTable)
+    .where(eq(plantsTable.id, plantId))
+    .returning()
 
-  await sqlite.delete(plantsTable).where(eq(plantsTable.id, id))
-  return true
+  return result[0] ?? null
 }

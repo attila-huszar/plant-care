@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/features/auth/stores'
+import { useAuthStore, useUserStore } from '@/features/auth/stores'
 import {
   ForgotPasswordView,
   LoginView,
@@ -58,6 +58,7 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+  const userStore = useUserStore()
 
   bootstrapPromise ??= authStore.bootstrap().catch((err) => {
     bootstrapPromise = null
@@ -65,7 +66,11 @@ router.beforeEach(async (to) => {
   })
   await bootstrapPromise
 
-  const isAuthed = authStore.isAuthenticated
+  if (authStore.isAuthenticated) {
+    await userStore.bootstrap()
+  }
+
+  const isAuthed = authStore.isAuthenticated && userStore.isReady
   const isPublic = to.matched.some(
     (record) => Boolean(record.meta.public) || Boolean(record.meta.publicOnly),
   )

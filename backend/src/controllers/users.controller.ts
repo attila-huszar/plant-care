@@ -1,11 +1,15 @@
-import type {
-  AuthJWTPayload,
-  LoginRequest,
-  PasswordResetRequest,
-  PasswordResetSubmit,
-  PasswordResetToken,
-  PublicUser,
-  VerificationRequest,
+import {
+  type AuthJWTPayload,
+  createCustomEventRequestSchema,
+  emailSchema,
+  loginSchema,
+  passwordResetSchema,
+  type PublicUser,
+  registerSchema,
+  tokenSchema,
+  userProfileUpdateSchema,
+  uuidSchema,
+  validate,
 } from '@plant-care/shared'
 import { Hono } from 'hono'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
@@ -13,7 +17,6 @@ import { cookieOptions, env, REFRESH_TOKEN } from '@/config'
 import { UsersService } from '@/services'
 import { signAccessToken, signRefreshToken, verifyJWTRefresh } from '@/utils'
 import { errorHandler } from '@/errors'
-import type { UserUpdate } from '@/types'
 
 type Variables = {
   jwtPayload: {
@@ -25,7 +28,8 @@ export const users = new Hono<{ Variables: Variables }>()
 
 users.post('/login', async (c) => {
   try {
-    const loginRequest = await c.req.json<LoginRequest>()
+    const body = await c.req.json<unknown>()
+    const loginRequest = validate(loginSchema, body)
     const { accessToken, refreshToken, firstName } =
       await UsersService.loginUser(loginRequest)
 
@@ -45,7 +49,13 @@ users.post('/login', async (c) => {
 
 users.post('/register', async (c) => {
   try {
-    const registerRequest = await c.req.formData()
+    const formData = await c.req.formData()
+    const registerRequest = validate(registerSchema, {
+      firstName: formData.get('firstName'),
+      lastName: formData.get('lastName'),
+      email: formData.get('email'),
+      password: formData.get('password'),
+    })
     const { email } = await UsersService.registerUser(registerRequest)
 
     return c.json({ email })
@@ -56,7 +66,8 @@ users.post('/register', async (c) => {
 
 users.post('/verification', async (c) => {
   try {
-    const verificationRequest = await c.req.json<VerificationRequest>()
+    const body = await c.req.json<unknown>()
+    const verificationRequest = validate(tokenSchema, body)
     const { email } = await UsersService.verifyUser(verificationRequest)
 
     return c.json({ email })
@@ -67,7 +78,8 @@ users.post('/verification', async (c) => {
 
 users.post('/password-reset-request', async (c) => {
   try {
-    const request = await c.req.json<PasswordResetRequest>()
+    const body = await c.req.json<unknown>()
+    const request = validate(emailSchema, body)
     const { message } = await UsersService.passwordResetRequest(request)
 
     return c.json({ message })
@@ -78,7 +90,8 @@ users.post('/password-reset-request', async (c) => {
 
 users.post('/password-reset-token', async (c) => {
   try {
-    const request = await c.req.json<PasswordResetToken>()
+    const body = await c.req.json<unknown>()
+    const request = validate(tokenSchema, body)
     const { token } = await UsersService.passwordResetToken(request)
 
     return c.json({ token })
@@ -89,7 +102,8 @@ users.post('/password-reset-token', async (c) => {
 
 users.post('/password-reset-submit', async (c) => {
   try {
-    const request = await c.req.json<PasswordResetSubmit>()
+    const body = await c.req.json<unknown>()
+    const request = validate(passwordResetSchema, body)
     const { message } = await UsersService.passwordResetSubmit(request)
 
     return c.json({ message })
@@ -100,8 +114,8 @@ users.post('/password-reset-submit', async (c) => {
 
 users.get('/profile', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const user: PublicUser = await UsersService.getUserProfile(jwtPayload.uuid)
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const user: PublicUser = await UsersService.getUserProfile(userUuid)
 
     return c.json(user)
   } catch (error) {
@@ -111,10 +125,11 @@ users.get('/profile', async (c) => {
 
 users.patch('/profile', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const updateFields = await c.req.json<UserUpdate>()
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const body = await c.req.json<unknown>()
+    const updateFields = validate(userProfileUpdateSchema, body)
     const user: PublicUser = await UsersService.updateUserProfile(
-      jwtPayload.uuid,
+      userUuid,
       updateFields,
     )
 
@@ -179,8 +194,8 @@ users.post('/refresh', async (c) => {
 
 users.get('/custom-events', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const customEvents = await UsersService.getCustomEventTypes(jwtPayload.uuid)
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const customEvents = await UsersService.getCustomEventTypes(userUuid)
 
     return c.json({ customEvents })
   } catch (error) {
@@ -190,13 +205,11 @@ users.get('/custom-events', async (c) => {
 
 users.post('/custom-events', async (c) => {
   try {
-    const jwtPayload = c.get('jwtPayload')
-    const body = await c.req.json<CustomEvent>()
+    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
+    const body = await c.req.json<unknown>()
+    const payload = validate(createCustomEventRequestSchema, body)
 
-    const result = await UsersService.upsertCustomEventType(
-      jwtPayload.uuid,
-      body,
-    )
+    const result = await UsersService.upsertCustomEventType(userUuid, payload)
 
     return c.json(result.customEvent, result.created ? 201 : 200)
   } catch (error) {

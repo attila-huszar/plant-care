@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { sqlite } from '@/db'
 import { eventsTable } from '@/models'
 import type { EventInsert } from '@/types'
@@ -7,33 +7,34 @@ export const getEventsByUserId = async (userId: number) => {
   return sqlite.select().from(eventsTable).where(eq(eventsTable.userId, userId))
 }
 
-export const getEventsByPlantIdAndUserId = async (
-  plantId: number,
-  userId: number,
-) => {
+export const getEventsByPlantId = async (plantId: number) => {
   return sqlite
     .select()
     .from(eventsTable)
-    .where(
-      and(eq(eventsTable.plantId, plantId), eq(eventsTable.userId, userId)),
-    )
+    .where(eq(eventsTable.plantId, plantId))
+}
+
+export const getEventById = async (eventId: number) => {
+  const result = await sqlite
+    .select()
+    .from(eventsTable)
+    .where(eq(eventsTable.id, eventId))
+    .limit(1)
+
+  return result[0] ?? null
 }
 
 export const insertEvent = async (data: EventInsert) => {
   const result = await sqlite.insert(eventsTable).values(data).returning()
-  return result[0]
+
+  return result[0] ?? null
 }
 
-export const deleteEvent = async (id: number, userId: number) => {
-  const events = await sqlite
-    .select()
-    .from(eventsTable)
-    .where(eq(eventsTable.id, id))
-    .limit(1)
+export const deleteEvent = async (eventId: number) => {
+  const result = await sqlite
+    .delete(eventsTable)
+    .where(eq(eventsTable.id, eventId))
+    .returning()
 
-  const event = events[0]
-  if (event?.userId !== userId) return false
-
-  await sqlite.delete(eventsTable).where(eq(eventsTable.id, id))
-  return true
+  return result[0] ?? null
 }

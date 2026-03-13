@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
-  import type { CustomEvent, Event, EventType, Plant } from '@plant-care/shared'
+  import type {
+    CustomEventDto,
+    EventDto,
+    EventType,
+    PlantDto,
+  } from '@plant-care/shared'
   import { PlantIcon } from '@/assets/svg'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
@@ -9,9 +14,9 @@
   )
 
   const props = defineProps<{
-    plants: Plant[]
-    events: Event[]
-    customEvents: CustomEvent[]
+    plants: PlantDto[]
+    events: EventDto[]
+    customEvents: CustomEventDto[]
   }>()
 
   const emit = defineEmits<{
@@ -40,17 +45,14 @@
   }
 
   const lastEventByPlantId = computed(() => {
-    const map = new Map<
-      number,
-      { iso: string; ms: number; typeId: EventType }
-    >()
+    const map = new Map<number, { iso: string; ms: number; type: EventType }>()
 
     for (const event of props.events ?? []) {
       const ms = new Date(event.date).getTime()
       if (!Number.isFinite(ms)) continue
       const current = map.get(event.plantId)
       if (!current || ms > current.ms) {
-        map.set(event.plantId, { iso: event.date, ms, typeId: event.typeId })
+        map.set(event.plantId, { iso: event.date, ms, type: event.type })
       }
     }
 
@@ -160,8 +162,8 @@
             :title="formatCalendarDate(card.lastEvent.iso)"
           >
             Last:
-            {{ getTypeIcon(card.lastEvent.typeId) }}
-            {{ getTypeLabel(card.lastEvent.typeId) }} •
+            {{ getTypeIcon(card.lastEvent.type) }}
+            {{ getTypeLabel(card.lastEvent.type) }} •
             {{ formatRelativeDay(card.lastEvent.iso) }}
           </p>
           <p v-else class="mt-1 text-xs text-slate-400 dark:text-slate-500">

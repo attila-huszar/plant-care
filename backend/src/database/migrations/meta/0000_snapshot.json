@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "68b0e348-1bf3-429a-ab10-e52a5caf1a7f",
+  "id": "1f45e597-b936-4217-80ef-8dd7b5c1c281",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "events": {
@@ -28,8 +28,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "type_id": {
-          "name": "type_id",
+        "type": {
+          "name": "type",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -248,19 +248,13 @@
           "notNull": true,
           "autoincrement": false
         },
-        "occurrence": {
-          "name": "occurrence",
+        "care_rules": {
+          "name": "care_rules",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "scheduled": {
-          "name": "scheduled",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
         },
         "image_url": {
           "name": "image_url",

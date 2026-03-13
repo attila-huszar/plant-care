@@ -1,4 +1,4 @@
-import type { Occurrence, Scheduled } from '@plant-care/shared'
+import type { CareRule } from '@plant-care/shared'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { timestamps } from './column.helpers'
 import { usersTable } from './usersTable'
@@ -9,8 +9,10 @@ export const plantsTable = sqliteTable('plants', {
     .notNull()
     .references(() => usersTable.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  occurrence: text('occurrence', { mode: 'json' }).$type<Occurrence[]>(),
-  scheduled: text('scheduled', { mode: 'json' }).$type<Scheduled[]>(),
+  careRules: text('care_rules', { mode: 'json' })
+    .notNull()
+    .default('[]')
+    .$type<CareRule[]>(),
   imageUrl: text('image_url'),
   ...timestamps,
 })

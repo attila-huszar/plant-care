@@ -1,35 +1,57 @@
-import { validate } from '@plant-care/shared'
-import { EventsRepository, PlantsRepository } from '@/repositories'
-import { eventInsertSchema } from '@/schemas'
-import { BadRequest } from '@/errors'
-import { requireUserByUuid } from './helpers/requireUserByUuid'
+import type { CreateEventRequest } from '@plant-care/shared'
+import {
+  EventsRepository,
+  PlantsRepository,
+  UsersRepository,
+} from '@/repositories'
+import { toPublicEvent, toPublicPlant } from '@/utils'
+import { Internal, NotFound, Unauthorized } from '@/errors'
 
-export const getEventsByUserId = async (userId: number) => {
-  return EventsRepository.getEventsByUserId(userId)
-}
+export const createEvent = async (
+  userUuid: string,
+  plantId: number,
+  payload: CreateEventRequest,
+) => {
+  const user = await UsersRepository.getUserBy('uuid', userUuid)
+  if (!user) throw new Unauthorized()
 
-export const createEventForUuid = async (uuid: string, payload: unknown) => {
-  const user = await requireUserByUuid(uuid)
-  const data = validate(eventInsertSchema.omit({ userId: true }), payload)
+  const plant = await PlantsRepository.getPlantById(plantId)
+  if (plant?.userId !== user.id) throw new NotFound()
 
-  const plant = await PlantsRepository.getPlantByIdAndUserId(
-    data.plantId,
-    user.id,
-  )
-  if (!plant) {
-    throw new BadRequest('Plant not found or does not belong to user')
+  const event = await EventsRepository.insertEvent({
+    ...payload,
+    plantId,
+    userId: user.id,
+  })
+  if (!event) throw new Internal('Failed to create event')
+
+  const events = await EventsRepository.getEventsByPlantId(plantId)
+
+  return {
+    event: toPublicEvent(event),
+    plant: {
+      ...toPublicPlant(plant),
+      history: events.map(toPublicEvent),
+    },
   }
-
-  const event = await EventsRepository.insertEvent({ ...data, userId: user.id })
-  const events = await EventsRepository.getEventsByPlantIdAndUserId(
-    data.plantId,
-    user.id,
-  )
-
-  return { event, plant: { ...plant, events } }
 }
 
-export const deleteEventForUuid = async (id: number, uuid: string) => {
-  const user = await requireUserByUuid(uuid)
-  return EventsRepository.deleteEvent(id, user.id)
+export const deleteEvent = async (
+  userUuid: string,
+  plantId: number,
+  eventId: number,
+) => {
+  const user = await UsersRepository.getUserBy('uuid', userUuid)
+  if (!user) throw new Unauthorized()
+
+  const [plant, event] = await Promise.all([
+    PlantsRepository.getPlantById(plantId),
+    EventsRepository.getEventById(eventId),
+  ])
+
+  if (plant?.userId !== user.id) throw new NotFound()
+  if (event?.userId !== user.id || event?.plantId !== plantId)
+    throw new NotFound()
+
+  return EventsRepository.deleteEvent(eventId)
 }

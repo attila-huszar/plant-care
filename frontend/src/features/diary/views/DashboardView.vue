@@ -1,17 +1,18 @@
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { onMounted, ref } from 'vue'
   import { useDark } from '@vueuse/core'
   import { Switch } from '@headlessui/vue'
   import { useRouter } from 'vue-router'
-  import type { EventType } from '@plant-care/shared'
+  import type { CareTimelinePayload } from '@/types'
   import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
-  import { useAuthStore } from '../../auth/stores/auth'
+  import { useAuthStore, useUserStore } from '../../auth/stores'
   import { EventTimeline, PlantList, PlantModal } from '../components'
-  import { useDiaryStore } from '../stores/diary'
+  import { usePlantsStore } from '../stores'
 
   const authStore = useAuthStore()
+  const userStore = useUserStore()
   const router = useRouter()
-  const diaryStore = useDiaryStore()
+  const plantsStore = usePlantsStore()
   const isDark = useDark({
     storageKey: 'plant-care-theme-dark',
     valueDark: 'dark',
@@ -40,23 +41,22 @@
     plantModalPlantId.value = null
   }
 
-  const handleCompleteCare = (payload: {
-    plantId: number
-    typeId: EventType
-    scheduledCareId?: string
-  }) => {
-    diaryStore.addEvent({
+  onMounted(() => {
+    void Promise.all([plantsStore.loadPlants(), userStore.bootstrap()])
+  })
+
+  const handleCare = async (payload: CareTimelinePayload) => {
+    const event = await plantsStore.addEvent({
       plantId: payload.plantId,
-      typeId: payload.typeId,
+      type: payload.type,
       notes: '',
       date: new Date().toISOString(),
     })
 
-    if (payload.scheduledCareId) {
-      diaryStore.removeScheduledCareItem(
-        payload.plantId,
-        payload.scheduledCareId,
-      )
+    if (!event) return
+
+    if (payload.kind === 'date') {
+      await plantsStore.removeCareRuleItem(payload.plantId, payload.careRuleId)
     }
   }
 </script>
@@ -104,7 +104,7 @@
         <span
           class="rounded-full border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
         >
-          Hello, {{ authStore.profile?.firstName ?? authStore.profile?.email }}
+          Hello, {{ userStore.profile?.firstName ?? userStore.profile?.email }}
         </span>
         <button
           @click="handleLogout"
@@ -121,19 +121,19 @@
     >
       <div class="lg:col-span-2">
         <PlantList
-          :plants="diaryStore.plants"
-          :events="diaryStore.events"
-          :customEvents="diaryStore.customEvents"
+          :plants="plantsStore.plants"
+          :events="plantsStore.events"
+          :customEvents="userStore.customEvents"
           @add-plant="openAddPlantModal"
           @edit-plant="openEditPlantModal"
         />
       </div>
       <div class="h-full min-h-100">
         <EventTimeline
-          :plants="diaryStore.plants"
-          :events="diaryStore.events"
-          :customEvents="diaryStore.customEvents"
-          @complete-care="handleCompleteCare"
+          :plants="plantsStore.plants"
+          :events="plantsStore.events"
+          :customEvents="userStore.customEvents"
+          @care="handleCare"
         />
       </div>
     </main>
