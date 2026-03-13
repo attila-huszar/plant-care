@@ -1,12 +1,10 @@
-import { SQLITE_FILE } from '@/constants'
-
 export const env = {
   serverBaseUrl: process.env.SERVER_BASE_URL ?? 'http://localhost',
   port: process.env.PORT ?? '5000',
   cookieSecret: process.env.COOKIE_SECRET,
   cookieMaxAge: process.env.COOKIE_MAX_AGE ?? '1209600',
   clientBaseUrl: process.env.CLIENT_BASE_URL,
-  dbSqliteFile: process.env.DB_SQLITE_FILE ?? SQLITE_FILE,
+  dbSqliteFile: process.env.DB_SQLITE_FILE,
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
   mailerService: process.env.MAILER_SERVICE ?? 'gmail',

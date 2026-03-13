@@ -1,1 +1,1 @@
-export { sendMail } from './nodemailer'
+export * from './nodemailer'

@@ -7,6 +7,7 @@ import { timeout } from 'hono/timeout'
 import { trimTrailingSlash } from 'hono/trailing-slash'
 import { env } from './config/env'
 import { events, plants, users } from './controllers'
+import { initMailer } from './libs'
 import { authMiddleware, payloadLimiter } from './middleware'
 import { ngrokForward } from './utils'
 
@@ -66,6 +67,7 @@ api.route('/plants', plants)
 api.route('/events', events)
 app.route('/api', api)
 
+void initMailer()
 if (env.ngrokAuthToken) void ngrokForward()
 
 export default app

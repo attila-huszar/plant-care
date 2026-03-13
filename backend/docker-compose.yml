@@ -24,7 +24,7 @@ services:
         if [ "${NODE_ENV:-}" = "production" ]; then
           bun src/app.ts
         else
-          bun dev --watch
+          bun dev
         fi
 
   redis:
@@ -47,13 +47,12 @@ services:
         condition: service_started
     restart: unless-stopped
     env_file: .env
-    environment:
-      DB_REPO: SQLITE
-    command: >
-      sh -c "
-       set -e
-       bun worker:email
-       "
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        bun worker:email
 
 volumes:
   sqlite_data:

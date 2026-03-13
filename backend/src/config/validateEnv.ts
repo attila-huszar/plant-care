@@ -3,12 +3,11 @@ import { env } from './env'
 type EnvKey = keyof typeof env
 
 const requiredKeys: EnvKey[] = [
+  'dbSqliteFile',
   'adminEmail',
   'adminPassword',
   'clientBaseUrl',
   'cookieSecret',
-  'mailerUser',
-  'mailerPass',
   'jwtAccessSecret',
   'jwtRefreshSecret',
   'redisUrl',
