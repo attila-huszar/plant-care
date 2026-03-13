@@ -2,12 +2,7 @@
   import { computed, ref } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
-  import type {
-    CustomEventType,
-    EventType,
-    Plant,
-    PlantEvent,
-  } from '@plant-care/shared'
+  import type { CustomEvent, Event, EventType, Plant } from '@plant-care/shared'
   import type { UpcomingItem } from '@/types'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
@@ -15,15 +10,9 @@
   )
 
   const props = defineProps<{
-    events: PlantEvent[]
     plants: Plant[]
-    customEventTypes?: CustomEventType[]
-  }>()
-
-  const emit = defineEmits<{
-    'complete-care': [
-      payload: { plantId: string; typeId: EventType; scheduledCareId?: string },
-    ]
+    events: Event[]
+    customEvents?: CustomEvent[]
   }>()
 
   const DAY_MS = 1000 * 60 * 60 * 24
@@ -31,7 +20,7 @@
 
   const customTypeNameById = computed(() => {
     const map = new Map<string, string>()
-    for (const t of props.customEventTypes ?? []) {
+    for (const t of props.customEvents ?? []) {
       map.set(t.id, t.name)
     }
     return map
@@ -73,8 +62,8 @@
 
         const key = `${plant.id}:${occurrence.typeId}`
         const lastEventMs = latestEventMsByPlantAndType.value.get(key)
-        const plantAddedMs = plant.dateAdded
-          ? new Date(plant.dateAdded).getTime()
+        const plantAddedMs = plant.createdAt
+          ? new Date(plant.createdAt).getTime()
           : Number.NaN
 
         const candidateMs =
@@ -89,7 +78,7 @@
         const diffDays = Math.round((dueDay.getTime() - todayMs) / DAY_MS)
 
         items.push({
-          key,
+          key: String(key),
           plantId: plant.id,
           plantName: plant.name,
           typeId: occurrence.typeId,
@@ -100,7 +89,7 @@
         })
       }
 
-      for (const scheduled of plant.scheduledCare ?? []) {
+      for (const scheduled of plant.scheduled ?? []) {
         const dueDate = new Date(scheduled.date)
         if (!Number.isFinite(dueDate.getTime())) continue
 
@@ -112,7 +101,7 @@
         )
 
         items.push({
-          key: `${plant.id}:${scheduled.id}`,
+          key: String(`${plant.id}:${scheduled.id}`),
           plantId: plant.id,
           plantName: plant.name,
           typeId: scheduled.typeId,
@@ -199,15 +188,6 @@
   const completeItem = (item: (typeof upcomingCare.value)[number]) => {
     if (isCompleting(item.key)) return
     markCompleting(item.key)
-
-    window.setTimeout(() => {
-      emit('complete-care', {
-        plantId: item.plantId,
-        typeId: item.typeId,
-        scheduledCareId:
-          item.kind === 'scheduled' ? item.scheduledCareId : undefined,
-      })
-    }, 160)
 
     window.setTimeout(() => {
       unmarkCompleting(item.key)

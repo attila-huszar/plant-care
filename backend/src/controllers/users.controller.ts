@@ -10,16 +10,7 @@ import type {
 import { Hono } from 'hono'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
 import { cookieOptions, env, REFRESH_TOKEN } from '@/config'
-import {
-  getUserProfile,
-  loginUser,
-  passwordResetRequest,
-  passwordResetSubmit,
-  passwordResetToken,
-  registerUser,
-  updateUserProfile,
-  verifyUser,
-} from '@/services'
+import { UsersService } from '@/services'
 import { signAccessToken, signRefreshToken, verifyJWTRefresh } from '@/utils'
 import { errorHandler } from '@/errors'
 import type { UserUpdate } from '@/types'
@@ -36,7 +27,7 @@ users.post('/login', async (c) => {
   try {
     const loginRequest = await c.req.json<LoginRequest>()
     const { accessToken, refreshToken, firstName } =
-      await loginUser(loginRequest)
+      await UsersService.loginUser(loginRequest)
 
     await setSignedCookie(
       c,
@@ -55,7 +46,7 @@ users.post('/login', async (c) => {
 users.post('/register', async (c) => {
   try {
     const registerRequest = await c.req.formData()
-    const { email } = await registerUser(registerRequest)
+    const { email } = await UsersService.registerUser(registerRequest)
 
     return c.json({ email })
   } catch (error) {
@@ -66,7 +57,7 @@ users.post('/register', async (c) => {
 users.post('/verification', async (c) => {
   try {
     const verificationRequest = await c.req.json<VerificationRequest>()
-    const { email } = await verifyUser(verificationRequest)
+    const { email } = await UsersService.verifyUser(verificationRequest)
 
     return c.json({ email })
   } catch (error) {
@@ -77,7 +68,7 @@ users.post('/verification', async (c) => {
 users.post('/password-reset-request', async (c) => {
   try {
     const request = await c.req.json<PasswordResetRequest>()
-    const { message } = await passwordResetRequest(request)
+    const { message } = await UsersService.passwordResetRequest(request)
 
     return c.json({ message })
   } catch (error) {
@@ -88,7 +79,7 @@ users.post('/password-reset-request', async (c) => {
 users.post('/password-reset-token', async (c) => {
   try {
     const request = await c.req.json<PasswordResetToken>()
-    const { token } = await passwordResetToken(request)
+    const { token } = await UsersService.passwordResetToken(request)
 
     return c.json({ token })
   } catch (error) {
@@ -99,7 +90,7 @@ users.post('/password-reset-token', async (c) => {
 users.post('/password-reset-submit', async (c) => {
   try {
     const request = await c.req.json<PasswordResetSubmit>()
-    const { message } = await passwordResetSubmit(request)
+    const { message } = await UsersService.passwordResetSubmit(request)
 
     return c.json({ message })
   } catch (error) {
@@ -110,7 +101,7 @@ users.post('/password-reset-submit', async (c) => {
 users.get('/profile', async (c) => {
   try {
     const jwtPayload = c.get('jwtPayload')
-    const user: PublicUser = await getUserProfile(jwtPayload.uuid)
+    const user: PublicUser = await UsersService.getUserProfile(jwtPayload.uuid)
 
     return c.json(user)
   } catch (error) {
@@ -122,7 +113,7 @@ users.patch('/profile', async (c) => {
   try {
     const jwtPayload = c.get('jwtPayload')
     const updateFields = await c.req.json<UserUpdate>()
-    const user: PublicUser = await updateUserProfile(
+    const user: PublicUser = await UsersService.updateUserProfile(
       jwtPayload.uuid,
       updateFields,
     )
@@ -181,6 +172,33 @@ users.post('/refresh', async (c) => {
     const accessToken = await signAccessToken(jwtPayload.uuid, timestamp)
 
     return c.json({ accessToken })
+  } catch (error) {
+    return errorHandler(c, error)
+  }
+})
+
+users.get('/custom-events', async (c) => {
+  try {
+    const jwtPayload = c.get('jwtPayload')
+    const customEvents = await UsersService.getCustomEventTypes(jwtPayload.uuid)
+
+    return c.json({ customEvents })
+  } catch (error) {
+    return errorHandler(c, error)
+  }
+})
+
+users.post('/custom-events', async (c) => {
+  try {
+    const jwtPayload = c.get('jwtPayload')
+    const body = await c.req.json<CustomEvent>()
+
+    const result = await UsersService.upsertCustomEventType(
+      jwtPayload.uuid,
+      body,
+    )
+
+    return c.json(result.customEvent, result.created ? 201 : 200)
   } catch (error) {
     return errorHandler(c, error)
   }

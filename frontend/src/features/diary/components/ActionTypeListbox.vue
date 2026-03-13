@@ -21,7 +21,11 @@
 
   const labelById = computed(() => {
     const map = new Map<EventType, string>()
-    for (const opt of props.options) map.set(opt.id, opt.label)
+    for (const opt of props.options) {
+      if (opt.id !== undefined && opt.id !== null) {
+        map.set(opt.id, opt.label)
+      }
+    }
     return map
   })
 

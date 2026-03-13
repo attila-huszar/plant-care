@@ -13,18 +13,14 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type {
-    EventType,
-    OccurrenceRequirement,
-    ScheduledCare,
-  } from '@plant-care/shared'
+  import type { EventType, Occurrence, Scheduled } from '@plant-care/shared'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
   import { useDiaryStore } from '../stores/diary'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 
   const props = defineProps<{
     isOpen: boolean
-    plantId: string | null
+    plantId: number | null
   }>()
 
   const emit = defineEmits<{
@@ -33,10 +29,9 @@
 
   const diaryStore = useDiaryStore()
 
-  const stablePlantId = ref<string | null>(null)
+  const stablePlantId = ref<number | null>(null)
   const stableIsAdd = ref(false)
   const draftName = ref('')
-  const draftSpecies = ref('')
 
   const plant = computed(() => {
     const plantId = stablePlantId.value
@@ -53,7 +48,7 @@
       options.push({ id: t.id, label: t.label })
     }
 
-    for (const t of diaryStore.customEventTypes) {
+    for (const t of diaryStore.customEvents) {
       options.push({ id: t.id, label: t.name })
     }
 
@@ -64,7 +59,7 @@
       }
     }
 
-    for (const scheduled of plant.value?.scheduledCare ?? []) {
+    for (const scheduled of plant.value?.scheduled ?? []) {
       const exists = options.some((o) => o.id === scheduled.typeId)
       if (!exists) {
         options.push({ id: scheduled.typeId, label: scheduled.typeId })
@@ -111,7 +106,7 @@
       days: String(o.days),
     }))
 
-    scheduledRows.value = (plant.value.scheduledCare ?? []).map((i) => ({
+    scheduledRows.value = (plant.value.scheduled ?? []).map((i) => ({
       key: crypto.randomUUID(),
       id: i.id,
       typeId: i.typeId,
@@ -129,7 +124,6 @@
 
       if (props.plantId === null) {
         draftName.value = ''
-        draftSpecies.value = ''
       }
 
       initializeRows()
@@ -172,16 +166,16 @@
     scheduledRows.value = scheduledRows.value.filter((r) => r.key !== key)
   }
 
-  const addCustomType = () => {
+  const addCustomType = async () => {
     const name = newCustomName.value.trim()
     if (!name) return
-    diaryStore.addCustomEventType(name)
+    await diaryStore.createCustomEventType(name)
     newCustomName.value = ''
   }
 
   const save = () => {
     const seen = new Set<string>()
-    const occurrences: OccurrenceRequirement[] = []
+    const occurrences: Occurrence[] = []
 
     for (let i = rows.value.length - 1; i >= 0; i -= 1) {
       const row = rows.value[i]
@@ -193,7 +187,7 @@
       occurrences.unshift({ typeId: row.typeId, days })
     }
 
-    const scheduledCare: ScheduledCare[] = []
+    const scheduledCare: Scheduled[] = []
 
     for (const row of scheduledRows.value) {
       if (!row.typeId) continue
@@ -208,10 +202,8 @@
 
       diaryStore.addPlant({
         name,
-        species: draftSpecies.value.trim() || 'Unknown',
-        dateAdded: new Date().toISOString(),
         occurrences,
-        scheduledCare,
+        scheduled: scheduledCare,
       })
       emit('close')
       return
@@ -272,7 +264,7 @@
                     v-if="!isAddMode && plant"
                     class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                   >
-                    {{ plant.name }} • {{ plant.species }}
+                    {{ plant.name }}
                   </p>
                   <p
                     v-else-if="isAddMode"
@@ -326,21 +318,6 @@
                       type="text"
                       required
                       placeholder="e.g. Barnaby"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      for="plantSpecies"
-                      class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200"
-                      >Species / Variety</label
-                    >
-                    <input
-                      id="plantSpecies"
-                      v-model="draftSpecies"
-                      type="text"
-                      placeholder="e.g. Monstera Deliciosa"
                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
                     />
                   </div>

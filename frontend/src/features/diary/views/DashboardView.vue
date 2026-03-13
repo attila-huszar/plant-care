@@ -18,7 +18,7 @@
   })
 
   const isPlantModalOpen = ref(false)
-  const plantModalPlantId = ref<string | null>(null)
+  const plantModalPlantId = ref<number | null>(null)
 
   const handleLogout = async () => {
     await authStore.logout()
@@ -30,7 +30,7 @@
     isPlantModalOpen.value = true
   }
 
-  const openEditPlantModal = (payload: { plantId: string }) => {
+  const openEditPlantModal = (payload: { plantId: number }) => {
     plantModalPlantId.value = payload.plantId
     isPlantModalOpen.value = true
   }
@@ -41,7 +41,7 @@
   }
 
   const handleCompleteCare = (payload: {
-    plantId: string
+    plantId: number
     typeId: EventType
     scheduledCareId?: string
   }) => {
@@ -123,16 +123,16 @@
         <PlantList
           :plants="diaryStore.plants"
           :events="diaryStore.events"
-          :custom-event-types="diaryStore.customEventTypes"
+          :customEvents="diaryStore.customEvents"
           @add-plant="openAddPlantModal"
           @edit-plant="openEditPlantModal"
         />
       </div>
       <div class="h-full min-h-100">
         <EventTimeline
-          :events="diaryStore.events"
           :plants="diaryStore.plants"
-          :custom-event-types="diaryStore.customEventTypes"
+          :events="diaryStore.events"
+          :customEvents="diaryStore.customEvents"
           @complete-care="handleCompleteCare"
         />
       </div>
