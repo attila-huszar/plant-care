@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue'
+  import { computed, nextTick, ref, watch } from 'vue'
   import { PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
@@ -29,6 +29,9 @@
   const stablePlantId = ref<number | null>(null)
   const stableIsAdd = ref(false)
   const draftName = ref('')
+  const isNameEditing = ref(false)
+  const originalName = ref('')
+  const plantNameInput = ref<HTMLInputElement | null>(null)
 
   const plant = computed(() => {
     const plantId = stablePlantId.value
@@ -103,6 +106,12 @@
 
       if (props.plantId === null) {
         draftName.value = ''
+        originalName.value = ''
+        isNameEditing.value = false
+      } else if (plant.value) {
+        originalName.value = plant.value.name
+        draftName.value = plant.value.name
+        isNameEditing.value = false
       }
 
       initializeRows()
@@ -115,9 +124,42 @@
       if (!props.isOpen) return
       stablePlantId.value = plantId
       stableIsAdd.value = plantId === null
+      isNameEditing.value = false
       initializeRows()
     },
   )
+
+  watch(
+    plant,
+    (p) => {
+      if (!props.isOpen) return
+      if (isAddMode.value) return
+      if (!p) return
+      if (isNameEditing.value) return
+      originalName.value = p.name
+      draftName.value = p.name
+    },
+    { immediate: true },
+  )
+
+  const toggleNameEdit = async () => {
+    if (isAddMode.value) return
+    if (!plant.value) return
+
+    if (isNameEditing.value) {
+      draftName.value = originalName.value
+      isNameEditing.value = false
+      return
+    }
+
+    originalName.value = plant.value.name
+    draftName.value = plant.value.name
+    isNameEditing.value = true
+
+    await nextTick()
+    plantNameInput.value?.focus()
+    plantNameInput.value?.select()
+  }
 
   const addRuleRow = () => {
     ruleRows.value.push({
@@ -237,7 +279,9 @@
 
     if (!plant.value) return
 
+    const nextName = draftName.value.trim()
     const result = await plantsStore.updatePlant(plant.value.id, {
+      ...(nextName && nextName !== plant.value.name ? { name: nextName } : {}),
       careRules,
     })
     if (result) emit('close')
@@ -289,9 +333,32 @@
                   </DialogTitle>
                   <p
                     v-if="!isAddMode && plant"
-                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                    class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400"
                   >
-                    {{ plant.name }}
+                    <template v-if="!isNameEditing">
+                      <span
+                        class="font-medium text-slate-700 dark:text-slate-200"
+                      >
+                        {{ plant.name }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <input
+                        ref="plantNameInput"
+                        v-model="draftName"
+                        type="text"
+                        maxlength="60"
+                        class="w-56 max-w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                      />
+                    </template>
+
+                    <button
+                      type="button"
+                      class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                      @click="toggleNameEdit"
+                    >
+                      {{ isNameEditing ? 'Cancel' : 'Edit' }}
+                    </button>
                   </p>
                   <p
                     v-else-if="isAddMode"
@@ -345,7 +412,7 @@
                       type="text"
                       required
                       placeholder="e.g. Barnaby"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-950/60"
                     />
                   </div>
                 </div>

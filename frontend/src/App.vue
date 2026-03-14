@@ -1,5 +1,10 @@
 <script setup lang="ts">
+  import { useDark } from '@vueuse/core'
   import { RouterView } from 'vue-router'
+
+  useDark({
+    storageKey: 'plant-care-theme-dark',
+  })
 </script>
 
 <template>

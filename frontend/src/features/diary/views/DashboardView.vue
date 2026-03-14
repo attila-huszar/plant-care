@@ -13,10 +13,7 @@
   const userStore = useUserStore()
   const router = useRouter()
   const plantsStore = usePlantsStore()
-  const isDark = useDark({
-    storageKey: 'plant-care-theme-dark',
-    valueDark: 'dark',
-  })
+  const isDark = useDark()
 
   const isPlantModalOpen = ref(false)
   const plantModalPlantId = ref<number | null>(null)
@@ -78,7 +75,7 @@
         <h1
           class="hidden text-xl font-bold text-emerald-900 sm:block dark:text-slate-100"
         >
-          My Plant Diary
+          Plant Care Diary
         </h1>
       </div>
 
