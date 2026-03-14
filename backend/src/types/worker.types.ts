@@ -30,10 +30,3 @@ export type SendEmailProps =
   | VerificationEmailProps
   | PasswordResetEmailProps
   | MfaOtpEmailProps
-
-export type SendEmailInput = {
-  toAddress: string
-  toName: string
-  tokenLink?: string
-  code?: string
-}

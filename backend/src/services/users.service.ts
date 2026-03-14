@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto'
 import {
   type LoginRequest,
   type MfaVerifyRequest,
@@ -9,6 +10,7 @@ import {
   type UserProfileUpdateRequest,
   type VerificationRequest,
 } from '@plant-care/shared'
+import status from 'http-status'
 import { env } from '@/config'
 import { UsersRepository } from '@/repositories'
 import {
@@ -18,7 +20,13 @@ import {
   toPublicUser,
 } from '@/utils'
 import { authMessage, userMessage } from '@/constants'
-import { BadRequest, Forbidden, NotFound, Unauthorized } from '@/errors'
+import {
+  BadRequest,
+  Forbidden,
+  Internal,
+  NotFound,
+  Unauthorized,
+} from '@/errors'
 import type { UserInsert, UserUpdate } from '@/types'
 
 export async function loginUser(loginRequest: LoginRequest) {
@@ -41,9 +49,7 @@ export async function loginUser(loginRequest: LoginRequest) {
   }
 
   if (user.mfaEnabled) {
-    const code = Math.floor(Math.random() * 1000000)
-      .toString()
-      .padStart(6, '0')
+    const code = randomInt(0, 1000000).toString().padStart(6, '0')
     const mfaToken = await Bun.password.hash(code)
     const mfaExpires = new Date(Date.now() + 10 * 60 * 1000)
 
@@ -56,11 +62,24 @@ export async function loginUser(loginRequest: LoginRequest) {
       throw new Error(userMessage.updateError)
     }
 
-    sendEmail('mfaOtp', {
-      toAddress: user.email,
-      toName: user.firstName,
-      code,
-    })
+    try {
+      await sendEmail('mfaOtp', {
+        toAddress: user.email,
+        toName: user.firstName,
+        code,
+      })
+    } catch {
+      await UsersRepository.updateUserBy('uuid', user.uuid, {
+        mfaToken: null,
+        mfaExpires: null,
+      })
+
+      throw new Internal(
+        authMessage.mfaDeliveryUnavailable,
+        'ServiceUnavailable',
+        status.SERVICE_UNAVAILABLE,
+      )
+    }
 
     return { mfaPending: true as const, email: user.email }
   }
@@ -150,11 +169,21 @@ export async function registerUser(registerRequest: RegisterRequest) {
     throw new Error(userMessage.createError)
   }
 
-  sendEmail('verification', {
-    toAddress: email,
-    toName: firstName,
-    tokenLink,
-  })
+  try {
+    await sendEmail('verification', {
+      toAddress: email,
+      toName: firstName,
+      tokenLink,
+    })
+  } catch {
+    await UsersRepository.deleteUserBy('uuid', userCreated.uuid)
+
+    throw new Internal(
+      userMessage.sendEmail,
+      'ServiceUnavailable',
+      status.SERVICE_UNAVAILABLE,
+    )
+  }
 
   return { email: userCreated.email }
 }
@@ -211,11 +240,18 @@ export async function passwordResetRequest(
     throw new Error(userMessage.updateError)
   }
 
-  sendEmail('passwordReset', {
-    toAddress: user.email,
-    toName: user.firstName,
-    tokenLink,
-  })
+  try {
+    await sendEmail('passwordReset', {
+      toAddress: user.email,
+      toName: user.firstName,
+      tokenLink,
+    })
+  } catch {
+    await UsersRepository.updateUserBy('email', user.email, {
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    })
+  }
 
   return { message: userMessage.forgotPasswordRequest }
 }

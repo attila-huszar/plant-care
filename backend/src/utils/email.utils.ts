@@ -22,19 +22,22 @@ export class SendEmailPreconditionError extends Error {
   }
 }
 
-export function sendEmail(
+export async function sendEmail(
   type: typeof QUEUE.EMAIL.JOB.VERIFICATION,
   data: Omit<VerificationEmailProps, 'type'>,
-): void
-export function sendEmail(
+): Promise<void>
+export async function sendEmail(
   type: typeof QUEUE.EMAIL.JOB.PASSWORD_RESET,
   data: Omit<PasswordResetEmailProps, 'type'>,
-): void
-export function sendEmail(
+): Promise<void>
+export async function sendEmail(
   type: typeof QUEUE.EMAIL.JOB.MFA_OTP,
   data: Omit<MfaOtpEmailProps, 'type'>,
-): void
-export function sendEmail(type: EmailJobType, data: unknown): void {
+): Promise<void>
+export async function sendEmail(
+  type: EmailJobType,
+  data: unknown,
+): Promise<void> {
   const emailQueue = getEmailQueue()
 
   switch (type) {
@@ -44,7 +47,9 @@ export function sendEmail(type: EmailJobType, data: unknown): void {
         ...(data as Omit<VerificationEmailProps, 'type'>),
       }
 
-      emailQueue.add(type, payload, jobOpts).catch((error: Error) => {
+      try {
+        await emailQueue.add(type, payload, jobOpts)
+      } catch (error) {
         console.error(
           '[QUEUE] Failed to queue registration verification email',
           {
@@ -52,7 +57,8 @@ export function sendEmail(type: EmailJobType, data: unknown): void {
             toAddress: payload.toAddress,
           },
         )
-      })
+        throw error
+      }
       return
     }
     case QUEUE.EMAIL.JOB.PASSWORD_RESET: {
@@ -61,12 +67,15 @@ export function sendEmail(type: EmailJobType, data: unknown): void {
         ...(data as Omit<PasswordResetEmailProps, 'type'>),
       }
 
-      emailQueue.add(type, payload, jobOpts).catch((error: Error) => {
+      try {
+        await emailQueue.add(type, payload, jobOpts)
+      } catch (error) {
         console.error('[QUEUE] Failed to queue password reset email', {
           error,
           toAddress: payload.toAddress,
         })
-      })
+        throw error
+      }
       return
     }
     case QUEUE.EMAIL.JOB.MFA_OTP: {
@@ -75,13 +84,21 @@ export function sendEmail(type: EmailJobType, data: unknown): void {
         ...(data as Omit<MfaOtpEmailProps, 'type'>),
       }
 
-      emailQueue.add(type, payload, jobOpts).catch((error: Error) => {
+      try {
+        await emailQueue.add(type, payload, jobOpts)
+      } catch (error) {
         console.error('[QUEUE] Failed to queue MFA OTP email', {
           error,
           toAddress: payload.toAddress,
         })
-      })
+        throw error
+      }
       return
+    }
+    default: {
+      throw new SendEmailPreconditionError(
+        `Unknown email type: ${String(type)}`,
+      )
     }
   }
 }
