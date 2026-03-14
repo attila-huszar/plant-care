@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { customEventDtoSchema } from './diarySchemas'
 
 export const emailSchema = z.object({
   email: z
@@ -63,10 +64,20 @@ export const userProfileUpdateSchema = z
     lastName: lastNameSchema.optional(),
     email: emailSchema.shape.email.optional(),
     password: passwordSchema.shape.password.optional(),
+    mfaEnabled: z.boolean().optional(),
+    customEvents: z.array(customEventDtoSchema).optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, {
     message: 'At least one field is required',
   })
+
+export const mfaCodeSchema = z.strictObject({
+  ...emailSchema.shape,
+  code: z
+    .string('Code is required')
+    .length(6, 'Code must be 6 digits')
+    .regex(/^\d+$/, 'Code must be numeric'),
+})
 
 export const passwordResetSchema = z.strictObject({
   ...tokenSchema.shape,
@@ -84,4 +95,6 @@ export const publicUserSchema = z.strictObject({
   firstName: z.string(),
   lastName: z.string(),
   email: z.email(),
+  mfaEnabled: z.boolean(),
+  customEvents: z.array(customEventDtoSchema),
 })

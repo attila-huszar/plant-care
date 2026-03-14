@@ -1,0 +1,43 @@
+<mjml>
+  <mj-body background-color="#f9f9f9">
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold"
+          >Hello <span style="font-weight: 700">{{ toName }}</span
+          >,</mj-text
+        >
+
+        <mj-text font-size="16px" padding-bottom="12px">
+          Use the code below to finish signing in:
+        </mj-text>
+
+        <mj-text
+          align="center"
+          font-size="28px"
+          font-weight="bold"
+          letter-spacing="6px"
+          padding="18px 0"
+          css-class="otp-code"
+        >
+          {{ code }}
+        </mj-text>
+
+        <mj-text font-size="13px" color="#888" padding-bottom="20px">
+          <em>This code expires in 10 minutes.</em>
+        </mj-text>
+
+        <mj-text font-size="16px" font-weight="bold" padding-bottom="10px"
+          >Plant Care Diary Team</mj-text
+        >
+        <mj-image
+          src="cid:{{cid}}"
+          alt="Plant Care Diary Logo"
+          href="{{baseLink}}"
+          width="90px"
+          align="left"
+        />
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

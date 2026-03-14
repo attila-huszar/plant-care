@@ -5,11 +5,11 @@ export const API_PATHS = {
     refresh: '/users/refresh',
     register: '/users/register',
     profile: '/users/profile',
+    mfaVerify: '/users/mfa-verify',
     verification: '/users/verification',
     passwordResetRequest: '/users/password-reset-request',
     passwordResetToken: '/users/password-reset-token',
     passwordResetSubmit: '/users/password-reset-submit',
-    customEvents: '/users/custom-events',
   },
   plants: {
     root: '/plants',

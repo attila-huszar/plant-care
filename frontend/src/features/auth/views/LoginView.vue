@@ -72,6 +72,14 @@
     const redirect =
       typeof route.query.redirect === 'string' ? route.query.redirect : '/'
 
+    if ('mfaPending' in result.data) {
+      await router.push({
+        name: 'mfa',
+        query: { email: result.data.email, redirect },
+      })
+      return
+    }
+
     await router.push(redirect)
   })
 </script>

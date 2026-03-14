@@ -1,7 +1,11 @@
 import { computed, ref, watch } from 'vue'
-import { API_PATHS } from '@/constants'
+import { API_PATHS, PLANT_CARE_META } from '@/constants'
 import { defineStore } from 'pinia'
-import type { CustomEventDto, PublicUser } from '@plant-care/shared'
+import type {
+  CustomEventDto,
+  PublicUser,
+  UserProfileUpdateRequest,
+} from '@plant-care/shared'
 import { useApiFetch, withAuth } from '@/composables'
 import { type ApiResult, toResult } from '@/utils'
 import { useAuthStore } from './auth'
@@ -70,6 +74,38 @@ export const useUserStore = defineStore('user', () => {
     return result
   }
 
+  const patchWithAuthRetry = async <T>(
+    path: string,
+    payload: unknown,
+  ): Promise<ApiResult<T>> => {
+    const res = await useApiFetch(path, withAuth(authStore.accessToken))
+      .patch(payload, 'json')
+      .json<T>()
+
+    let result = toResult<T>({
+      response: res.response.value,
+      body: res.data.value,
+      fetchError: res.error.value,
+    })
+
+    if (!result.ok && result.status === 401) {
+      const token = await authStore.refresh()
+      if (!token) return result
+
+      const retry = await useApiFetch(path, withAuth(authStore.accessToken))
+        .patch(payload, 'json')
+        .json<T>()
+
+      result = toResult<T>({
+        response: retry.response.value,
+        body: retry.data.value,
+        fetchError: retry.error.value,
+      })
+    }
+
+    return result
+  }
+
   const loadProfile = async (): Promise<ApiResult<PublicUser>> => {
     isLoading.value = true
     error.value = null
@@ -77,8 +113,10 @@ export const useUserStore = defineStore('user', () => {
       const result = await getWithAuthRetry<PublicUser>(API_PATHS.users.profile)
       if (result.ok) {
         profile.value = result.data
+        customEvents.value = result.data.customEvents ?? []
       } else {
         profile.value = null
+        customEvents.value = []
         error.value = result.error
       }
       return result
@@ -87,25 +125,36 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  const loadCustomEvents = async (): Promise<ApiResult<CustomEventDto[]>> => {
-    customEventsLoading.value = true
-    customEventsError.value = null
+  const updateProfile = async (
+    payload: UserProfileUpdateRequest,
+  ): Promise<ApiResult<PublicUser>> => {
+    isLoading.value = true
+    error.value = null
     try {
-      const result = await getWithAuthRetry<{
-        customEvents?: CustomEventDto[]
-      }>(API_PATHS.users.customEvents)
+      const result = await patchWithAuthRetry<PublicUser>(
+        API_PATHS.users.profile,
+        payload,
+      )
 
-      if (!result.ok) {
-        customEventsError.value = result.error
-        return result
+      if (result.ok) {
+        profile.value = result.data
+        customEvents.value = result.data.customEvents ?? []
+      } else {
+        error.value = result.error
       }
 
-      customEvents.value = result.data.customEvents ?? []
-      return { ok: true, data: customEvents.value }
+      return result
     } finally {
-      customEventsLoading.value = false
+      isLoading.value = false
     }
   }
+
+  const toggleMfa = async (enable: boolean): Promise<ApiResult<PublicUser>> =>
+    updateProfile({ mfaEnabled: enable })
+
+  const reservedTypeIdsLower = new Set(
+    PLANT_CARE_META.map((t) => t.id.toLowerCase()),
+  )
 
   const createCustomEvent = async (
     name: string,
@@ -113,6 +162,14 @@ export const useUserStore = defineStore('user', () => {
     const trimmed = name.trim()
     if (!trimmed) {
       return { ok: false, status: null, error: 'Name is required' }
+    }
+
+    if (reservedTypeIdsLower.has(trimmed.toLowerCase())) {
+      return { ok: false, status: null, error: 'Name is reserved' }
+    }
+
+    if (!profile.value) {
+      return { ok: false, status: null, error: 'Profile not loaded' }
     }
 
     const existing = customEvents.value.find(
@@ -123,49 +180,116 @@ export const useUserStore = defineStore('user', () => {
     customEventsLoading.value = true
     customEventsError.value = null
     try {
-      const res = await useApiFetch(
-        API_PATHS.users.customEvents,
-        withAuth(authStore.accessToken),
-      )
-        .post({ name: trimmed }, 'json')
-        .json<CustomEventDto>()
+      const created: CustomEventDto = { id: crypto.randomUUID(), name: trimmed }
+      const next = [...customEvents.value, created]
 
-      let result = toResult<CustomEventDto>({
-        response: res.response.value,
-        body: res.data.value,
-        fetchError: res.error.value,
-      })
+      const updated = await updateProfile({ customEvents: next })
 
-      if (!result.ok && result.status === 401) {
-        const token = await authStore.refresh()
-        if (!token) {
-          customEventsError.value = result.error
-          return result
+      if (!updated.ok) {
+        customEventsError.value = updated.error
+        return {
+          ok: false,
+          status: updated.status,
+          error: updated.error,
+          validation: updated.validation,
         }
-
-        const retry = await useApiFetch(
-          API_PATHS.users.customEvents,
-          withAuth(authStore.accessToken),
-        )
-          .post({ name: trimmed }, 'json')
-          .json<CustomEventDto>()
-
-        result = toResult<CustomEventDto>({
-          response: retry.response.value,
-          body: retry.data.value,
-          fetchError: retry.error.value,
-        })
       }
 
-      if (!result.ok) {
-        customEventsError.value = result.error
-        return result
+      return { ok: true, data: created }
+    } finally {
+      customEventsLoading.value = false
+    }
+  }
+
+  const renameCustomEvent = async (
+    id: string,
+    name: string,
+  ): Promise<ApiResult<CustomEventDto>> => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      return { ok: false, status: null, error: 'Name is required' }
+    }
+
+    if (reservedTypeIdsLower.has(trimmed.toLowerCase())) {
+      return { ok: false, status: null, error: 'Name is reserved' }
+    }
+
+    if (!profile.value) {
+      return { ok: false, status: null, error: 'Profile not loaded' }
+    }
+
+    const current = customEvents.value.find((t) => t.id === id)
+    if (!current) {
+      return { ok: false, status: null, error: 'Custom event not found' }
+    }
+
+    const duplicate = customEvents.value.find(
+      (t) => t.id !== id && t.name.toLowerCase() === trimmed.toLowerCase(),
+    )
+    if (duplicate) {
+      return { ok: false, status: null, error: 'Name already exists' }
+    }
+
+    if (current.name === trimmed) return { ok: true, data: current }
+
+    customEventsLoading.value = true
+    customEventsError.value = null
+    try {
+      const next = customEvents.value.map((t) =>
+        t.id === id ? { ...t, name: trimmed } : t,
+      )
+
+      const updated = await updateProfile({ customEvents: next })
+      if (!updated.ok) {
+        customEventsError.value = updated.error
+        return {
+          ok: false,
+          status: updated.status,
+          error: updated.error,
+          validation: updated.validation,
+        }
       }
 
-      if (!customEvents.value.some((t) => t.id === result.data.id)) {
-        customEvents.value = [...customEvents.value, result.data]
+      const renamed = (updated.data.customEvents ?? []).find((t) => t.id === id)
+      if (!renamed) {
+        return {
+          ok: false,
+          status: null,
+          error: 'Failed to rename custom event',
+        }
       }
-      return result
+
+      return { ok: true, data: renamed }
+    } finally {
+      customEventsLoading.value = false
+    }
+  }
+
+  const removeCustomEvent = async (id: string): Promise<ApiResult<true>> => {
+    if (!profile.value) {
+      return { ok: false, status: null, error: 'Profile not loaded' }
+    }
+
+    const existing = customEvents.value.find((t) => t.id === id)
+    if (!existing) return { ok: true, data: true }
+
+    customEventsLoading.value = true
+    customEventsError.value = null
+    try {
+      const next = customEvents.value.filter((t) => t.id !== id)
+      const updated = await updateProfile({ customEvents: next })
+
+      if (!updated.ok) {
+        customEventsError.value = updated.error
+        return {
+          ok: false,
+          status: updated.status,
+          error: updated.error,
+          validation: updated.validation,
+        }
+      }
+
+      return { ok: true, data: true }
     } finally {
       customEventsLoading.value = false
     }
@@ -186,8 +310,6 @@ export const useUserStore = defineStore('user', () => {
         bootstrapped.value = true
         return
       }
-
-      await loadCustomEvents()
       bootstrapped.value = true
     })().finally(() => {
       bootstrapPromise = null
@@ -207,8 +329,11 @@ export const useUserStore = defineStore('user', () => {
     customEventsError,
     bootstrap,
     loadProfile,
-    loadCustomEvents,
+    updateProfile,
+    toggleMfa,
     createCustomEvent,
+    renameCustomEvent,
+    removeCustomEvent,
     clear,
   }
 })

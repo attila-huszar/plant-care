@@ -16,6 +16,8 @@ export const authMessage = {
   loginError: 'Login error',
   logoutError: 'Logout error',
   registerError: 'Register error',
+  mfaDeliveryUnavailable:
+    'MFA code delivery is temporarily unavailable. Please try again.',
   verifyError: 'Error verifying email',
   forgotPasswordError: 'Error sending password reset email',
   resetPasswordError: 'Error resetting password',

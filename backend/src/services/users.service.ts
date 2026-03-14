@@ -1,14 +1,16 @@
+import { randomInt } from 'node:crypto'
 import {
-  type CreateCustomEventRequest,
-  type CustomEventDto,
   type LoginRequest,
+  type MfaVerifyRequest,
   type PasswordResetRequest,
   type PasswordResetSubmit,
   type PasswordResetToken,
   type PublicUser,
   type RegisterRequest,
+  type UserProfileUpdateRequest,
   type VerificationRequest,
 } from '@plant-care/shared'
+import status from 'http-status'
 import { env } from '@/config'
 import { UsersRepository } from '@/repositories'
 import {
@@ -18,7 +20,13 @@ import {
   toPublicUser,
 } from '@/utils'
 import { authMessage, userMessage } from '@/constants'
-import { BadRequest, Forbidden, NotFound, Unauthorized } from '@/errors'
+import {
+  BadRequest,
+  Forbidden,
+  Internal,
+  NotFound,
+  Unauthorized,
+} from '@/errors'
 import type { UserInsert, UserUpdate } from '@/types'
 
 export async function loginUser(loginRequest: LoginRequest) {
@@ -38,6 +46,89 @@ export async function loginUser(loginRequest: LoginRequest) {
 
   if (!isPasswordCorrect) {
     throw new Unauthorized(authMessage.authError)
+  }
+
+  if (user.mfaEnabled) {
+    const code = randomInt(0, 1000000).toString().padStart(6, '0')
+    const mfaToken = await Bun.password.hash(code)
+    const mfaExpires = new Date(Date.now() + 10 * 60 * 1000)
+
+    const updated = await UsersRepository.updateUserBy('uuid', user.uuid, {
+      mfaToken,
+      mfaExpires,
+    })
+
+    if (!updated) {
+      throw new Error(userMessage.updateError)
+    }
+
+    try {
+      await sendEmail('mfaOtp', {
+        toAddress: user.email,
+        toName: user.firstName,
+        code,
+      })
+    } catch {
+      await UsersRepository.updateUserBy('uuid', user.uuid, {
+        mfaToken: null,
+        mfaExpires: null,
+      })
+
+      throw new Internal(
+        authMessage.mfaDeliveryUnavailable,
+        'ServiceUnavailable',
+        status.SERVICE_UNAVAILABLE,
+      )
+    }
+
+    return { mfaPending: true as const, email: user.email }
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000)
+  const accessToken = await signAccessToken(user.uuid, timestamp)
+  const refreshToken = await signRefreshToken(user.uuid, timestamp)
+
+  return { accessToken, refreshToken, firstName: user.firstName }
+}
+
+export async function verifyMfa(payload: MfaVerifyRequest) {
+  const { email, code } = payload
+
+  const user = await UsersRepository.getUserBy('email', email)
+
+  if (!user) {
+    throw new Unauthorized(authMessage.authError)
+  }
+
+  if (!user.verified) {
+    throw new Forbidden(userMessage.verifyFirst)
+  }
+
+  if (!user.mfaEnabled || !user.mfaToken || !user.mfaExpires) {
+    throw new Unauthorized(authMessage.authError)
+  }
+
+  if (new Date(user.mfaExpires) < new Date()) {
+    await UsersRepository.updateUserBy('uuid', user.uuid, {
+      mfaToken: null,
+      mfaExpires: null,
+    })
+    throw new Unauthorized(authMessage.authError)
+  }
+
+  const isCodeCorrect = await Bun.password.verify(code, user.mfaToken)
+
+  if (!isCodeCorrect) {
+    throw new Unauthorized(authMessage.authError)
+  }
+
+  const cleared = await UsersRepository.updateUserBy('uuid', user.uuid, {
+    mfaToken: null,
+    mfaExpires: null,
+  })
+
+  if (!cleared) {
+    throw new Error(userMessage.updateError)
   }
 
   const timestamp = Math.floor(Date.now() / 1000)
@@ -78,11 +169,21 @@ export async function registerUser(registerRequest: RegisterRequest) {
     throw new Error(userMessage.createError)
   }
 
-  sendEmail('verification', {
-    toAddress: email,
-    toName: firstName,
-    tokenLink,
-  })
+  try {
+    await sendEmail('verification', {
+      toAddress: email,
+      toName: firstName,
+      tokenLink,
+    })
+  } catch {
+    await UsersRepository.deleteUserBy('uuid', userCreated.uuid)
+
+    throw new Internal(
+      userMessage.sendEmail,
+      'ServiceUnavailable',
+      status.SERVICE_UNAVAILABLE,
+    )
+  }
 
   return { email: userCreated.email }
 }
@@ -139,11 +240,18 @@ export async function passwordResetRequest(
     throw new Error(userMessage.updateError)
   }
 
-  sendEmail('passwordReset', {
-    toAddress: user.email,
-    toName: user.firstName,
-    tokenLink,
-  })
+  try {
+    await sendEmail('passwordReset', {
+      toAddress: user.email,
+      toName: user.firstName,
+      tokenLink,
+    })
+  } catch {
+    await UsersRepository.updateUserBy('email', user.email, {
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    })
+  }
 
   return { message: userMessage.forgotPasswordRequest }
 }
@@ -209,7 +317,7 @@ export async function getUserProfile(
 
 export async function updateUserProfile(
   uuid: string,
-  updatePayload: UserUpdate,
+  updatePayload: UserProfileUpdateRequest,
 ): Promise<PublicUser> {
   const user = await UsersRepository.getUserBy('uuid', uuid)
 
@@ -217,62 +325,24 @@ export async function updateUserProfile(
     throw new NotFound(userMessage.getError)
   }
 
-  if (updatePayload.password) {
-    updatePayload.password = await Bun.password.hash(updatePayload.password)
+  const updateFields: UserUpdate = { ...updatePayload }
+
+  if (updateFields.password) {
+    updateFields.password = await Bun.password.hash(updateFields.password)
   }
 
-  const userUpdated = await UsersRepository.updateUserBy(
-    'email',
-    user.email,
-    updatePayload,
-  )
+  if (updateFields.mfaEnabled === false) {
+    updateFields.mfaToken = null
+    updateFields.mfaExpires = null
+  }
+
+  const userUpdated = await UsersRepository.updateUserBy('uuid', user.uuid, {
+    ...updateFields,
+  })
 
   if (!userUpdated) {
     throw new Error(userMessage.updateError)
   }
 
   return toPublicUser(userUpdated)
-}
-
-export async function getCustomEventTypes(
-  uuid: string,
-): Promise<CustomEventDto[]> {
-  const user = await UsersRepository.getUserBy('uuid', uuid)
-
-  if (!user) {
-    throw new NotFound(userMessage.getError)
-  }
-
-  return user.customEvents ?? []
-}
-
-export async function upsertCustomEventType(
-  uuid: string,
-  payload: CreateCustomEventRequest,
-): Promise<{ customEvent: CustomEventDto; created: boolean }> {
-  const user = await UsersRepository.getUserBy('uuid', uuid)
-
-  if (!user) {
-    throw new NotFound(userMessage.getError)
-  }
-
-  const { name } = payload
-
-  const existing = (user.customEvents ?? []).find(
-    (t) => t.name.toLowerCase() === name.toLowerCase(),
-  )
-  if (existing) return { customEvent: existing, created: false }
-
-  const customEvent: CustomEventDto = { id: crypto.randomUUID(), name }
-  const customEventTypes = [...(user.customEvents ?? []), customEvent]
-
-  const updated = await UsersRepository.updateUserBy('uuid', user.uuid, {
-    customEvents: customEventTypes,
-  })
-
-  if (!updated) {
-    throw new Error(userMessage.updateError)
-  }
-
-  return { customEvent, created: true }
 }

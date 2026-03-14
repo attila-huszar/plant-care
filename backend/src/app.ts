@@ -6,6 +6,7 @@ import { csrf } from 'hono/csrf'
 import { timeout } from 'hono/timeout'
 import { trimTrailingSlash } from 'hono/trailing-slash'
 import { env } from './config/env'
+import { API_PATHS } from './constants'
 import { plants, users } from './controllers'
 import { initMailer } from './libs'
 import { authMiddleware, payloadLimiter } from './middleware'
@@ -56,13 +57,12 @@ if (Bun.env.NODE_ENV === 'production') {
 
 app.get('/health', (c) => c.text('OK', 200))
 
-api.use('/users/profile', authMiddleware)
-api.use('/users/logout', authMiddleware)
-api.use('/users/custom-events', authMiddleware)
-api.use('/plants/*', authMiddleware)
+api.use(API_PATHS.users.logout, authMiddleware)
+api.use(API_PATHS.users.profile, authMiddleware)
+api.use(API_PATHS.plants.wildcard, authMiddleware)
 
-api.route('/users', users)
-api.route('/plants', plants)
+api.route('/', users)
+api.route('/', plants)
 app.route('/api', api)
 
 void initMailer()
