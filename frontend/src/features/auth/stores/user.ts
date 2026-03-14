@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import { API_PATHS } from '@/constants'
+import { API_PATHS, PLANT_CARE_META } from '@/constants'
 import { defineStore } from 'pinia'
 import type {
   CustomEventDto,
@@ -152,12 +152,20 @@ export const useUserStore = defineStore('user', () => {
   const toggleMfa = async (enable: boolean): Promise<ApiResult<PublicUser>> =>
     updateProfile({ mfaEnabled: enable })
 
+  const reservedTypeIdsLower = new Set(
+    PLANT_CARE_META.map((t) => t.id.toLowerCase()),
+  )
+
   const createCustomEvent = async (
     name: string,
   ): Promise<ApiResult<CustomEventDto>> => {
     const trimmed = name.trim()
     if (!trimmed) {
       return { ok: false, status: null, error: 'Name is required' }
+    }
+
+    if (reservedTypeIdsLower.has(trimmed.toLowerCase())) {
+      return { ok: false, status: null, error: 'Name is reserved' }
     }
 
     if (!profile.value) {
@@ -188,6 +196,100 @@ export const useUserStore = defineStore('user', () => {
       }
 
       return { ok: true, data: created }
+    } finally {
+      customEventsLoading.value = false
+    }
+  }
+
+  const renameCustomEvent = async (
+    id: string,
+    name: string,
+  ): Promise<ApiResult<CustomEventDto>> => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      return { ok: false, status: null, error: 'Name is required' }
+    }
+
+    if (reservedTypeIdsLower.has(trimmed.toLowerCase())) {
+      return { ok: false, status: null, error: 'Name is reserved' }
+    }
+
+    if (!profile.value) {
+      return { ok: false, status: null, error: 'Profile not loaded' }
+    }
+
+    const current = customEvents.value.find((t) => t.id === id)
+    if (!current) {
+      return { ok: false, status: null, error: 'Custom event not found' }
+    }
+
+    const duplicate = customEvents.value.find(
+      (t) => t.id !== id && t.name.toLowerCase() === trimmed.toLowerCase(),
+    )
+    if (duplicate) {
+      return { ok: false, status: null, error: 'Name already exists' }
+    }
+
+    if (current.name === trimmed) return { ok: true, data: current }
+
+    customEventsLoading.value = true
+    customEventsError.value = null
+    try {
+      const next = customEvents.value.map((t) =>
+        t.id === id ? { ...t, name: trimmed } : t,
+      )
+
+      const updated = await updateProfile({ customEvents: next })
+      if (!updated.ok) {
+        customEventsError.value = updated.error
+        return {
+          ok: false,
+          status: updated.status,
+          error: updated.error,
+          validation: updated.validation,
+        }
+      }
+
+      const renamed = (updated.data.customEvents ?? []).find((t) => t.id === id)
+      if (!renamed) {
+        return {
+          ok: false,
+          status: null,
+          error: 'Failed to rename custom event',
+        }
+      }
+
+      return { ok: true, data: renamed }
+    } finally {
+      customEventsLoading.value = false
+    }
+  }
+
+  const removeCustomEvent = async (id: string): Promise<ApiResult<true>> => {
+    if (!profile.value) {
+      return { ok: false, status: null, error: 'Profile not loaded' }
+    }
+
+    const existing = customEvents.value.find((t) => t.id === id)
+    if (!existing) return { ok: true, data: true }
+
+    customEventsLoading.value = true
+    customEventsError.value = null
+    try {
+      const next = customEvents.value.filter((t) => t.id !== id)
+      const updated = await updateProfile({ customEvents: next })
+
+      if (!updated.ok) {
+        customEventsError.value = updated.error
+        return {
+          ok: false,
+          status: updated.status,
+          error: updated.error,
+          validation: updated.validation,
+        }
+      }
+
+      return { ok: true, data: true }
     } finally {
       customEventsLoading.value = false
     }
@@ -230,6 +332,8 @@ export const useUserStore = defineStore('user', () => {
     updateProfile,
     toggleMfa,
     createCustomEvent,
+    renameCustomEvent,
+    removeCustomEvent,
     clear,
   }
 })

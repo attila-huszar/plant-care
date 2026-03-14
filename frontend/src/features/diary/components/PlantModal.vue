@@ -332,39 +332,70 @@
                     <DialogTitle
                       class="text-2xl font-bold text-slate-800 dark:text-slate-100"
                     >
-                      {{ isAddMode ? 'Add plant' : 'Edit plant' }}
+                      <div class="flex items-center gap-4">
+                        <template v-if="isAddMode">Add Plant</template>
+                        <template v-else-if="plant">
+                          <template v-if="isNameEditing">
+                            <input
+                              ref="plantNameInput"
+                              v-model="draftName"
+                              type="text"
+                              maxlength="60"
+                              class="w-64 max-w-[70vw] rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                            />
+                          </template>
+                          <template v-else>
+                            <span class="truncate">{{ plant.name }}</span>
+                          </template>
+
+                          <button
+                            type="button"
+                            class="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                            @click="toggleNameEdit"
+                            :title="
+                              isNameEditing
+                                ? 'Cancel name edit'
+                                : 'Edit plant name'
+                            "
+                            :aria-label="
+                              isNameEditing
+                                ? 'Cancel name edit'
+                                : 'Edit plant name'
+                            "
+                          >
+                            <svg
+                              v-if="isNameEditing"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                              ></path>
+                            </svg>
+                            <svg
+                              v-else
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 640 640"
+                              fill="currentColor"
+                              class="h-4 w-4"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M416.9 85.2 372 130.1 509.9 268l44.9-44.9c13.6-13.5 21.2-31.9 21.2-51.1s-7.6-37.6-21.2-51.1l-35.7-35.7C505.6 71.6 487.2 64 468 64s-37.6 7.6-51.1 21.2M338.1 164 122.9 379.1c-10.7 10.7-18.5 24.1-22.6 38.7L64.9 545.6c-2.3 8.3 0 17.3 6.2 23.4s15.1 8.5 23.4 6.2l127.8-35.5c14.6-4.1 27.9-11.8 38.7-22.6l215-215.2z"
+                              />
+                            </svg>
+                          </button>
+                        </template>
+                        <template v-else>Edit Plant</template>
+                      </div>
                     </DialogTitle>
                     <p
-                      v-if="!isAddMode && plant"
-                      class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400"
-                    >
-                      <template v-if="!isNameEditing">
-                        <span
-                          class="font-medium text-slate-700 dark:text-slate-200"
-                        >
-                          {{ plant.name }}
-                        </span>
-                      </template>
-                      <template v-else>
-                        <input
-                          ref="plantNameInput"
-                          v-model="draftName"
-                          type="text"
-                          maxlength="60"
-                          class="w-56 max-w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                        />
-                      </template>
-
-                      <button
-                        type="button"
-                        class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                        @click="toggleNameEdit"
-                      >
-                        {{ isNameEditing ? 'Cancel' : 'Edit' }}
-                      </button>
-                    </p>
-                    <p
-                      v-else-if="isAddMode"
+                      v-if="isAddMode"
                       class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                     >
                       Set up your plant and optionally add care reminders.
