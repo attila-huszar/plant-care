@@ -11,5 +11,10 @@ export type UserUpdate = z.infer<typeof userUpdateSchema>
 
 export type GetUserBy = Extract<
   keyof User,
-  'id' | 'uuid' | 'email' | 'verificationToken' | 'passwordResetToken'
+  | 'id'
+  | 'uuid'
+  | 'email'
+  | 'verificationToken'
+  | 'passwordResetToken'
+  | 'mfaToken'
 >

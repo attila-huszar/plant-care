@@ -3,6 +3,7 @@ import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
 import type {
   LoginRequest,
+  MfaVerifyRequest,
   PasswordResetRequest,
   PasswordResetSubmit,
   PasswordResetToken,
@@ -70,14 +71,54 @@ export const useAuthStore = defineStore('auth', () => {
 
   const login = async (
     payload: LoginRequest,
-  ): Promise<ApiResult<{ accessToken: string }>> => {
+  ): Promise<
+    ApiResult<
+      | { mfaPending: true; email: string }
+      | { accessToken: string; firstName: string }
+    >
+  > => {
     isLoading.value = true
     error.value = null
     const res = await useApiFetch(API_PATHS.users.login)
       .post(payload, 'json')
-      .json<{ accessToken: string }>()
+      .json<
+        | { mfaPending: true; email: string }
+        | { accessToken: string; firstName: string }
+      >()
 
-    const result = toResult<{ accessToken: string }>({
+    const result = toResult<
+      | { mfaPending: true; email: string }
+      | { accessToken: string; firstName: string }
+    >({
+      response: res.response.value,
+      body: res.data.value,
+      fetchError: res.error.value,
+    })
+
+    if (!result.ok) {
+      error.value = result.error
+      isLoading.value = false
+      return result
+    }
+
+    if ('accessToken' in result.data) {
+      accessToken.value = result.data.accessToken
+    }
+    isLoading.value = false
+    return result
+  }
+
+  const mfaVerify = async (
+    payload: MfaVerifyRequest,
+  ): Promise<ApiResult<{ accessToken: string; firstName: string }>> => {
+    isLoading.value = true
+    error.value = null
+
+    const res = await useApiFetch(API_PATHS.users.mfaVerify)
+      .post(payload, 'json')
+      .json<{ accessToken: string; firstName: string }>()
+
+    const result = toResult<{ accessToken: string; firstName: string }>({
       response: res.response.value,
       body: res.data.value,
       fetchError: res.error.value,
@@ -217,6 +258,7 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     bootstrap,
     login,
+    mfaVerify,
     register,
     verifyEmail,
     requestPasswordReset,

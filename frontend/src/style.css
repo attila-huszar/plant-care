@@ -28,13 +28,3 @@ body {
   width: 100%;
   min-height: 100vh;
 }
-
-button:not(:disabled),
-[role='button']:not(:disabled) {
-  cursor: pointer;
-}
-
-button:disabled,
-[role='button']:disabled {
-  cursor: not-allowed;
-}

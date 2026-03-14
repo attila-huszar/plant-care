@@ -4,6 +4,7 @@ export const QUEUE = {
     JOB: {
       VERIFICATION: 'verification',
       PASSWORD_RESET: 'passwordReset',
+      MFA_OTP: 'mfaOtp',
     },
   },
 } as const

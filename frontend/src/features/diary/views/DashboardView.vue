@@ -1,12 +1,23 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue'
   import { useDark } from '@vueuse/core'
-  import { Switch } from '@headlessui/vue'
+  import {
+    Menu,
+    MenuButton,
+    MenuItem,
+    MenuItems,
+    Switch,
+  } from '@headlessui/vue'
   import { useRouter } from 'vue-router'
   import type { CareTimelinePayload } from '@/types'
   import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
   import { useAuthStore, useUserStore } from '../../auth/stores'
-  import { EventTimeline, PlantList, PlantModal } from '../components'
+  import {
+    EventTimeline,
+    PlantList,
+    PlantModal,
+    SettingsModal,
+  } from '../components'
   import { usePlantsStore } from '../stores'
 
   const authStore = useAuthStore()
@@ -17,6 +28,7 @@
 
   const isPlantModalOpen = ref(false)
   const plantModalPlantId = ref<number | null>(null)
+  const isSettingsOpen = ref(false)
 
   const handleLogout = async () => {
     await authStore.logout()
@@ -36,6 +48,18 @@
   const closePlantModal = () => {
     isPlantModalOpen.value = false
     plantModalPlantId.value = null
+  }
+
+  const openSettings = () => {
+    isSettingsOpen.value = true
+  }
+
+  const closeSettings = () => {
+    isSettingsOpen.value = false
+  }
+
+  const toggleTheme = () => {
+    isDark.value = !isDark.value
   }
 
   onMounted(() => {
@@ -64,25 +88,25 @@
   >
     <!-- Navbar -->
     <header
-      class="sticky top-0 z-30 flex items-center justify-between border-b border-emerald-100 bg-white/70 px-6 py-4 shadow-sm backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/70"
+      class="sticky top-0 z-30 flex h-15 items-center justify-between gap-4 border-b border-emerald-100 bg-white/85 px-6 shadow-sm backdrop-blur-lg dark:border-slate-800 dark:bg-slate-900/85"
     >
-      <div class="flex items-center gap-3">
+      <div class="flex min-w-0 flex-1 items-center gap-3">
         <span
-          class="inline-flex h-10 w-10 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_20px_currentColor)]"
+          class="inline-flex h-10 w-10 shrink-0 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_20px_currentColor)]"
         >
           <img :src="PlantIcon" alt="" aria-hidden="true" class="h-10 w-10" />
         </span>
         <h1
-          class="hidden text-xl font-bold text-emerald-900 sm:block dark:text-slate-100"
+          class="min-w-0 text-xl leading-tight font-bold wrap-break-word whitespace-normal text-emerald-900 dark:text-slate-100"
         >
           Plant Care Diary
         </h1>
       </div>
 
-      <div class="flex items-center gap-4">
+      <div class="flex shrink-0 items-center gap-3 min-[460px]:gap-4">
         <Switch
           v-model="isDark"
-          class="relative inline-flex h-8 w-14 items-center rounded-full transition focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none dark:focus:ring-offset-slate-950"
+          class="relative hidden h-8 w-14 items-center rounded-full transition focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none min-[460px]:inline-flex dark:focus:ring-offset-slate-950"
           :class="isDark ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700'"
         >
           <span class="sr-only">Toggle dark mode</span>
@@ -98,17 +122,77 @@
             />
           </span>
         </Switch>
-        <span
-          class="rounded-full border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
-        >
-          Hello, {{ userStore.profile?.firstName ?? userStore.profile?.email }}
-        </span>
-        <button
-          @click="handleLogout"
-          class="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-300 dark:hover:bg-red-950/30"
-        >
-          Log Out
-        </button>
+
+        <Menu as="div" class="relative inline-block text-left">
+          <MenuButton
+            class="max-w-48 truncate rounded-full border border-emerald-200 bg-emerald-100/70 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Hello,
+            {{ userStore.profile?.firstName ?? userStore.profile?.email }}
+          </MenuButton>
+
+          <Transition
+            enter-active-class="transition ease-out duration-100"
+            enter-from-class="transform opacity-0 scale-95"
+            enter-to-class="transform opacity-100 scale-100"
+            leave-active-class="transition ease-in duration-75"
+            leave-from-class="transform opacity-100 scale-100"
+            leave-to-class="transform opacity-0 scale-95"
+          >
+            <MenuItems
+              class="absolute right-0 z-50 mt-3 w-56 origin-top-right rounded-2xl border border-white/60 bg-white/95 p-2 shadow-xl ring-1 ring-black/10 focus:outline-none dark:border-slate-700/60 dark:bg-slate-900/95 dark:ring-white/10"
+            >
+              <div class="space-y-1">
+                <MenuItem v-slot="{ active }">
+                  <button
+                    type="button"
+                    @click="openSettings"
+                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium"
+                    :class="
+                      active
+                        ? 'bg-emerald-50 text-emerald-900 dark:bg-slate-800 dark:text-white'
+                        : 'text-slate-700 dark:text-slate-200'
+                    "
+                  >
+                    ⚙ Settings
+                  </button>
+                </MenuItem>
+
+                <MenuItem v-slot="{ active }">
+                  <button
+                    type="button"
+                    @click="toggleTheme"
+                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium min-[460px]:hidden"
+                    :class="
+                      active
+                        ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                        : 'text-slate-700 dark:text-slate-200'
+                    "
+                  >
+                    🌓 Toggle theme
+                  </button>
+                </MenuItem>
+
+                <div class="my-1 h-px bg-slate-200/80 dark:bg-slate-700/70" />
+
+                <MenuItem v-slot="{ active }">
+                  <button
+                    type="button"
+                    @click="handleLogout"
+                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium"
+                    :class="
+                      active
+                        ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-200'
+                        : 'text-slate-700 dark:text-slate-200'
+                    "
+                  >
+                    🚪 Log Out
+                  </button>
+                </MenuItem>
+              </div>
+            </MenuItems>
+          </Transition>
+        </Menu>
       </div>
     </header>
 
@@ -141,5 +225,6 @@
       :plant-id="plantModalPlantId"
       @close="closePlantModal"
     />
+    <SettingsModal :is-open="isSettingsOpen" @close="closeSettings" />
   </div>
 </template>

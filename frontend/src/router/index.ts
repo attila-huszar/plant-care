@@ -3,6 +3,7 @@ import { useAuthStore, useUserStore } from '@/features/auth/stores'
 import {
   ForgotPasswordView,
   LoginView,
+  MfaView,
   PasswordResetView,
   RegisterView,
   VerifyEmailView,
@@ -41,6 +42,12 @@ const router = createRouter({
       path: '/forgot-password',
       name: 'forgot-password',
       component: ForgotPasswordView,
+      meta: { public: true },
+    },
+    {
+      path: '/mfa',
+      name: 'mfa',
+      component: MfaView,
       meta: { public: true },
     },
     {

@@ -10,12 +10,15 @@ export const toPublicUser = (user: User): PublicUser => {
     verificationExpires,
     passwordResetToken,
     passwordResetExpires,
+    mfaToken,
+    mfaExpires,
+    customEvents,
     createdAt,
     updatedAt,
     ...publicUser
   } = user
 
-  return publicUser
+  return { ...publicUser, customEvents: customEvents ?? [] }
 }
 
 export const toPublicPlant = (plant: Plant): Omit<PlantDto, 'history'> => {

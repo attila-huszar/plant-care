@@ -27,6 +27,12 @@ export const usersTable = sqliteTable(
     passwordResetExpires: integer('password_reset_expires', {
       mode: 'timestamp',
     }).$type<Date>(),
+    mfaEnabled: int('mfa_enabled', { mode: 'boolean' })
+      .notNull()
+      .default(false)
+      .$type<boolean>(),
+    mfaToken: text('mfa_token'),
+    mfaExpires: integer('mfa_expires', { mode: 'timestamp' }).$type<Date>(),
     customEvents: text('custom_events', { mode: 'json' }).$type<
       CustomEventDto[]
     >(),

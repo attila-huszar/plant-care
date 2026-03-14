@@ -19,10 +19,21 @@ export type PasswordResetEmailProps = {
   tokenLink: string
 }
 
-export type SendEmailProps = VerificationEmailProps | PasswordResetEmailProps
+export type MfaOtpEmailProps = {
+  type: 'mfaOtp'
+  toAddress: string
+  toName: string
+  code: string
+}
+
+export type SendEmailProps =
+  | VerificationEmailProps
+  | PasswordResetEmailProps
+  | MfaOtpEmailProps
 
 export type SendEmailInput = {
   toAddress: string
   toName: string
-  tokenLink: string
+  tokenLink?: string
+  code?: string
 }

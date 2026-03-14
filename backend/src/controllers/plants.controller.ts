@@ -9,6 +9,7 @@ import {
 import { Hono } from 'hono'
 import httpStatus from 'http-status'
 import { EventsService, PlantsService } from '@/services'
+import { API_PATHS } from '@/constants'
 import { errorHandler } from '@/errors'
 
 type Variables = {
@@ -19,7 +20,7 @@ type Variables = {
 
 export const plants = new Hono<{ Variables: Variables }>()
 
-plants.post('/:plantId/events', async (c) => {
+plants.post(API_PATHS.plants.events, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const body = await c.req.json<unknown>()
@@ -34,7 +35,7 @@ plants.post('/:plantId/events', async (c) => {
   }
 })
 
-plants.delete('/:plantId/events/:eventId', async (c) => {
+plants.delete(API_PATHS.plants.eventById, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const plantId = validate(idSchema, c.req.param('plantId'))
@@ -48,7 +49,7 @@ plants.delete('/:plantId/events/:eventId', async (c) => {
   }
 })
 
-plants.get('/', async (c) => {
+plants.get(API_PATHS.plants.root, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
 
@@ -60,7 +61,7 @@ plants.get('/', async (c) => {
   }
 })
 
-plants.post('/', async (c) => {
+plants.post(API_PATHS.plants.root, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const body = await c.req.json<unknown>()
@@ -74,7 +75,7 @@ plants.post('/', async (c) => {
   }
 })
 
-plants.put('/:id', async (c) => {
+plants.put(API_PATHS.plants.byId, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const plantId = validate(idSchema, c.req.param('id'))
@@ -89,7 +90,7 @@ plants.put('/:id', async (c) => {
   }
 })
 
-plants.delete('/:id', async (c) => {
+plants.delete(API_PATHS.plants.byId, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const plantId = validate(idSchema, c.req.param('id'))

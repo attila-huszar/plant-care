@@ -1,8 +1,8 @@
 import {
   type AuthJWTPayload,
-  createCustomEventRequestSchema,
   emailSchema,
   loginSchema,
+  mfaCodeSchema,
   passwordResetSchema,
   type PublicUser,
   registerSchema,
@@ -16,6 +16,7 @@ import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
 import { cookieOptions, env, REFRESH_TOKEN } from '@/config'
 import { UsersService } from '@/services'
 import { signAccessToken, signRefreshToken, verifyJWTRefresh } from '@/utils'
+import { API_PATHS } from '@/constants'
 import { errorHandler } from '@/errors'
 
 type Variables = {
@@ -26,12 +27,40 @@ type Variables = {
 
 export const users = new Hono<{ Variables: Variables }>()
 
-users.post('/login', async (c) => {
+users.post(API_PATHS.users.login, async (c) => {
   try {
     const body = await c.req.json<unknown>()
     const loginRequest = validate(loginSchema, body)
+    const result = await UsersService.loginUser(loginRequest)
+
+    if ('mfaPending' in result) {
+      return c.json(result)
+    }
+
+    await setSignedCookie(
+      c,
+      REFRESH_TOKEN,
+      result.refreshToken,
+      env.cookieSecret!,
+      cookieOptions,
+    )
+
+    return c.json({
+      accessToken: result.accessToken,
+      firstName: result.firstName,
+    })
+  } catch (error) {
+    return errorHandler(c, error)
+  }
+})
+
+users.post(API_PATHS.users.mfaVerify, async (c) => {
+  try {
+    const body = await c.req.json<unknown>()
+    const payload = validate(mfaCodeSchema, body)
+
     const { accessToken, refreshToken, firstName } =
-      await UsersService.loginUser(loginRequest)
+      await UsersService.verifyMfa(payload)
 
     await setSignedCookie(
       c,
@@ -47,7 +76,7 @@ users.post('/login', async (c) => {
   }
 })
 
-users.post('/register', async (c) => {
+users.post(API_PATHS.users.register, async (c) => {
   try {
     const formData = await c.req.formData()
     const registerRequest = validate(registerSchema, {
@@ -64,7 +93,7 @@ users.post('/register', async (c) => {
   }
 })
 
-users.post('/verification', async (c) => {
+users.post(API_PATHS.users.verification, async (c) => {
   try {
     const body = await c.req.json<unknown>()
     const verificationRequest = validate(tokenSchema, body)
@@ -76,7 +105,7 @@ users.post('/verification', async (c) => {
   }
 })
 
-users.post('/password-reset-request', async (c) => {
+users.post(API_PATHS.users.passwordResetRequest, async (c) => {
   try {
     const body = await c.req.json<unknown>()
     const request = validate(emailSchema, body)
@@ -88,7 +117,7 @@ users.post('/password-reset-request', async (c) => {
   }
 })
 
-users.post('/password-reset-token', async (c) => {
+users.post(API_PATHS.users.passwordResetToken, async (c) => {
   try {
     const body = await c.req.json<unknown>()
     const request = validate(tokenSchema, body)
@@ -100,7 +129,7 @@ users.post('/password-reset-token', async (c) => {
   }
 })
 
-users.post('/password-reset-submit', async (c) => {
+users.post(API_PATHS.users.passwordResetSubmit, async (c) => {
   try {
     const body = await c.req.json<unknown>()
     const request = validate(passwordResetSchema, body)
@@ -112,7 +141,7 @@ users.post('/password-reset-submit', async (c) => {
   }
 })
 
-users.get('/profile', async (c) => {
+users.get(API_PATHS.users.profile, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const user: PublicUser = await UsersService.getUserProfile(userUuid)
@@ -123,7 +152,7 @@ users.get('/profile', async (c) => {
   }
 })
 
-users.patch('/profile', async (c) => {
+users.patch(API_PATHS.users.profile, async (c) => {
   try {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const body = await c.req.json<unknown>()
@@ -139,7 +168,7 @@ users.patch('/profile', async (c) => {
   }
 })
 
-users.post('/logout', (c) => {
+users.post(API_PATHS.users.logout, (c) => {
   try {
     deleteCookie(c, REFRESH_TOKEN, cookieOptions)
 
@@ -149,7 +178,7 @@ users.post('/logout', (c) => {
   }
 })
 
-users.post('/refresh', async (c) => {
+users.post(API_PATHS.users.refresh, async (c) => {
   try {
     const refreshTokenCookie = await getSignedCookie(
       c,
@@ -187,31 +216,6 @@ users.post('/refresh', async (c) => {
     const accessToken = await signAccessToken(jwtPayload.uuid, timestamp)
 
     return c.json({ accessToken })
-  } catch (error) {
-    return errorHandler(c, error)
-  }
-})
-
-users.get('/custom-events', async (c) => {
-  try {
-    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
-    const customEvents = await UsersService.getCustomEventTypes(userUuid)
-
-    return c.json({ customEvents })
-  } catch (error) {
-    return errorHandler(c, error)
-  }
-})
-
-users.post('/custom-events', async (c) => {
-  try {
-    const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
-    const body = await c.req.json<unknown>()
-    const payload = validate(createCustomEventRequestSchema, body)
-
-    const result = await UsersService.upsertCustomEventType(userUuid, payload)
-
-    return c.json(result.customEvent, result.created ? 201 : 200)
   } catch (error) {
     return errorHandler(c, error)
   }

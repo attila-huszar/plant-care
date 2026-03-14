@@ -1,5 +1,6 @@
 export { default as ForgotPasswordView } from './ForgotPasswordView.vue'
 export { default as LoginView } from './LoginView.vue'
+export { default as MfaView } from './MfaView.vue'
 export { default as PasswordResetView } from './PasswordResetView.vue'
 export { default as RegisterView } from './RegisterView.vue'
 export { default as VerifyEmailView } from './VerifyEmailView.vue'
