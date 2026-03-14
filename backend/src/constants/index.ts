@@ -1,4 +1,5 @@
-export * from './defaults'
+export * from './paths'
 export * from './fileLimits'
 export * from './queues'
+export * from './email'
 export * from './messages'

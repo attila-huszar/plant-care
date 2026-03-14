@@ -1,46 +1,47 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue'
+  import { computed, nextTick, ref, watch } from 'vue'
   import { PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
     DialogTitle,
-    Tab,
-    TabGroup,
-    TabList,
-    TabPanel,
-    TabPanels,
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
+  import type { CareRule, EventType } from '@plant-care/shared'
+  import { useUserStore } from '@/features/auth/stores'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
-  import type { EventType, OccurrenceRequirement, ScheduledCare } from '@/types'
-  import { useDiaryStore } from '../stores/diary'
+  import { usePlantsStore } from '../stores'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 
   const props = defineProps<{
     isOpen: boolean
-    plantId: string | null
+    plantId: number | null
   }>()
 
   const emit = defineEmits<{
     close: []
   }>()
 
-  const diaryStore = useDiaryStore()
+  const plantsStore = usePlantsStore()
+  const userStore = useUserStore()
 
-  const stablePlantId = ref<string | null>(null)
+  const stablePlantId = ref<number | null>(null)
   const stableIsAdd = ref(false)
   const draftName = ref('')
-  const draftSpecies = ref('')
+  const isNameEditing = ref(false)
+  const originalName = ref('')
+  const plantNameInput = ref<HTMLInputElement | null>(null)
 
   const plant = computed(() => {
     const plantId = stablePlantId.value
     if (!plantId) return null
-    return diaryStore.plants.find((p) => p.id === plantId) ?? null
+    return plantsStore.plants.find((p) => p.id === plantId) ?? null
   })
 
   const isAddMode = computed(() => stableIsAdd.value)
+
+  const builtinTypeIds = new Set(PLANT_CARE_META.map((t) => t.id))
 
   const typeOptions = computed(() => {
     const options: { id: EventType; label: string }[] = []
@@ -49,44 +50,30 @@
       options.push({ id: t.id, label: t.label })
     }
 
-    for (const t of diaryStore.customEventTypes) {
+    for (const t of userStore.customEvents) {
       options.push({ id: t.id, label: t.name })
     }
 
-    for (const occurrence of plant.value?.occurrences ?? []) {
-      const exists = options.some((o) => o.id === occurrence.typeId)
+    for (const rule of plant.value?.careRules ?? []) {
+      const exists = options.some((o) => o.id === rule.type)
       if (!exists) {
-        options.push({ id: occurrence.typeId, label: occurrence.typeId })
-      }
-    }
-
-    for (const scheduled of plant.value?.scheduledCare ?? []) {
-      const exists = options.some((o) => o.id === scheduled.typeId)
-      if (!exists) {
-        options.push({ id: scheduled.typeId, label: scheduled.typeId })
+        options.push({ id: rule.type, label: rule.type })
       }
     }
 
     return options
   })
 
-  type DraftRow = {
-    key: string
-    typeId: EventType
-    days: string
-  }
-
-  type ScheduledDraftRow = {
+  type DraftCareRuleRow = {
     key: string
     id: string
-    typeId: EventType
+    kind: 'recurring' | 'date'
+    type: EventType
+    days: string
     date: string
   }
 
-  const rows = ref<DraftRow[]>([])
-  const scheduledRows = ref<ScheduledDraftRow[]>([])
-  const newCustomName = ref('')
-  const careTabIndex = ref(0)
+  const ruleRows = ref<DraftCareRuleRow[]>([])
 
   const toDays = (value: string) => {
     const parsed = Number.parseInt(value, 10)
@@ -96,22 +83,17 @@
 
   const initializeRows = () => {
     if (!plant.value) {
-      rows.value = []
-      scheduledRows.value = []
+      ruleRows.value = []
       return
     }
 
-    rows.value = (plant.value.occurrences ?? []).map((o) => ({
+    ruleRows.value = (plant.value.careRules ?? []).map((r) => ({
       key: crypto.randomUUID(),
-      typeId: o.typeId,
-      days: String(o.days),
-    }))
-
-    scheduledRows.value = (plant.value.scheduledCare ?? []).map((i) => ({
-      key: crypto.randomUUID(),
-      id: i.id,
-      typeId: i.typeId,
-      date: toDateInputValue(new Date(i.date)),
+      id: r.id,
+      kind: r.kind,
+      type: r.type,
+      days: r.kind === 'recurring' ? String(r.days) : '7',
+      date: r.kind === 'date' ? toDateInputValue(new Date(r.date)) : '',
     }))
   }
 
@@ -121,15 +103,18 @@
       if (!isOpen) return
       stablePlantId.value = props.plantId
       stableIsAdd.value = props.plantId === null
-      careTabIndex.value = 0
 
       if (props.plantId === null) {
         draftName.value = ''
-        draftSpecies.value = ''
+        originalName.value = ''
+        isNameEditing.value = false
+      } else if (plant.value) {
+        originalName.value = plant.value.name
+        draftName.value = plant.value.name
+        isNameEditing.value = false
       }
 
       initializeRows()
-      newCustomName.value = ''
     },
   )
 
@@ -139,85 +124,167 @@
       if (!props.isOpen) return
       stablePlantId.value = plantId
       stableIsAdd.value = plantId === null
+      isNameEditing.value = false
       initializeRows()
     },
   )
 
-  const addRow = () => {
-    rows.value.push({
-      key: crypto.randomUUID(),
-      typeId: 'water',
-      days: '7',
-    })
+  watch(
+    plant,
+    (p) => {
+      if (!props.isOpen) return
+      if (isAddMode.value) return
+      if (!p) return
+      if (isNameEditing.value) return
+      originalName.value = p.name
+      draftName.value = p.name
+    },
+    { immediate: true },
+  )
+
+  const toggleNameEdit = async () => {
+    if (isAddMode.value) return
+    if (!plant.value) return
+
+    if (isNameEditing.value) {
+      draftName.value = originalName.value
+      isNameEditing.value = false
+      return
+    }
+
+    originalName.value = plant.value.name
+    draftName.value = plant.value.name
+    isNameEditing.value = true
+
+    await nextTick()
+    plantNameInput.value?.focus()
+    plantNameInput.value?.select()
   }
 
-  const addScheduledRow = () => {
-    scheduledRows.value.push({
+  const addRuleRow = () => {
+    ruleRows.value.push({
       key: crypto.randomUUID(),
       id: crypto.randomUUID(),
-      typeId: 'water',
+      kind: 'recurring',
+      type: 'water',
+      days: '7',
       date: '',
     })
   }
 
-  const removeRow = (key: string) => {
-    rows.value = rows.value.filter((r) => r.key !== key)
+  const removeRuleRow = (key: string) => {
+    ruleRows.value = ruleRows.value.filter((r) => r.key !== key)
   }
 
-  const removeScheduledRow = (key: string) => {
-    scheduledRows.value = scheduledRows.value.filter((r) => r.key !== key)
+  const ensureDateDefault = (row: DraftCareRuleRow) => {
+    if (row.kind !== 'date') return
+    if (row.date) return
+    row.date = toDateInputValue(new Date())
   }
 
-  const addCustomType = () => {
-    const name = newCustomName.value.trim()
-    if (!name) return
-    diaryStore.addCustomEventType(name)
-    newCustomName.value = ''
-  }
+  const save = async () => {
+    ruleRows.value = ruleRows.value.map((row) => ({
+      ...row,
+      type: row.type.trim(),
+    }))
 
-  const save = () => {
-    const seen = new Set<string>()
-    const occurrences: OccurrenceRequirement[] = []
+    const usedTypes = [
+      ...new Set(ruleRows.value.map((row) => row.type).filter(Boolean)),
+    ]
 
-    for (let i = rows.value.length - 1; i >= 0; i -= 1) {
-      const row = rows.value[i]
-      const days = toDays(row.days)
-      if (!days) continue
-      if (!row.typeId) continue
-      if (seen.has(row.typeId)) continue
-      seen.add(row.typeId)
-      occurrences.unshift({ typeId: row.typeId, days })
+    const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
+    const idByLabelLower = new Map<string, EventType>()
+    for (const opt of typeOptions.value) {
+      idByLabelLower.set(opt.label.toLowerCase(), opt.id)
+    }
+    const resolvedTypeByInput = new Map<EventType, EventType>()
+
+    for (const inputType of usedTypes) {
+      const normalizedType =
+        idByLabelLower.get(inputType.toLowerCase()) ?? inputType
+
+      if (
+        builtinTypeIds.has(normalizedType) ||
+        customTypeIds.has(normalizedType)
+      ) {
+        resolvedTypeByInput.set(inputType, normalizedType)
+        continue
+      }
+
+      if (normalizedType.length > 60) return
+
+      const result = await userStore.createCustomEvent(normalizedType)
+      if (!result.ok) return
+
+      resolvedTypeByInput.set(inputType, result.data.id)
     }
 
-    const scheduledCare: ScheduledCare[] = []
+    ruleRows.value = ruleRows.value.map((row) => ({
+      ...row,
+      type: resolvedTypeByInput.get(row.type) ?? row.type,
+    }))
 
-    for (const row of scheduledRows.value) {
-      if (!row.typeId) continue
+    const lastCadenceIndexByType = new Map<string, number>()
+    for (let i = 0; i < ruleRows.value.length; i += 1) {
+      const row = ruleRows.value[i]
+      if (row.kind !== 'recurring') continue
+      if (!row.type) continue
+      lastCadenceIndexByType.set(row.type, i)
+    }
+
+    const careRules: CareRule[] = []
+
+    for (let i = 0; i < ruleRows.value.length; i += 1) {
+      const row = ruleRows.value[i]
+      if (!row.type) continue
+
+      if (row.kind === 'recurring') {
+        const lastIndex = lastCadenceIndexByType.get(row.type)
+        if (lastIndex !== i) continue
+
+        const days = toDays(row.days)
+        if (!days) continue
+
+        careRules.push({
+          kind: 'recurring',
+          id: row.id,
+          type: row.type,
+          days,
+        })
+        continue
+      }
+
       const iso = toIsoFromDateInput(row.date)
       if (!iso) continue
-      scheduledCare.push({ id: row.id, typeId: row.typeId, date: iso })
+
+      careRules.push({
+        kind: 'date',
+        id: row.id,
+        type: row.type,
+        date: iso,
+      })
     }
 
     if (isAddMode.value) {
       const name = draftName.value.trim()
       if (!name) return
 
-      diaryStore.addPlant({
+      const result = await plantsStore.addPlant({
         name,
-        species: draftSpecies.value.trim() || 'Unknown',
-        dateAdded: new Date().toISOString(),
-        occurrences,
-        scheduledCare,
+        careRules,
       })
-      emit('close')
+      if (result) emit('close')
       return
     }
 
     if (!plant.value) return
 
-    diaryStore.updatePlantOccurrences(plant.value.id, occurrences)
-    diaryStore.updatePlantScheduledCare(plant.value.id, scheduledCare)
-    emit('close')
+    const nextName = draftName.value.trim()
+    const result = await plantsStore.updatePlant(plant.value.id, {
+      ...(nextName && nextName !== plant.value.name ? { name: nextName } : {}),
+      careRules,
+    })
+    if (result) emit('close')
   }
 
   const handleClose = () => {
@@ -254,7 +321,7 @@
           leave-to="opacity-0"
         >
           <DialogPanel
-            class="w-full max-w-lg transform-gpu overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl will-change-transform dark:border-slate-800 dark:bg-slate-900"
+            class="w-full max-w-3xl transform-gpu overflow-visible rounded-3xl border border-white/20 bg-white shadow-2xl will-change-transform dark:border-slate-800 dark:bg-slate-900"
           >
             <div class="px-6 py-6 sm:p-8">
               <div class="mb-6 flex items-center justify-between">
@@ -266,9 +333,32 @@
                   </DialogTitle>
                   <p
                     v-if="!isAddMode && plant"
-                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                    class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400"
                   >
-                    {{ plant.name }} • {{ plant.species }}
+                    <template v-if="!isNameEditing">
+                      <span
+                        class="font-medium text-slate-700 dark:text-slate-200"
+                      >
+                        {{ plant.name }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <input
+                        ref="plantNameInput"
+                        v-model="draftName"
+                        type="text"
+                        maxlength="60"
+                        class="w-56 max-w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                      />
+                    </template>
+
+                    <button
+                      type="button"
+                      class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                      @click="toggleNameEdit"
+                    >
+                      {{ isNameEditing ? 'Cancel' : 'Edit' }}
+                    </button>
                   </p>
                   <p
                     v-else-if="isAddMode"
@@ -322,211 +412,125 @@
                       type="text"
                       required
                       placeholder="e.g. Barnaby"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      for="plantSpecies"
-                      class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200"
-                      >Species / Variety</label
-                    >
-                    <input
-                      id="plantSpecies"
-                      v-model="draftSpecies"
-                      type="text"
-                      placeholder="e.g. Monstera Deliciosa"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-950/60"
                     />
                   </div>
                 </div>
 
                 <div class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <h4
-                      class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                    >
-                      Care actions
-                    </h4>
-                    <button
-                      type="button"
-                      @click="careTabIndex === 0 ? addRow() : addScheduledRow()"
-                      class="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
-                    >
-                      + Add action
-                    </button>
+                  <div
+                    v-if="ruleRows.length === 0"
+                    class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
+                  >
+                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                      No care rules yet. Add a task to start.
+                    </p>
                   </div>
 
-                  <TabGroup
-                    as="div"
-                    :selectedIndex="careTabIndex"
-                    @change="(idx) => (careTabIndex = idx)"
-                  >
-                    <TabList
-                      class="flex gap-2 rounded-xl bg-white p-1 shadow-sm dark:bg-slate-950/40"
+                  <div v-else class="space-y-3">
+                    <div
+                      v-for="row in ruleRows"
+                      :key="row.key"
+                      class="flex items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
                     >
-                      <Tab v-slot="{ selected }" as="template">
-                        <button
-                          type="button"
-                          class="flex-1 cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
-                          :class="
-                            selected
-                              ? 'bg-emerald-600 text-white'
-                              : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900/60'
-                          "
+                      <div class="w-32 shrink-0">
+                        <label
+                          class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
                         >
-                          Recurring
-                        </button>
-                      </Tab>
-                      <Tab v-slot="{ selected }" as="template">
-                        <button
-                          type="button"
-                          class="flex-1 cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
-                          :class="
-                            selected
-                              ? 'bg-emerald-600 text-white'
-                              : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900/60'
-                          "
-                        >
-                          Date
-                        </button>
-                      </Tab>
-                    </TabList>
-
-                    <TabPanels class="mt-3">
-                      <TabPanel>
-                        <div
-                          v-if="rows.length === 0"
-                          class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
-                        >
-                          <p class="text-sm text-slate-600 dark:text-slate-300">
-                            No occurrence schedule yet. Add an action to start.
-                          </p>
-                        </div>
-
-                        <div v-else class="space-y-3">
-                          <div
-                            v-for="row in rows"
-                            :key="row.key"
-                            class="flex items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
+                          Kind
+                        </label>
+                        <div class="relative">
+                          <select
+                            v-model="row.kind"
+                            @change="ensureDateDefault(row)"
+                            class="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
                           >
-                            <div class="min-w-0 flex-1">
-                              <ActionTypeListbox
-                                v-model="row.typeId"
-                                :options="typeOptions"
-                                label="Action"
-                              />
-                            </div>
-
-                            <div class="w-32">
-                              <label
-                                class="mb-1 block text-xs font-medium text-slate-600"
-                              >
-                                Every (days)
-                              </label>
-                              <input
-                                v-model="row.days"
-                                type="number"
-                                min="1"
-                                inputmode="numeric"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                              />
-                            </div>
-
-                            <button
-                              type="button"
-                              class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-white hover:text-rose-600"
-                              @click="removeRow(row.key)"
-                              aria-label="Remove action"
-                              title="Remove"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      </TabPanel>
-
-                      <TabPanel>
-                        <div
-                          v-if="scheduledRows.length === 0"
-                          class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
-                        >
-                          <p class="text-sm text-slate-600 dark:text-slate-300">
-                            No one-off dates yet. Add an action to start.
-                          </p>
-                        </div>
-
-                        <div v-else class="space-y-3">
-                          <div
-                            v-for="row in scheduledRows"
-                            :key="row.key"
-                            class="flex items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
+                            <option value="recurring">Recurring</option>
+                            <option value="date">Date</option>
+                          </select>
+                          <span
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
                           >
-                            <div class="min-w-0 flex-1">
-                              <ActionTypeListbox
-                                v-model="row.typeId"
-                                :options="typeOptions"
-                                label="Action"
-                              />
-                            </div>
-
-                            <div class="w-44">
-                              <label
-                                class="mb-1 block text-xs font-medium text-slate-600"
-                              >
-                                Date
-                              </label>
-                              <input
-                                v-model="row.date"
-                                type="date"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                              />
-                            </div>
-
-                            <button
-                              type="button"
-                              class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-white hover:text-rose-600"
-                              @click="removeScheduledRow(row.key)"
-                              aria-label="Remove action"
-                              title="Remove"
+                            <svg
+                              class="h-4 w-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              aria-hidden="true"
                             >
-                              ✕
-                            </button>
-                          </div>
+                              <path
+                                fill-rule="evenodd"
+                                d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z"
+                                clip-rule="evenodd"
+                              />
+                            </svg>
+                          </span>
                         </div>
-                      </TabPanel>
-                    </TabPanels>
-                  </TabGroup>
-                </div>
+                      </div>
 
-                <div
-                  class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/30"
-                >
-                  <h4
-                    class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                  >
-                    Custom events
-                  </h4>
-                  <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    Add your own action types (e.g. “Mist”, “Prune”).
-                  </p>
+                      <div class="flex min-w-0 flex-1 items-end gap-3">
+                        <div
+                          class="min-w-0"
+                          :class="row.kind === 'date' ? 'flex-3' : 'flex-1'"
+                        >
+                          <ActionTypeListbox
+                            v-model="row.type"
+                            :options="typeOptions"
+                            label="Task"
+                          />
+                        </div>
 
-                  <div class="mt-3 flex gap-3">
-                    <input
-                      v-model="newCustomName"
-                      type="text"
-                      placeholder="New custom action"
-                      class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-950/60"
-                    />
-                    <button
-                      type="button"
-                      @click="addCustomType"
-                      class="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
-                    >
-                      Add
-                    </button>
+                        <div
+                          v-if="row.kind === 'recurring'"
+                          class="w-24 shrink-0"
+                        >
+                          <label
+                            class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                          >
+                            Days
+                          </label>
+                          <input
+                            v-model="row.days"
+                            type="number"
+                            min="1"
+                            inputmode="numeric"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                          />
+                        </div>
+
+                        <div v-else class="min-w-0 flex-2">
+                          <label
+                            class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                          >
+                            Date
+                          </label>
+                          <input
+                            v-model="row.date"
+                            type="date"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-white hover:text-rose-600"
+                        @click="removeRuleRow(row.key)"
+                        aria-label="Remove action"
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    @click="addRuleRow"
+                    class="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
+                  >
+                    <span aria-hidden="true">+</span>
+                    Add New
+                  </button>
                 </div>
 
                 <div class="flex gap-3 pt-2">

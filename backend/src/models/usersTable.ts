@@ -1,3 +1,4 @@
+import type { CustomEventDto } from '@plant-care/shared'
 import { sql } from 'drizzle-orm'
 import {
   int,
@@ -26,6 +27,9 @@ export const usersTable = sqliteTable(
     passwordResetExpires: integer('password_reset_expires', {
       mode: 'timestamp',
     }).$type<Date>(),
+    customEvents: text('custom_events', { mode: 'json' }).$type<
+      CustomEventDto[]
+    >(),
     ...timestamps,
   },
   (table) => [uniqueIndex('email_unique_ci').on(sql`lower(${table.email})`)],

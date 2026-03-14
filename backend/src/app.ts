@@ -6,7 +6,8 @@ import { csrf } from 'hono/csrf'
 import { timeout } from 'hono/timeout'
 import { trimTrailingSlash } from 'hono/trailing-slash'
 import { env } from './config/env'
-import { users } from './controllers'
+import { plants, users } from './controllers'
+import { initMailer } from './libs'
 import { authMiddleware, payloadLimiter } from './middleware'
 import { ngrokForward } from './utils'
 
@@ -57,10 +58,14 @@ app.get('/health', (c) => c.text('OK', 200))
 
 api.use('/users/profile', authMiddleware)
 api.use('/users/logout', authMiddleware)
+api.use('/users/custom-events', authMiddleware)
+api.use('/plants/*', authMiddleware)
 
 api.route('/users', users)
+api.route('/plants', plants)
 app.route('/api', api)
 
+void initMailer()
 if (env.ngrokAuthToken) void ngrokForward()
 
 export default app

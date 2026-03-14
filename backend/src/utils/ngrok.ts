@@ -8,5 +8,5 @@ export async function ngrokForward() {
     domain: env.ngrokDomain,
   })
 
-  console.log(`Ingress established at: ${listener.url()}`)
+  console.log(`🌐 Ingress established at: ${listener.url()}`)
 }

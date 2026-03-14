@@ -4,7 +4,7 @@ export const env = {
   cookieSecret: process.env.COOKIE_SECRET,
   cookieMaxAge: process.env.COOKIE_MAX_AGE ?? '1209600',
   clientBaseUrl: process.env.CLIENT_BASE_URL,
-  dbSqliteFile: process.env.DB_SQLITE_FILE ?? 'data/db.sqlite',
+  dbSqliteFile: process.env.DB_SQLITE_FILE,
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
   mailerService: process.env.MAILER_SERVICE ?? 'gmail',

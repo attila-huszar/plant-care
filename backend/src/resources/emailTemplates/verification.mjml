@@ -31,7 +31,7 @@
           src="cid:{{cid}}"
           alt="Plant Care Diary Logo"
           href="{{baseLink}}"
-          width="100px"
+          width="90px"
           align="left"
         />
       </mj-column>

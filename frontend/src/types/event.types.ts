@@ -1,59 +1,18 @@
-export type EventType = 'water' | 'fertilize' | 'repot' | (string & {})
+import type { CareRule, EventType, PlantDto } from '@plant-care/shared'
 
-export interface CustomEventType {
-  id: string
-  name: string
-}
-
-export interface PlantEvent {
-  id: string
-  plantId: string
-  typeId: EventType
-  date: string
-  notes?: string
-}
-
-export interface OccurrenceRequirement {
-  typeId: EventType
-  days: number
-}
-
-export interface ScheduledCare {
-  id: string
-  typeId: EventType
-  date: string
-}
-
-export interface Plant {
-  id: string
-  name: string
-  species: string
-  imageUrl?: string
-  dateAdded: string
-  occurrences: OccurrenceRequirement[]
-  scheduledCare?: ScheduledCare[]
-}
-
-export type OccurrenceUpcomingItem = {
+export type UpcomingItem = {
   key: string
-  plantId: string
-  plantName: string
-  typeId: EventType
+  plantId: PlantDto['id']
+  plantName: PlantDto['name']
+  careRuleId: CareRule['id']
+  type: EventType
   dueDate: Date
   diffDays: number
-  kind: 'occurrence'
-  cadenceDays: number
-}
+} & ({ kind: 'recurring'; days: number } | { kind: 'date' })
 
-export type ScheduledUpcomingItem = {
-  key: string
-  plantId: string
-  plantName: string
-  typeId: EventType
-  dueDate: Date
-  diffDays: number
-  kind: 'scheduled'
-  scheduledCareId: string
+export type CareTimelinePayload = {
+  plantId: PlantDto['id']
+  type: CareRule['type']
+  kind: CareRule['kind']
+  careRuleId: CareRule['id']
 }
-
-export type UpcomingItem = OccurrenceUpcomingItem | ScheduledUpcomingItem

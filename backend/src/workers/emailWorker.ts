@@ -20,14 +20,14 @@ export const emailWorker = new Worker(
 )
 
 emailWorker.on('completed', (job) => {
-  void console.info('Email sent successfully', {
+  console.info('Email sent successfully', {
     type: job.name,
     email: job.data.toAddress,
   })
 })
 
 emailWorker.on('failed', (job, error) => {
-  void console.error('Email sending failed', {
+  console.error('Email sending failed', {
     type: job?.name,
     email: job?.data.toAddress,
     error,
@@ -35,5 +35,5 @@ emailWorker.on('failed', (job, error) => {
 })
 
 emailWorker.on('error', (error) => {
-  void console.error('Email worker error', { error })
+  console.error('Email worker error', { error })
 })

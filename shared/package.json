@@ -1,5 +1,15 @@
 {
   "name": "@plant-care/shared",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
 }

@@ -1,7 +1,6 @@
+import { type AuthJWTPayload, authJWTPayloadSchema } from '@plant-care/shared'
 import { sign, verify } from 'hono/jwt'
 import { env } from '@/config'
-import { authJWTPayloadSchema } from '@/validation'
-import type { AuthJWTPayload } from '@/types'
 
 export const signAccessToken = async (uuid: string, timestamp: number) => {
   const accessToken = await sign(

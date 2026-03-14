@@ -1,37 +1,38 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
-  import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
   import type {
-    CustomEventType,
+    CustomEventDto,
+    EventDto,
     EventType,
-    Plant,
-    PlantEvent,
-    UpcomingItem,
-  } from '@/types'
+    PlantDto,
+  } from '@plant-care/shared'
+  import type { CareTimelinePayload, UpcomingItem } from '@/types'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
     PLANT_CARE_META.map((t) => [t.id, t]),
   )
 
   const props = defineProps<{
-    events: PlantEvent[]
-    plants: Plant[]
-    customEventTypes?: CustomEventType[]
+    plants: PlantDto[]
+    events: EventDto[]
+    customEvents?: CustomEventDto[]
   }>()
 
   const emit = defineEmits<{
-    'complete-care': [
-      payload: { plantId: string; typeId: EventType; scheduledCareId?: string },
-    ]
+    care: [payload: CareTimelinePayload]
   }>()
 
   const DAY_MS = 1000 * 60 * 60 * 24
-  const eventsTabIndex = ref(0)
+  const startOfDayMs = (ms: number) => {
+    const date = new Date(ms)
+    date.setHours(0, 0, 0, 0)
+    return date.getTime()
+  }
 
   const customTypeNameById = computed(() => {
     const map = new Map<string, string>()
-    for (const t of props.customEventTypes ?? []) {
+    for (const t of props.customEvents ?? []) {
       map.set(t.id, t.name)
     }
     return map
@@ -42,7 +43,7 @@
     for (const event of props.events) {
       const ms = new Date(event.date).getTime()
       if (!Number.isFinite(ms)) continue
-      const key = `${event.plantId}:${event.typeId}`
+      const key = `${event.plantId}:${event.type}`
       const prev = map.get(key)
       if (prev === undefined || ms > prev) map.set(key, ms)
     }
@@ -67,59 +68,52 @@
     const items: UpcomingItem[] = []
 
     for (const plant of props.plants) {
-      const occurrences = plant.occurrences ?? []
-      for (const occurrence of occurrences) {
-        if (!occurrence || occurrence.days <= 0) continue
+      for (const rule of plant.careRules ?? []) {
+        if (!rule) continue
 
-        const key = `${plant.id}:${occurrence.typeId}`
-        const lastEventMs = latestEventMsByPlantAndType.value.get(key)
-        const plantAddedMs = plant.dateAdded
-          ? new Date(plant.dateAdded).getTime()
-          : Number.NaN
+        if (rule.kind === 'recurring') {
+          if (rule.days <= 0) continue
 
-        const candidateMs =
-          lastEventMs ??
-          (Number.isFinite(plantAddedMs) ? plantAddedMs : Date.now())
-        const baseMs = Number.isFinite(candidateMs) ? candidateMs : todayMs
+          const key = `${plant.id}:${rule.id}`
+          const lastEventKey = `${plant.id}:${rule.type}`
+          const lastEventMs =
+            latestEventMsByPlantAndType.value.get(lastEventKey)
+          const baseMs = startOfDayMs(lastEventMs ?? todayMs)
 
-        const dueDate = new Date(baseMs + occurrence.days * DAY_MS)
-        const dueDay = new Date(dueDate)
-        dueDay.setHours(0, 0, 0, 0)
+          const dueDayMs = baseMs + rule.days * DAY_MS
+          const dueDate = new Date(dueDayMs)
+          const diffDays = Math.round((dueDayMs - todayMs) / DAY_MS)
 
-        const diffDays = Math.round((dueDay.getTime() - todayMs) / DAY_MS)
+          items.push({
+            key: String(key),
+            plantId: plant.id,
+            plantName: plant.name,
+            careRuleId: rule.id,
+            type: rule.type,
+            dueDate,
+            diffDays,
+            kind: 'recurring',
+            days: rule.days,
+          })
+          continue
+        }
 
-        items.push({
-          key,
-          plantId: plant.id,
-          plantName: plant.name,
-          typeId: occurrence.typeId,
-          dueDate,
-          diffDays,
-          kind: 'occurrence',
-          cadenceDays: occurrence.days,
-        })
-      }
+        const dueMs = new Date(rule.date).getTime()
+        if (!Number.isFinite(dueMs)) continue
 
-      for (const scheduled of plant.scheduledCare ?? []) {
-        const dueDate = new Date(scheduled.date)
-        if (!Number.isFinite(dueDate.getTime())) continue
-
-        const dueDay = new Date(dueDate)
-        dueDay.setHours(0, 0, 0, 0)
-
-        const diffDays = Math.round(
-          (dueDay.getTime() - today.getTime()) / DAY_MS,
-        )
+        const dueDayMs = startOfDayMs(dueMs)
+        const dueDate = new Date(dueDayMs)
+        const diffDays = Math.round((dueDayMs - todayMs) / DAY_MS)
 
         items.push({
-          key: `${plant.id}:${scheduled.id}`,
+          key: String(`${plant.id}:${rule.id}`),
           plantId: plant.id,
           plantName: plant.name,
-          typeId: scheduled.typeId,
+          careRuleId: rule.id,
+          type: rule.type,
           dueDate,
           diffDays,
-          kind: 'scheduled',
-          scheduledCareId: scheduled.id,
+          kind: 'date',
         })
       }
     }
@@ -196,18 +190,21 @@
     completingKeys.value = next
   }
 
+  const canCompleteItem = (item: (typeof upcomingCare.value)[number]) => {
+    return item.diffDays <= 0
+  }
+
   const completeItem = (item: (typeof upcomingCare.value)[number]) => {
+    if (!canCompleteItem(item)) return
     if (isCompleting(item.key)) return
     markCompleting(item.key)
 
-    window.setTimeout(() => {
-      emit('complete-care', {
-        plantId: item.plantId,
-        typeId: item.typeId,
-        scheduledCareId:
-          item.kind === 'scheduled' ? item.scheduledCareId : undefined,
-      })
-    }, 160)
+    emit('care', {
+      plantId: item.plantId,
+      type: item.type,
+      kind: item.kind,
+      careRuleId: item.careRuleId,
+    })
 
     window.setTimeout(() => {
       unmarkCompleting(item.key)
@@ -219,145 +216,88 @@
   <section class="flex h-full flex-col gap-6">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
-        Events
+        Activity
       </h2>
     </div>
 
-    <div
-      class="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
-    >
-      <TabGroup
-        as="div"
-        :selectedIndex="eventsTabIndex"
-        @change="(idx) => (eventsTabIndex = idx)"
-        class="flex h-full flex-col overflow-hidden"
+    <div class="grid min-h-0 flex-1 grid-rows-2 gap-4">
+      <div
+        class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
       >
-        <div class="border-b border-slate-200 px-3 py-3 dark:border-slate-800">
-          <TabList
-            class="flex gap-2 rounded-xl bg-slate-50 p-1 dark:bg-slate-950/50"
-          >
-            <Tab v-slot="{ selected }" as="template">
-              <button
-                type="button"
-                class="flex-1 cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
-                :class="
-                  selected
-                    ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-900 dark:text-slate-100'
-                    : 'text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-slate-900/60'
-                "
-              >
-                Upcoming
-              </button>
-            </Tab>
-            <Tab v-slot="{ selected }" as="template">
-              <button
-                type="button"
-                class="flex-1 cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
-                :class="
-                  selected
-                    ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-900 dark:text-slate-100'
-                    : 'text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-slate-900/60'
-                "
-              >
-                History
-              </button>
-            </Tab>
-          </TabList>
+        <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Upcoming care
+          </h3>
         </div>
 
-        <TabPanels class="min-h-0 flex-1">
-          <TabPanel class="h-full">
-            <div v-if="upcomingCareAll.length === 0" class="px-4 py-4">
-              <p class="text-sm text-slate-500 dark:text-slate-400">
-                No upcoming care items. Add a schedule when creating a plant.
-              </p>
-            </div>
+        <div v-if="upcomingCareAll.length === 0" class="px-4 py-4">
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            No upcoming care items. Add a schedule when creating a plant.
+          </p>
+        </div>
 
-            <div v-else class="h-full overflow-y-auto px-2 pt-2 pb-2">
+        <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
+          <div
+            v-for="item in upcomingCare"
+            :key="item.key"
+            class="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors"
+            :class="
+              item.key === highlightedKey
+                ? 'bg-emerald-50/60 dark:bg-emerald-950/30'
+                : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+            "
+          >
+            <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
               <div
-                v-for="item in upcomingCare"
-                :key="item.key"
-                class="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors"
-                :class="
-                  item.key === highlightedKey
-                    ? 'bg-emerald-50/60'
-                    : 'hover:bg-slate-50'
-                "
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
-                <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
-                  <div
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
-                  >
-                    {{ getTypeIcon(item.typeId) }}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p
-                      class="text-sm font-medium text-slate-900 dark:text-slate-100"
-                    >
-                      <span class="capitalize">{{
-                        getTypeLabel(item.typeId)
-                      }}</span>
-                      for
-                      <span class="font-bold text-emerald-700">{{
-                        item.plantName
-                      }}</span>
-                    </p>
-                    <p
-                      class="mt-0.5 text-xs"
-                      :class="
-                        item.diffDays < 0
-                          ? 'text-rose-600'
-                          : item.diffDays <= 2
-                            ? 'text-amber-600'
-                            : 'text-slate-500 dark:text-slate-400'
-                      "
-                    >
-                      {{ formatDueLabel(item.diffDays) }} •
-                      <span v-if="item.kind === 'occurrence'">
-                        every {{ item.cadenceDays }} days
-                      </span>
-                      <span v-else>one-off</span>
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95"
-                  :class="
-                    isCompleting(item.key)
-                      ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20'
-                      : 'border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/60 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800'
-                  "
-                  @click.stop="completeItem(item)"
-                  aria-label="Mark as done"
-                  title="Mark as done"
+                {{ getTypeIcon(item.type) }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <p
+                  class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
-                  <svg
-                    class="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="3"
-                      d="M5 13l4 4L19 7"
-                    ></path>
-                  </svg>
-                </button>
+                  <span>{{ getTypeLabel(item.type) }}</span>
+                  for
+                  <span class="font-bold text-emerald-700">{{
+                    item.plantName
+                  }}</span>
+                </p>
+                <p
+                  class="mt-0.5 text-xs"
+                  :class="
+                    item.diffDays < 0
+                      ? 'text-rose-600'
+                      : item.diffDays <= 2
+                        ? 'text-amber-600'
+                        : 'text-slate-500 dark:text-slate-400'
+                  "
+                >
+                  {{ formatDueLabel(item.diffDays) }} •
+                  <span v-if="item.kind === 'recurring'">
+                    every {{ item.days }} days
+                  </span>
+                  <span v-else>one-off</span>
+                </p>
               </div>
             </div>
-          </TabPanel>
 
-          <TabPanel class="h-full">
-            <div
-              v-if="enrichedEvents.length === 0"
-              class="flex h-full min-h-60 flex-1 flex-col items-center justify-center gap-4 px-4 pb-6 text-center opacity-60"
+            <button
+              v-if="canCompleteItem(item)"
+              type="button"
+              class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              :class="
+                isCompleting(item.key)
+                  ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20'
+                  : 'border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/60 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800'
+              "
+              @click.stop="completeItem(item)"
+              :disabled="isCompleting(item.key)"
+              aria-label="Mark as done"
+              title="Mark as done"
             >
               <svg
-                class="h-12 w-12 text-slate-400"
+                class="h-5 w-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -365,55 +305,80 @@
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
                 ></path>
               </svg>
-              <p class="text-sm">No events recorded yet.</p>
-            </div>
+            </button>
+          </div>
+        </div>
+      </div>
 
-            <div v-else class="h-full overflow-y-auto px-4 pt-2 pb-4">
-              <div class="space-y-4">
-                <div
-                  v-for="event in enrichedEvents"
-                  :key="event.id"
-                  class="flex items-start gap-4 rounded-xl border border-transparent p-4 transition-colors hover:border-slate-100 hover:bg-slate-50 dark:hover:border-slate-800 dark:hover:bg-slate-900"
+      <div
+        class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
+      >
+        <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            History
+          </h3>
+        </div>
+
+        <div
+          v-if="enrichedEvents.length === 0"
+          class="flex min-h-60 flex-1 flex-col items-center justify-center gap-4 px-4 pb-6 text-center opacity-60"
+        >
+          <svg
+            class="h-12 w-12 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            ></path>
+          </svg>
+          <p class="text-sm">No events recorded yet.</p>
+        </div>
+
+        <div v-else class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4">
+          <div class="space-y-4">
+            <div
+              v-for="event in enrichedEvents"
+              :key="event.id"
+              class="flex items-start gap-4 rounded-xl border border-transparent p-4 transition-colors hover:border-slate-100 hover:bg-slate-50 dark:hover:border-slate-800 dark:hover:bg-slate-900"
+            >
+              <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
+              >
+                {{ getTypeIcon(event.type) }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <p
+                  class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
-                  <div
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
-                  >
-                    {{ getTypeIcon(event.typeId) }}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p
-                      class="text-sm font-medium text-slate-900 dark:text-slate-100"
-                    >
-                      <span class="capitalize">{{
-                        getTypeLabel(event.typeId)
-                      }}</span>
-                      for
-                      <span class="font-bold text-emerald-700">{{
-                        event.plantName
-                      }}</span>
-                    </p>
-                    <p
-                      v-if="event.notes"
-                      class="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400"
-                    >
-                      {{ event.notes }}
-                    </p>
-                    <p
-                      class="mt-1 text-xs text-slate-400 capitalize dark:text-slate-500"
-                    >
-                      {{ formatEventDate(event.date) }}
-                    </p>
-                  </div>
-                </div>
+                  <span>{{ getTypeLabel(event.type) }}</span>
+                  for
+                  <span class="font-bold text-emerald-700">{{
+                    event.plantName
+                  }}</span>
+                </p>
+                <p
+                  v-if="event.notes"
+                  class="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400"
+                >
+                  {{ event.notes }}
+                </p>
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                  {{ formatEventDate(event.date) }}
+                </p>
               </div>
             </div>
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>

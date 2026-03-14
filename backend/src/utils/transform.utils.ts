@@ -1,6 +1,7 @@
-import type { PublicUser, User } from '@/types'
+import type { EventDto, PlantDto, PublicUser } from '@plant-care/shared'
+import type { Event, Plant, User } from '@/types'
 
-export const stripSensitiveUserFields = (user: User): PublicUser => {
+export const toPublicUser = (user: User): PublicUser => {
   const {
     id,
     password,
@@ -15,6 +16,16 @@ export const stripSensitiveUserFields = (user: User): PublicUser => {
   } = user
 
   return publicUser
+}
+
+export const toPublicPlant = (plant: Plant): Omit<PlantDto, 'history'> => {
+  const { userId, createdAt, updatedAt, ...publicPlant } = plant
+  return publicPlant
+}
+
+export const toPublicEvent = (event: Event): EventDto => {
+  const { userId, createdAt, updatedAt, ...publicEvent } = event
+  return publicEvent
 }
 
 export const stripTimestamps = <T extends { createdAt: Date; updatedAt: Date }>(

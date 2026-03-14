@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
-  import type { CustomEventType, EventType, Plant, PlantEvent } from '@/types'
+  import type {
+    CustomEventDto,
+    EventDto,
+    EventType,
+    PlantDto,
+  } from '@plant-care/shared'
   import { PlantIcon } from '@/assets/svg'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
@@ -9,21 +14,21 @@
   )
 
   const props = defineProps<{
-    plants: Plant[]
-    events: PlantEvent[]
-    customEventTypes?: CustomEventType[]
+    plants: PlantDto[]
+    events: EventDto[]
+    customEvents: CustomEventDto[]
   }>()
 
   const emit = defineEmits<{
     'add-plant': []
-    'edit-plant': [payload: { plantId: string }]
+    'edit-plant': [payload: { plantId: number }]
   }>()
 
   const DAY_MS = 1000 * 60 * 60 * 24
 
   const customTypeNameById = computed(() => {
     const map = new Map<string, string>()
-    for (const t of props.customEventTypes ?? []) {
+    for (const t of props.customEvents) {
       map.set(t.id, t.name)
     }
     return map
@@ -40,17 +45,14 @@
   }
 
   const lastEventByPlantId = computed(() => {
-    const map = new Map<
-      string,
-      { iso: string; ms: number; typeId: EventType }
-    >()
+    const map = new Map<number, { iso: string; ms: number; type: EventType }>()
 
     for (const event of props.events ?? []) {
       const ms = new Date(event.date).getTime()
       if (!Number.isFinite(ms)) continue
       const current = map.get(event.plantId)
       if (!current || ms > current.ms) {
-        map.set(event.plantId, { iso: event.date, ms, typeId: event.typeId })
+        map.set(event.plantId, { iso: event.date, ms, type: event.type })
       }
     }
 
@@ -154,17 +156,14 @@
           <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">
             {{ card.plant.name }}
           </h3>
-          <p class="text-sm text-slate-500 dark:text-slate-400">
-            {{ card.plant.species }}
-          </p>
           <p
             v-if="card.lastEvent"
             class="mt-1 text-xs text-slate-400 dark:text-slate-500"
             :title="formatCalendarDate(card.lastEvent.iso)"
           >
             Last:
-            {{ getTypeIcon(card.lastEvent.typeId) }}
-            {{ getTypeLabel(card.lastEvent.typeId) }} •
+            {{ getTypeIcon(card.lastEvent.type) }}
+            {{ getTypeLabel(card.lastEvent.type) }} •
             {{ formatRelativeDay(card.lastEvent.iso) }}
           </p>
           <p v-else class="mt-1 text-xs text-slate-400 dark:text-slate-500">
