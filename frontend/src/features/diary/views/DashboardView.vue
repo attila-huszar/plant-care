@@ -97,16 +97,16 @@
           <img :src="PlantIcon" alt="" aria-hidden="true" class="h-10 w-10" />
         </span>
         <h1
-          class="min-w-0 text-xl leading-tight font-bold wrap-break-word whitespace-normal text-emerald-900 dark:text-slate-100"
+          class="line-clamp-2 min-w-0 text-xl leading-tight font-bold text-emerald-900 dark:text-slate-100"
         >
           Plant Care Diary
         </h1>
       </div>
 
-      <div class="flex shrink-0 items-center gap-3 min-[460px]:gap-4">
+      <div class="flex shrink-0 items-center gap-3 min-[480px]:gap-4">
         <Switch
           v-model="isDark"
-          class="relative hidden h-8 w-14 items-center rounded-full transition focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none min-[460px]:inline-flex dark:focus:ring-offset-slate-950"
+          class="relative hidden h-8 w-14 items-center rounded-full transition focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none min-[480px]:inline-flex dark:focus:ring-offset-slate-950"
           :class="isDark ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700'"
         >
           <span class="sr-only">Toggle dark mode</span>
@@ -125,10 +125,24 @@
 
         <Menu as="div" class="relative inline-block text-left">
           <MenuButton
-            class="max-w-48 truncate rounded-full border border-emerald-200 bg-emerald-100/70 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-800"
+            class="inline-flex max-w-64 items-center gap-2 truncate rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold whitespace-nowrap text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-950"
           >
-            Hello,
-            {{ userStore.profile?.firstName ?? userStore.profile?.email }}
+            <span class="min-w-0 truncate">
+              Hello,
+              {{ userStore.profile?.firstName ?? userStore.profile?.email }}
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="h-4 w-4 shrink-0 text-slate-400"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06"
+                clip-rule="evenodd"
+              />
+            </svg>
           </MenuButton>
 
           <Transition
@@ -140,14 +154,14 @@
             leave-to-class="transform opacity-0 scale-95"
           >
             <MenuItems
-              class="absolute right-0 z-50 mt-3 w-56 origin-top-right rounded-2xl border border-white/60 bg-white/95 p-2 shadow-xl ring-1 ring-black/10 focus:outline-none dark:border-slate-700/60 dark:bg-slate-900/95 dark:ring-white/10"
+              class="absolute right-0 z-50 mt-1.5 w-56 origin-top-right rounded-xl border border-white/60 bg-white/95 p-1 shadow-xl ring-1 ring-black/10 focus:outline-none dark:border-slate-700/60 dark:bg-slate-900/95 dark:ring-white/10"
             >
               <div class="space-y-1">
                 <MenuItem v-slot="{ active }">
                   <button
                     type="button"
                     @click="openSettings"
-                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium"
+                    class="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium"
                     :class="
                       active
                         ? 'bg-emerald-50 text-emerald-900 dark:bg-slate-800 dark:text-white'
@@ -162,7 +176,7 @@
                   <button
                     type="button"
                     @click="toggleTheme"
-                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium min-[460px]:hidden"
+                    class="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium min-[480px]:hidden"
                     :class="
                       active
                         ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
@@ -173,13 +187,15 @@
                   </button>
                 </MenuItem>
 
-                <div class="my-1 h-px bg-slate-200/80 dark:bg-slate-700/70" />
+                <div
+                  class="mx-auto my-1 h-px w-[95%] bg-slate-200/80 dark:bg-slate-700/70"
+                />
 
                 <MenuItem v-slot="{ active }">
                   <button
                     type="button"
                     @click="handleLogout"
-                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium"
+                    class="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium"
                     :class="
                       active
                         ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-200'
