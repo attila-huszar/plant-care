@@ -11,19 +11,21 @@
           Use the code below to finish signing in:
         </mj-text>
 
-        <mj-table align="center" padding="12px 0 18px">
+        <mj-table align="left" width="auto" padding="12px 0 18px">
           <tr>
             <td
               style="
-                background: #eef6ff;
-                border: 1px solid #d6e7ff;
+                background: #ffffff;
+                border: 1px solid #cbd5e1;
                 border-radius: 10px;
                 padding: 16px 22px;
-                text-align: center;
+                text-align: left;
+                font-family: 'Courier New', Courier, monospace;
                 font-size: 28px;
                 font-weight: 700;
                 letter-spacing: 6px;
                 color: #111111;
+                white-space: nowrap;
               "
             >
               {{ code }}

@@ -18,6 +18,7 @@ export const authMessage = {
   registerError: 'Register error',
   mfaDeliveryUnavailable:
     'MFA code delivery is temporarily unavailable. Please try again.',
+  mfaCodeError: 'The OTP code you entered is incorrect',
   verifyError: 'Error verifying email',
   forgotPasswordError: 'Error sending password reset email',
   resetPasswordError: 'Error resetting password',

@@ -36,7 +36,7 @@
   /* ------------------------------------------------ */
 
   .badge-water {
-    @apply bg-water-200 text-water-700 rounded-full px-2 py-1 text-xs;
+    @apply bg-water-200 text-water-500 rounded-full px-2 py-1 text-xs;
   }
 
   .badge-fertilize {
@@ -44,6 +44,6 @@
   }
 
   .badge-repot {
-    @apply bg-soil-200 text-soil-600 rounded-full px-2 py-1 text-xs;
+    @apply bg-soil-200 text-soil-500 rounded-full px-2 py-1 text-xs;
   }
 }
