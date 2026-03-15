@@ -2,7 +2,11 @@
   import { computed, onMounted, ref } from 'vue'
   import { useForm, useIsFieldTouched } from 'vee-validate'
   import { RouterLink, useRoute } from 'vue-router'
-  import { passwordResetSchema, tokenSchema } from '@plant-care/shared'
+  import {
+    passwordResetFormSchema,
+    type PasswordResetFormValues,
+    tokenSchema,
+  } from '@plant-care/shared'
   import { PlantIcon } from '@/assets/svg'
   import { useAuthStore } from '../stores/auth'
 
@@ -25,11 +29,12 @@
     isSubmitting,
     setFieldError,
     setFieldValue,
-  } = useForm({
-    validationSchema: passwordResetSchema,
+  } = useForm<PasswordResetFormValues>({
+    validationSchema: passwordResetFormSchema,
     initialValues: {
       token: '',
       password: '',
+      confirmPassword: '',
     },
     validateOnMount: false,
   })
@@ -41,12 +46,29 @@
     validateOnModelUpdate: false,
   })
 
+  const [confirmPassword, confirmPasswordAttrs] = defineField(
+    'confirmPassword',
+    {
+      validateOnBlur: true,
+      validateOnInput: false,
+      validateOnChange: false,
+      validateOnModelUpdate: false,
+    },
+  )
+
   const isPasswordTouched = useIsFieldTouched('password')
+  const isConfirmPasswordTouched = useIsFieldTouched('confirmPassword')
 
   const showPasswordError = computed(
     () =>
       (isPasswordTouched.value || submitCount.value > 0) &&
       Boolean(errors.value.password),
+  )
+
+  const showConfirmPasswordError = computed(
+    () =>
+      (isConfirmPasswordTouched.value || submitCount.value > 0) &&
+      Boolean(errors.value.confirmPassword),
   )
 
   onMounted(async () => {
@@ -73,7 +95,10 @@
     apiError.value = null
     successMessage.value = null
 
-    const result = await authStore.submitPasswordReset(values)
+    const result = await authStore.submitPasswordReset({
+      token: values.token,
+      password: values.password,
+    })
 
     if (!result.ok) {
       if (result.validation?.fieldErrors) {
@@ -87,6 +112,7 @@
       return
     }
 
+    await authStore.logout()
     successMessage.value = result.data.message
   })
 </script>
@@ -177,6 +203,29 @@
             class="mt-2 text-sm text-red-700 dark:text-red-200"
           >
             {{ errors.password }}
+          </p>
+        </div>
+
+        <div>
+          <label
+            for="confirmPassword"
+            class="mb-2 block text-sm font-medium text-emerald-900 dark:text-slate-200"
+            >Confirm password</label
+          >
+          <input
+            v-model="confirmPassword"
+            v-bind="confirmPasswordAttrs"
+            id="confirmPassword"
+            type="password"
+            required
+            placeholder="Re-enter your new password"
+            class="w-full rounded-xl border border-emerald-100 bg-white/50 px-4 py-3 text-emerald-900 placeholder-emerald-300 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
+          />
+          <p
+            v-if="showConfirmPasswordError"
+            class="mt-2 text-sm text-red-700 dark:text-red-200"
+          >
+            {{ errors.confirmPassword }}
           </p>
         </div>
 

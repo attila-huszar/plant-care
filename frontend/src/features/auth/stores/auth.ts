@@ -239,6 +239,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async () => {
+    if (!accessToken.value) {
+      await refresh()
+    }
+
     if (accessToken.value) {
       await useApiFetch(API_PATHS.users.logout, withAuth(accessToken))
         .post()

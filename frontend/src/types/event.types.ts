@@ -15,4 +15,5 @@ export type CareTimelinePayload = {
   type: CareRule['type']
   kind: CareRule['kind']
   careRuleId: CareRule['id']
+  notes?: string
 }

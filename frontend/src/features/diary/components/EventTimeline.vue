@@ -1,6 +1,13 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
+  import {
+    Dialog,
+    DialogPanel,
+    DialogTitle,
+    TransitionChild,
+    TransitionRoot,
+  } from '@headlessui/vue'
   import type {
     CustomEventDto,
     EventDto,
@@ -223,6 +230,11 @@
   )
 
   const completingKeys = ref<Set<string>>(new Set())
+  const isCompleteDialogOpen = ref(false)
+  const pendingCompleteItem = ref<(typeof upcomingCare.value)[number] | null>(
+    null,
+  )
+  const pendingNotes = ref('')
 
   const isCompleting = (key: string) => {
     return completingKeys.value.has(key)
@@ -244,9 +256,46 @@
     return item.diffDays <= 0
   }
 
-  const completeItem = (item: (typeof upcomingCare.value)[number]) => {
+  const closeCompleteDialog = () => {
+    isCompleteDialogOpen.value = false
+    pendingCompleteItem.value = null
+    pendingNotes.value = ''
+  }
+
+  const openCompleteDialog = (item: (typeof upcomingCare.value)[number]) => {
+    pendingCompleteItem.value = item
+    pendingNotes.value = ''
+    isCompleteDialogOpen.value = true
+  }
+
+  const confirmComplete = () => {
+    const item = pendingCompleteItem.value
+    if (!item) return
     if (!canCompleteItem(item)) return
     if (isCompleting(item.key)) return
+
+    const notes = pendingNotes.value.trim()
+    markCompleting(item.key)
+
+    emit('care', {
+      plantId: item.plantId,
+      type: item.type,
+      kind: item.kind,
+      careRuleId: item.careRuleId,
+      ...(notes ? { notes } : {}),
+    })
+
+    closeCompleteDialog()
+
+    window.setTimeout(() => {
+      unmarkCompleting(item.key)
+    }, 700)
+  }
+
+  const completeItemQuick = (item: (typeof upcomingCare.value)[number]) => {
+    if (!canCompleteItem(item)) return
+    if (isCompleting(item.key)) return
+
     markCompleting(item.key)
 
     emit('care', {
@@ -264,6 +313,87 @@
 
 <template>
   <section class="flex h-full flex-col gap-6">
+    <TransitionRoot as="template" :show="isCompleteDialogOpen">
+      <Dialog as="div" class="relative z-50" @close="closeCompleteDialog">
+        <TransitionChild
+          as="template"
+          enter="ease-out duration-200"
+          enter-from="opacity-0"
+          enter-to="opacity-100"
+          leave="ease-in duration-150"
+          leave-from="opacity-100"
+          leave-to="opacity-0"
+        >
+          <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+            aria-hidden="true"
+          />
+        </TransitionChild>
+
+        <div class="fixed inset-0 overflow-y-auto">
+          <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
+            <TransitionChild
+              as="template"
+              enter="ease-out duration-200"
+              enter-from="opacity-0 scale-90"
+              enter-to="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leave-from="opacity-100 scale-100"
+              leave-to="opacity-0 scale-90"
+            >
+              <DialogPanel
+                class="w-full max-w-lg overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div class="p-5 sm:p-6">
+                  <DialogTitle
+                    class="text-lg font-bold text-slate-900 dark:text-slate-100"
+                  >
+                    Mark as done
+                  </DialogTitle>
+
+                  <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Add optional notes for this event.
+                  </p>
+
+                  <div class="mt-4">
+                    <label
+                      class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200"
+                    >
+                      Notes (optional)
+                    </label>
+                    <textarea
+                      v-model="pendingNotes"
+                      rows="3"
+                      maxlength="1000"
+                      placeholder="e.g. watered thoroughly until runoff"
+                      class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-950/60"
+                    />
+                  </div>
+
+                  <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      class="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                      @click="closeCompleteDialog"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
+                      @click="confirmComplete"
+                    >
+                      Mark as done
+                    </button>
+                  </div>
+                </div>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
+        </div>
+      </Dialog>
+    </TransitionRoot>
+
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
         Activity
@@ -335,13 +465,25 @@
             <button
               v-if="canCompleteItem(item)"
               type="button"
-              class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              @click.stop="openCompleteDialog(item)"
+              :disabled="isCompleting(item.key)"
+              aria-label="Add notes"
+              title="Add notes"
+            >
+              <span aria-hidden="true">⋯</span>
+            </button>
+
+            <button
+              v-if="canCompleteItem(item)"
+              type="button"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               :class="
                 isCompleting(item.key)
                   ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20'
                   : 'border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/60 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800'
               "
-              @click.stop="completeItem(item)"
+              @click.stop="completeItemQuick(item)"
               :disabled="isCompleting(item.key)"
               aria-label="Mark as done"
               title="Mark as done"

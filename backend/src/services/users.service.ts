@@ -267,6 +267,11 @@ export async function passwordResetToken(
     throw new BadRequest(authMessage.invalidToken)
   }
 
+  const expiry = user.passwordResetExpires
+  if (expiry && new Date(expiry) < new Date()) {
+    throw new BadRequest(authMessage.invalidToken)
+  }
+
   return { token }
 }
 
@@ -279,6 +284,11 @@ export async function passwordResetSubmit(
 
   if (!user) {
     throw new NotFound(userMessage.getError)
+  }
+
+  const expiry = user.passwordResetExpires
+  if (expiry && new Date(expiry) < new Date()) {
+    throw new BadRequest(authMessage.invalidToken)
   }
 
   const userUpdated = await UsersRepository.updateUserBy('email', user.email, {

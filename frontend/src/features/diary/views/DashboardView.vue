@@ -72,7 +72,7 @@
     const event = await plantsStore.addEvent({
       plantId: payload.plantId,
       type: payload.type,
-      notes: '',
+      ...(payload.notes ? { notes: payload.notes } : {}),
       date: new Date().toISOString(),
     })
 
