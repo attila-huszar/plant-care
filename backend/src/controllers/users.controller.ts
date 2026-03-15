@@ -135,6 +135,7 @@ users.post(API_PATHS.users.passwordResetSubmit, async (c) => {
     const request = validate(passwordResetSchema, body)
     const { message } = await UsersService.passwordResetSubmit(request)
 
+    deleteCookie(c, REFRESH_TOKEN, cookieOptions)
     return c.json({ message })
   } catch (error) {
     return errorHandler(c, error)

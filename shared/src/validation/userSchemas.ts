@@ -84,6 +84,22 @@ export const passwordResetSchema = z.strictObject({
   ...passwordSchema.shape,
 })
 
+export const passwordResetFormSchema = passwordResetSchema
+  .extend({
+    confirmPassword: z
+      .string('Confirm password is required')
+      .min(1, 'Confirm password is required'),
+  })
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Passwords do not match',
+        path: ['confirmPassword'],
+      })
+    }
+  })
+
 export const authJWTPayloadSchema = z.looseObject({
   uuid: z.uuid('Invalid auth token uuid'),
   exp: z.number().optional(),

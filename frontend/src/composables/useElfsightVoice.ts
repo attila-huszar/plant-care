@@ -13,6 +13,9 @@ import {
   type SvgIconSpec,
 } from '@/assets/svg'
 
+const ELFSIGHT_SCRIPT_SRC = 'https://elfsightcdn.com/platform.js'
+let elfsightScriptPromise: Promise<void> | null = null
+
 export function useElfsightVoice() {
   let portalObserver: MutationObserver | null = null
   let messageObserver: MutationObserver | null = null
@@ -21,6 +24,34 @@ export function useElfsightVoice() {
   let isReadAloudEnabled = false
   const speakTimeoutById = new Map<string, number>()
   const lastSpokenTextById = new Map<string, string>()
+
+  function ensurePlatformScript() {
+    if (elfsightScriptPromise) return elfsightScriptPromise
+
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${ELFSIGHT_SCRIPT_SRC}"]`,
+    )
+
+    if (existing) {
+      elfsightScriptPromise = new Promise((resolve) => {
+        existing.addEventListener('load', () => resolve(), { once: true })
+        window.setTimeout(resolve, 0)
+      })
+
+      return elfsightScriptPromise
+    }
+
+    elfsightScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = ELFSIGHT_SCRIPT_SRC
+      script.async = true
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error('Failed to load Elfsight'))
+      document.body.appendChild(script)
+    })
+
+    return elfsightScriptPromise
+  }
 
   function speak(text: string) {
     const { supported, synth, Utterance } = getSpeechSynthesis()
@@ -340,7 +371,9 @@ export function useElfsightVoice() {
   }
 
   onMounted(() => {
-    watchForPortal()
+    void ensurePlatformScript().finally(() => {
+      watchForPortal()
+    })
   })
 
   onBeforeUnmount(() => {
@@ -364,5 +397,8 @@ export function useElfsightVoice() {
     lastSpokenTextById.clear()
 
     getSpeechSynthesis().synth?.cancel()
+
+    const portal = document.querySelector<HTMLElement>('#__EAAPS_PORTAL')
+    portal?.remove()
   })
 }

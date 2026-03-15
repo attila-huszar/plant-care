@@ -1,19 +1,24 @@
 <script setup lang="ts">
   import { computed, nextTick, ref, watch } from 'vue'
-  import { PLANT_CARE_META } from '@/constants'
+  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
     DialogTitle,
+    Tab,
+    TabGroup,
+    TabList,
+    TabPanel,
+    TabPanels,
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type { CareRule, EventType } from '@plant-care/shared'
+  import type { CareRule, EventDto, EventType } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
-  import { ChevronIcon, EditIcon, TrashIcon } from '@/assets/svg'
+  import { EditIcon } from '@/assets/svg'
   import { usePlantsStore } from '../stores'
-  import ActionTypeListbox from './ActionTypeListbox.vue'
+  import CareRulesEditor from './CareRulesEditor.vue'
 
   const props = defineProps<{
     isOpen: boolean
@@ -33,6 +38,7 @@
   const isNameEditing = ref(false)
   const originalName = ref('')
   const plantNameInput = ref<HTMLInputElement | null>(null)
+  const selectedTabIndex = ref(0)
 
   const plant = computed(() => {
     const plantId = stablePlantId.value
@@ -43,6 +49,10 @@
   const isAddMode = computed(() => stableIsAdd.value)
 
   const builtinTypeIds = new Set(PLANT_CARE_META.map((t) => t.id))
+
+  const BUILTIN_ACTION_META_BY_ID = new Map(
+    PLANT_CARE_META.map((t) => [t.id, t]),
+  )
 
   const typeOptions = computed(() => {
     const options: { id: EventType; label: string }[] = []
@@ -65,6 +75,53 @@
     return options
   })
 
+  const customTypeNameById = computed(() => {
+    const map = new Map<string, string>()
+    for (const t of userStore.customEvents) {
+      map.set(t.id, t.name)
+    }
+    return map
+  })
+
+  const getTypeIcon = (typeId: EventType) => {
+    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
+  }
+
+  const getTypeLabel = (typeId: EventType) => {
+    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
+    if (builtinLabel) return builtinLabel
+    return customTypeNameById.value.get(typeId) ?? typeId
+  }
+
+  const sortedHistory = computed<EventDto[]>(() => {
+    if (!plant.value) return []
+    return [...(plant.value.history ?? [])].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    )
+  })
+
+  const latestNotesByType = computed(() => {
+    const map = new Map<EventType, string>()
+
+    for (const event of sortedHistory.value) {
+      const notes = event.notes?.trim()
+      if (!notes) continue
+      if (!map.has(event.type)) map.set(event.type, notes)
+    }
+
+    return map
+  })
+
+  const DAY_MS = 1000 * 60 * 60 * 24
+  const formatRelativeDay = (isoString: string) => {
+    const date = new Date(isoString)
+    if (!Number.isFinite(date.getTime())) return ''
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+      Math.round((date.getTime() - Date.now()) / DAY_MS),
+      'day',
+    )
+  }
+
   type DraftCareRuleRow = {
     key: string
     id: string
@@ -72,6 +129,7 @@
     type: EventType
     days: string
     date: string
+    notes: string
   }
 
   const ruleRows = ref<DraftCareRuleRow[]>([])
@@ -95,6 +153,7 @@
       type: r.type,
       days: r.kind === 'recurring' ? String(r.days) : '7',
       date: r.kind === 'date' ? toDateInputValue(new Date(r.date)) : '',
+      notes: r.notes ?? latestNotesByType.value.get(r.type) ?? '',
     }))
   }
 
@@ -102,6 +161,7 @@
     () => props.isOpen,
     (isOpen) => {
       if (!isOpen) return
+      selectedTabIndex.value = 0
       stablePlantId.value = props.plantId
       stableIsAdd.value = props.plantId === null
 
@@ -123,6 +183,7 @@
     () => props.plantId,
     (plantId) => {
       if (!props.isOpen) return
+      selectedTabIndex.value = 0
       stablePlantId.value = plantId
       stableIsAdd.value = plantId === null
       isNameEditing.value = false
@@ -170,6 +231,7 @@
       type: 'water',
       days: '7',
       date: '',
+      notes: '',
     })
   }
 
@@ -181,6 +243,14 @@
     if (row.kind !== 'date') return
     if (row.date) return
     row.date = toDateInputValue(new Date())
+  }
+
+  const setRowKind = (
+    row: DraftCareRuleRow,
+    kind: DraftCareRuleRow['kind'],
+  ) => {
+    row.kind = kind
+    ensureDateDefault(row)
   }
 
   const save = async () => {
@@ -238,6 +308,7 @@
     for (let i = 0; i < ruleRows.value.length; i += 1) {
       const row = ruleRows.value[i]
       if (!row.type) continue
+      const notes = row.notes.trim() || undefined
 
       if (row.kind === 'recurring') {
         const lastIndex = lastCadenceIndexByType.get(row.type)
@@ -251,6 +322,7 @@
           id: row.id,
           type: row.type,
           days,
+          ...(notes ? { notes } : {}),
         })
         continue
       }
@@ -263,6 +335,7 @@
         id: row.id,
         type: row.type,
         date: iso,
+        ...(notes ? { notes } : {}),
       })
     }
 
@@ -312,9 +385,7 @@
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
-        <div
-          class="flex min-h-full items-start justify-center p-4 sm:items-center sm:p-6"
-        >
+        <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
           <TransitionChild
             as="template"
             enter="ease-out duration-200"
@@ -408,8 +479,12 @@
                   </p>
                 </div>
 
-                <form v-else @submit.prevent="save" class="space-y-5">
-                  <div v-if="isAddMode" class="space-y-4">
+                <form
+                  v-else-if="isAddMode"
+                  @submit.prevent="save"
+                  class="space-y-5"
+                >
+                  <div class="space-y-4">
                     <div>
                       <label
                         for="plantName"
@@ -427,127 +502,13 @@
                     </div>
                   </div>
 
-                  <div class="space-y-3">
-                    <div
-                      v-if="ruleRows.length === 0"
-                      class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
-                    >
-                      <p class="text-sm text-slate-600 dark:text-slate-300">
-                        No care rules yet. Add a task to start.
-                      </p>
-                    </div>
-
-                    <div v-else class="space-y-3">
-                      <div
-                        v-for="row in ruleRows"
-                        :key="row.key"
-                        class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:flex-row sm:items-end dark:border-slate-800 dark:bg-slate-950/30"
-                      >
-                        <div class="w-full shrink-0 sm:w-32">
-                          <label
-                            class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                          >
-                            Kind
-                          </label>
-                          <div class="flex items-end gap-2">
-                            <div class="relative min-w-0 flex-1">
-                              <select
-                                v-model="row.kind"
-                                @change="ensureDateDefault(row)"
-                                class="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                              >
-                                <option value="recurring">Recurring</option>
-                                <option value="date">One-off</option>
-                              </select>
-                              <span
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
-                              >
-                                <ChevronIcon
-                                  class="size-4"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:hidden dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                              @click="removeRuleRow(row.key)"
-                              aria-label="Remove action"
-                              title="Remove"
-                            >
-                              <TrashIcon class="size-4" aria-hidden="true" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div
-                          class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end"
-                        >
-                          <div
-                            class="min-w-0"
-                            :class="row.kind === 'date' ? 'flex-3' : 'flex-1'"
-                          >
-                            <ActionTypeListbox
-                              v-model="row.type"
-                              :options="typeOptions"
-                              label="Task"
-                            />
-                          </div>
-
-                          <div
-                            v-if="row.kind === 'recurring'"
-                            class="w-full shrink-0 sm:w-24"
-                          >
-                            <label
-                              class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                            >
-                              Days
-                            </label>
-                            <input
-                              v-model="row.days"
-                              type="number"
-                              min="1"
-                              inputmode="numeric"
-                              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                            />
-                          </div>
-
-                          <div v-else class="min-w-0 flex-2">
-                            <label
-                              class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                            >
-                              Date
-                            </label>
-                            <input
-                              v-model="row.date"
-                              type="date"
-                              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          class="hidden size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:inline-flex dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                          @click="removeRuleRow(row.key)"
-                          aria-label="Remove action"
-                          title="Remove"
-                        >
-                          <TrashIcon class="size-4" aria-hidden="true" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      @click="addRuleRow"
-                      class="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
-                    >
-                      <span aria-hidden="true">+</span>
-                      Add new task
-                    </button>
-                  </div>
+                  <CareRulesEditor
+                    :rule-rows="ruleRows"
+                    :type-options="typeOptions"
+                    :add-rule-row="addRuleRow"
+                    :remove-rule-row="removeRuleRow"
+                    :set-row-kind="setRowKind"
+                  />
 
                   <div class="flex flex-col gap-3 pt-2 sm:flex-row">
                     <button
@@ -565,6 +526,138 @@
                     </button>
                   </div>
                 </form>
+
+                <TabGroup
+                  v-else
+                  :selected-index="selectedTabIndex"
+                  @change="selectedTabIndex = $event"
+                  as="div"
+                  class="space-y-5"
+                >
+                  <TabList
+                    class="flex items-center gap-6 border-b border-slate-200 dark:border-slate-800"
+                  >
+                    <Tab v-slot="{ selected }" as="template">
+                      <button
+                        type="button"
+                        class="-mb-px border-b-2 px-1 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        :class="
+                          selected
+                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300'
+                            : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
+                        "
+                      >
+                        Care rules
+                      </button>
+                    </Tab>
+
+                    <Tab v-slot="{ selected }" as="template">
+                      <button
+                        type="button"
+                        class="-mb-px border-b-2 px-1 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        :class="
+                          selected
+                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300'
+                            : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
+                        "
+                      >
+                        History
+                      </button>
+                    </Tab>
+                  </TabList>
+
+                  <TabPanels>
+                    <TabPanel class="focus:outline-none">
+                      <form @submit.prevent="save" class="space-y-5">
+                        <CareRulesEditor
+                          :rule-rows="ruleRows"
+                          :type-options="typeOptions"
+                          :add-rule-row="addRuleRow"
+                          :remove-rule-row="removeRuleRow"
+                          :set-row-kind="setRowKind"
+                        />
+
+                        <div class="flex flex-col gap-3 pt-2 sm:flex-row">
+                          <button
+                            type="button"
+                            @click="handleClose"
+                            class="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    </TabPanel>
+
+                    <TabPanel class="focus:outline-none">
+                      <div class="space-y-4">
+                        <div
+                          v-if="sortedHistory.length === 0"
+                          class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950/30 dark:text-slate-300"
+                        >
+                          No events recorded yet.
+                        </div>
+
+                        <div
+                          v-else
+                          class="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
+                        >
+                          <div
+                            v-for="event in sortedHistory"
+                            :key="event.id"
+                            class="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/30"
+                          >
+                            <div
+                              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
+                            >
+                              {{ getTypeIcon(event.type) }}
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                              <div
+                                class="flex items-start justify-between gap-3"
+                              >
+                                <p
+                                  class="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                  {{ getTypeLabel(event.type) }}
+                                </p>
+                                <p
+                                  class="shrink-0 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                  {{ formatRelativeDay(event.date) }}
+                                </p>
+                              </div>
+
+                              <p
+                                v-if="event.notes"
+                                class="mt-1 text-sm text-slate-600 dark:text-slate-300"
+                              >
+                                {{ event.notes }}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="flex pt-2">
+                          <button
+                            type="button"
+                            @click="handleClose"
+                            class="ml-auto rounded-xl border border-slate-200 px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </TabPanel>
+                  </TabPanels>
+                </TabGroup>
               </div>
             </DialogPanel>
           </TransitionChild>

@@ -6,6 +6,7 @@ export type UpcomingItem = {
   plantName: PlantDto['name']
   careRuleId: CareRule['id']
   type: EventType
+  notes?: string
   dueDate: Date
   diffDays: number
 } & ({ kind: 'recurring'; days: number } | { kind: 'date' })
@@ -15,4 +16,5 @@ export type CareTimelinePayload = {
   type: CareRule['type']
   kind: CareRule['kind']
   careRuleId: CareRule['id']
+  notes?: string
 }

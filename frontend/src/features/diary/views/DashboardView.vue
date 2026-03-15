@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue'
-  import { useDark } from '@vueuse/core'
+  import { useDark, useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
   import { useElfsightVoice } from '@/composables'
   import type { CareTimelinePayload } from '@/types'
@@ -28,6 +28,7 @@
   const isPlantModalOpen = ref(false)
   const plantModalPlantId = ref<number | null>(null)
   const isSettingsOpen = ref(false)
+  const showHistoryCard = useLocalStorage('plant-care-show-history-card', true)
 
   const handleLogout = async () => {
     await authStore.logout()
@@ -72,7 +73,7 @@
     const event = await plantsStore.addEvent({
       plantId: payload.plantId,
       type: payload.type,
-      notes: '',
+      ...(payload.notes ? { notes: payload.notes } : {}),
       date: new Date().toISOString(),
     })
 
@@ -113,6 +114,7 @@
           :plants="plantsStore.plants"
           :events="plantsStore.events"
           :customEvents="userStore.customEvents"
+          :show-history-card="showHistoryCard"
           @care="handleCare"
         />
       </div>
@@ -123,6 +125,15 @@
       :plant-id="plantModalPlantId"
       @close="closePlantModal"
     />
-    <SettingsModal :is-open="isSettingsOpen" @close="closeSettings" />
+    <SettingsModal
+      :is-open="isSettingsOpen"
+      v-model:show-history-card="showHistoryCard"
+      @close="closeSettings"
+    />
+
+    <div
+      class="elfsight-app-bc426b86-ebaa-40ef-9518-c05b2bf1cb57"
+      data-elfsight-app-lazy
+    ></div>
   </div>
 </template>

@@ -16,12 +16,14 @@ export const careRuleSchema = z.discriminatedUnion('kind', [
     id: z.uuid(),
     type: eventTypeSchema,
     days: z.int().positive(),
+    notes: notesSchema.optional(),
   }),
   z.object({
     kind: z.literal('date'),
     id: z.uuid(),
     type: eventTypeSchema,
     date: z.iso.datetime(),
+    notes: notesSchema.optional(),
   }),
 ])
 

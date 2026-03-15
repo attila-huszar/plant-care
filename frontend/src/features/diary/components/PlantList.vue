@@ -213,16 +213,36 @@
           <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">
             {{ card.plant.name }}
           </h3>
-          <p
+
+          <div
             v-if="card.lastEvent"
-            class="mt-1 text-xs text-slate-400 dark:text-slate-500"
-            :title="formatCalendarDate(card.lastEvent.iso)"
+            class="mt-2 flex flex-wrap justify-center gap-2"
           >
-            Last:
-            {{ getTypeIcon(card.lastEvent.type) }}
-            {{ getTypeLabel(card.lastEvent.type) }} •
-            {{ formatRelativeDay(card.lastEvent.iso) }}
-          </p>
+            <span class="sr-only">Last event</span>
+            <span
+              class="self-center text-sm font-semibold text-slate-600 dark:text-slate-300"
+            >
+              Done
+            </span>
+            <span
+              class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-200"
+              :title="getTypeLabel(card.lastEvent.type)"
+            >
+              <span aria-hidden="true">{{
+                getTypeIcon(card.lastEvent.type)
+              }}</span>
+              <span class="truncate">{{
+                getTypeLabel(card.lastEvent.type)
+              }}</span>
+            </span>
+            <span
+              class="self-center text-sm font-semibold text-slate-600 dark:text-slate-300"
+              :title="formatCalendarDate(card.lastEvent.iso)"
+            >
+              {{ formatRelativeDay(card.lastEvent.iso) }}
+            </span>
+          </div>
+
           <p v-else class="mt-1 text-xs text-slate-400 dark:text-slate-500">
             No events yet
           </p>

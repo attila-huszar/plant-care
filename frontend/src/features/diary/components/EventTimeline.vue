@@ -1,6 +1,13 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
+  import {
+    Dialog,
+    DialogPanel,
+    DialogTitle,
+    TransitionChild,
+    TransitionRoot,
+  } from '@headlessui/vue'
   import type {
     CustomEventDto,
     EventDto,
@@ -14,11 +21,17 @@
     PLANT_CARE_META.map((t) => [t.id, t]),
   )
 
-  const props = defineProps<{
-    plants: PlantDto[]
-    events: EventDto[]
-    customEvents?: CustomEventDto[]
-  }>()
+  const props = withDefaults(
+    defineProps<{
+      plants: PlantDto[]
+      events: EventDto[]
+      customEvents?: CustomEventDto[]
+      showHistoryCard?: boolean
+    }>(),
+    {
+      showHistoryCard: true,
+    },
+  )
 
   const emit = defineEmits<{
     care: [payload: CareTimelinePayload]
@@ -48,6 +61,23 @@
       const prev = map.get(key)
       if (prev === undefined || ms > prev) map.set(key, ms)
     }
+    return map
+  })
+
+  const latestNotesByPlantAndType = computed(() => {
+    const map = new Map<string, string>()
+
+    const sorted = [...props.events].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    )
+
+    for (const event of sorted) {
+      const notes = event.notes?.trim()
+      if (!notes) continue
+      const key = `${event.plantId}:${event.type}`
+      if (!map.has(key)) map.set(key, notes)
+    }
+
     return map
   })
 
@@ -91,6 +121,9 @@
             plantName: plant.name,
             careRuleId: rule.id,
             type: rule.type,
+            notes:
+              rule.notes?.trim() ||
+              latestNotesByPlantAndType.value.get(lastEventKey),
             dueDate,
             diffDays,
             kind: 'recurring',
@@ -112,6 +145,9 @@
           plantName: plant.name,
           careRuleId: rule.id,
           type: rule.type,
+          notes:
+            rule.notes?.trim() ||
+            latestNotesByPlantAndType.value.get(`${plant.id}:${rule.type}`),
           dueDate,
           diffDays,
           kind: 'date',
@@ -223,6 +259,11 @@
   )
 
   const completingKeys = ref<Set<string>>(new Set())
+  const isCompleteDialogOpen = ref(false)
+  const pendingCompleteItem = ref<(typeof upcomingCare.value)[number] | null>(
+    null,
+  )
+  const pendingNotes = ref('')
 
   const isCompleting = (key: string) => {
     return completingKeys.value.has(key)
@@ -244,9 +285,25 @@
     return item.diffDays <= 0
   }
 
-  const completeItem = (item: (typeof upcomingCare.value)[number]) => {
+  const closeCompleteDialog = () => {
+    isCompleteDialogOpen.value = false
+    pendingCompleteItem.value = null
+    pendingNotes.value = ''
+  }
+
+  const openCompleteDialog = (item: (typeof upcomingCare.value)[number]) => {
+    pendingCompleteItem.value = item
+    pendingNotes.value = item.notes?.trim() ?? ''
+    isCompleteDialogOpen.value = true
+  }
+
+  const confirmComplete = () => {
+    const item = pendingCompleteItem.value
+    if (!item) return
     if (!canCompleteItem(item)) return
     if (isCompleting(item.key)) return
+
+    const notes = pendingNotes.value.trim()
     markCompleting(item.key)
 
     emit('care', {
@@ -254,6 +311,29 @@
       type: item.type,
       kind: item.kind,
       careRuleId: item.careRuleId,
+      ...(notes ? { notes } : {}),
+    })
+
+    closeCompleteDialog()
+
+    window.setTimeout(() => {
+      unmarkCompleting(item.key)
+    }, 700)
+  }
+
+  const completeItemQuick = (item: (typeof upcomingCare.value)[number]) => {
+    if (!canCompleteItem(item)) return
+    if (isCompleting(item.key)) return
+
+    const notes = item.notes?.trim() || undefined
+    markCompleting(item.key)
+
+    emit('care', {
+      plantId: item.plantId,
+      type: item.type,
+      kind: item.kind,
+      careRuleId: item.careRuleId,
+      ...(notes ? { notes } : {}),
     })
 
     window.setTimeout(() => {
@@ -264,13 +344,101 @@
 
 <template>
   <section class="flex h-full flex-col gap-6">
+    <TransitionRoot as="template" :show="isCompleteDialogOpen">
+      <Dialog as="div" class="relative z-50" @close="closeCompleteDialog">
+        <TransitionChild
+          as="template"
+          enter="ease-out duration-200"
+          enter-from="opacity-0"
+          enter-to="opacity-100"
+          leave="ease-in duration-150"
+          leave-from="opacity-100"
+          leave-to="opacity-0"
+        >
+          <div
+            class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+            aria-hidden="true"
+          />
+        </TransitionChild>
+
+        <div class="fixed inset-0 overflow-y-auto">
+          <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
+            <TransitionChild
+              as="template"
+              enter="ease-out duration-200"
+              enter-from="opacity-0 scale-90"
+              enter-to="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leave-from="opacity-100 scale-100"
+              leave-to="opacity-0 scale-90"
+            >
+              <DialogPanel
+                class="w-full max-w-lg overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div class="p-5 sm:p-6">
+                  <DialogTitle
+                    class="text-lg font-bold text-slate-900 dark:text-slate-100"
+                  >
+                    Mark as done
+                  </DialogTitle>
+
+                  <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Add optional notes for this task.
+                  </p>
+
+                  <div class="mt-4">
+                    <label
+                      class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200"
+                    >
+                      Notes (optional)
+                    </label>
+                    <textarea
+                      v-model="pendingNotes"
+                      rows="3"
+                      maxlength="1000"
+                      placeholder="e.g. watered thoroughly until runoff"
+                      class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 transition-all hover:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-950/60"
+                    />
+                  </div>
+
+                  <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      class="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                      @click="closeCompleteDialog"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
+                      @click="confirmComplete"
+                    >
+                      Mark as done
+                    </button>
+                  </div>
+                </div>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
+        </div>
+      </Dialog>
+    </TransitionRoot>
+
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
         Activity
       </h2>
     </div>
 
-    <div class="grid min-h-0 flex-1 grid-rows-2 gap-4">
+    <div
+      class="grid min-h-0 gap-4"
+      :class="
+        props.showHistoryCard
+          ? 'flex-1 grid-rows-[auto_minmax(0,1fr)]'
+          : 'grid-rows-[auto]'
+      "
+    >
       <div
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
       >
@@ -290,11 +458,11 @@
           <div
             v-for="item in upcomingCare"
             :key="item.key"
-            class="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors"
+            class="flex items-start gap-3 rounded-xl px-3 py-3"
             :class="
               item.key === highlightedKey
                 ? 'bg-emerald-50/60 dark:bg-emerald-950/30'
-                : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                : ''
             "
           >
             <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
@@ -329,19 +497,41 @@
                   </span>
                   <span v-else>one-off</span>
                 </p>
+                <div v-if="item.notes" class="mt-1">
+                  <p
+                    class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+                    :title="item.notes"
+                  >
+                    <span class="min-w-0 wrap-break-word">{{
+                      item.notes
+                    }}</span>
+                  </p>
+                </div>
               </div>
             </div>
 
             <button
               v-if="canCompleteItem(item)"
               type="button"
-              class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              @click.stop="openCompleteDialog(item)"
+              :disabled="isCompleting(item.key)"
+              aria-label="Add notes"
+              title="Add notes"
+            >
+              <span aria-hidden="true">⋯</span>
+            </button>
+
+            <button
+              v-if="canCompleteItem(item)"
+              type="button"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               :class="
                 isCompleting(item.key)
                   ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20'
                   : 'border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/60 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800'
               "
-              @click.stop="completeItem(item)"
+              @click.stop="completeItemQuick(item)"
               :disabled="isCompleting(item.key)"
               aria-label="Mark as done"
               title="Mark as done"
@@ -353,6 +543,7 @@
       </div>
 
       <div
+        v-if="props.showHistoryCard"
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
       >
         <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
@@ -402,15 +593,15 @@
           <p class="text-sm">No events recorded yet.</p>
         </div>
 
-        <div v-else class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4">
-          <div class="space-y-4">
+        <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
+          <div class="space-y-1">
             <div
               v-for="event in pagedHistoryEvents"
               :key="event.id"
-              class="flex items-start gap-4 rounded-xl border border-transparent p-4 transition-colors hover:border-slate-100 hover:bg-slate-50 dark:hover:border-slate-800 dark:hover:bg-slate-900"
+              class="flex items-start gap-3 rounded-xl px-3 py-3"
             >
               <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
                 {{ getTypeIcon(event.type) }}
               </div>
@@ -424,15 +615,19 @@
                     event.plantName
                   }}</span>
                 </p>
-                <p
-                  v-if="event.notes"
-                  class="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400"
-                >
-                  {{ event.notes }}
-                </p>
-                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   {{ formatEventDate(event.date) }}
                 </p>
+                <div v-if="event.notes" class="mt-1">
+                  <p
+                    class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+                    :title="event.notes"
+                  >
+                    <span class="min-w-0 wrap-break-word">{{
+                      event.notes
+                    }}</span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

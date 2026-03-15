@@ -4,6 +4,7 @@ import type {
   emailSchema,
   loginSchema,
   mfaCodeSchema,
+  passwordResetFormSchema,
   passwordResetSchema,
   publicUserSchema,
   registerFormSchema,
@@ -19,6 +20,7 @@ export type VerificationRequest = z.infer<typeof tokenSchema>
 export type PasswordResetRequest = z.infer<typeof emailSchema>
 export type PasswordResetToken = z.infer<typeof tokenSchema>
 export type PasswordResetSubmit = z.infer<typeof passwordResetSchema>
+export type PasswordResetFormValues = z.infer<typeof passwordResetFormSchema>
 export type AuthJWTPayload = z.infer<typeof authJWTPayloadSchema>
 export type PublicUser = z.infer<typeof publicUserSchema>
 export type UserProfileUpdateRequest = z.infer<typeof userProfileUpdateSchema>

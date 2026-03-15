@@ -11,7 +11,7 @@
     "dev": "concurrently --success=all -n backend,frontend \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run -w @plant-care/frontend dev",
     "dev:backend": "docker compose -f backend/docker-compose.yml up",
-    "dev:backend-setup": "cross-env SETUP=true docker compose -f backend/docker-compose.yml up --build",
+    "dev:backend-setup": "cross-env SETUP=true docker compose -f backend/docker-compose.yml up --build -d",
     "preview": "npm run -w @plant-care/frontend preview",
     "build": "npm run -w @plant-care/frontend build",
     "lint": "concurrently --success=all -n backend,frontend \"npm run -w @plant-care/backend lint\" \"npm run -w @plant-care/frontend lint\"",
