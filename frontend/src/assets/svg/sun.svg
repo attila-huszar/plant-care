@@ -1,55 +1,17 @@
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="64"
-  height="64"
-  viewBox="0 0 64 64"
-  fill="none"
->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <radialGradient
-      id="sunWash"
-      cx="0"
-      cy="0"
-      r="1"
-      gradientUnits="userSpaceOnUse"
-      gradientTransform="translate(32 30) rotate(90) scale(22)"
-    >
-      <stop offset="0" stop-color="#FFE8A3" stop-opacity="1" />
-      <stop offset="0.55" stop-color="#FFD36B" stop-opacity="0.95" />
-      <stop offset="1" stop-color="#FFB84D" stop-opacity="0.85" />
+    <radialGradient id="a" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(90 1 31)scale(22)">
+      <stop offset="0" stop-color="#ffe8a3"/>
+      <stop offset=".55" stop-color="#ffd36b" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#ffb84d" stop-opacity=".85"/>
     </radialGradient>
-    <filter id="waterBlur" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="1.6" />
+    <filter id="b" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.6"/>
     </filter>
   </defs>
-
-  <!-- Soft watercolor glow -->
-  <circle
-    cx="32"
-    cy="32"
-    r="18"
-    fill="url(#sunWash)"
-    filter="url(#waterBlur)"
-    opacity="0.95"
-  />
-  <circle cx="32" cy="32" r="14" fill="url(#sunWash)" opacity="0.95" />
-
-  <!-- Hand-painted rays -->
-  <g
-    stroke="#FFB84D"
-    stroke-linecap="round"
-    stroke-width="3"
-    opacity="0.9"
-    filter="url(#waterBlur)"
-  >
-    <path d="M32 6 v8" />
-    <path d="M32 50 v8" />
-    <path d="M6 32 h8" />
-    <path d="M50 32 h8" />
-    <path d="M13 13 l6 6" />
-    <path d="M45 45 l6 6" />
-    <path d="M51 13 l-6 6" />
-    <path d="M19 45 l-6 6" />
+  <circle cx="32" cy="32" r="18" fill="url(#a)" filter="url(#b)" opacity=".95"/>
+  <circle cx="32" cy="32" r="14" fill="url(#a)" opacity=".95"/>
+  <g stroke="#ffb84d" stroke-linecap="round" stroke-width="3" opacity=".9" filter="url(#b)">
+    <path d="M32 6v8m0 36v8M6 32h8m36 0h8M13 13l6 6m26 26 6 6m0-38-6 6M19 45l-6 6"/>
   </g>
 </svg>
-

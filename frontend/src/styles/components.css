@@ -1,0 +1,49 @@
+@layer components {
+  /* ------------------------------------------------ */
+  /* BUTTONS                                          */
+  /* ------------------------------------------------ */
+
+  .btn-primary {
+    @apply bg-plant-500 hover:bg-plant-400 dark:bg-plant-600 dark:hover:bg-plant-500 rounded-xl px-4 py-2 text-white shadow transition;
+  }
+
+  .btn-secondary {
+    @apply bg-water-400 hover:bg-water-300 dark:bg-water-500 dark:hover:bg-water-400 rounded-xl px-4 py-2 text-white transition;
+  }
+
+  .btn-soft {
+    @apply bg-paper border-plant-200 hover:bg-plant-100 dark:border-plant-700 rounded-xl border px-4 py-2 transition dark:bg-[#24322b];
+  }
+
+  /* ------------------------------------------------ */
+  /* INPUTS                                           */
+  /* ------------------------------------------------ */
+
+  .input-plant {
+    @apply border-plant-200 focus:ring-plant-300 dark:border-plant-700 dark:focus:ring-plant-500 rounded-lg border bg-white px-3 py-2 focus:ring-2 focus:outline-none dark:bg-[#24322b];
+  }
+
+  /* ------------------------------------------------ */
+  /* CARD                                             */
+  /* ------------------------------------------------ */
+
+  .card-plant {
+    @apply bg-paper border-plant-200 dark:border-plant-700 rounded-2xl border p-6 shadow-md dark:bg-[#24322b];
+  }
+
+  /* ------------------------------------------------ */
+  /* EVENT BADGES                                     */
+  /* ------------------------------------------------ */
+
+  .badge-water {
+    @apply bg-water-200 text-water-500 rounded-full px-2 py-1 text-xs;
+  }
+
+  .badge-fertilize {
+    @apply bg-plant-200 text-plant-700 rounded-full px-2 py-1 text-xs;
+  }
+
+  .badge-repot {
+    @apply bg-soil-200 text-soil-500 rounded-full px-2 py-1 text-xs;
+  }
+}

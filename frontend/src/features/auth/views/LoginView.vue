@@ -94,7 +94,7 @@
         <span
           class="mx-auto mb-6 inline-flex h-20 w-20 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_24px_currentColor)]"
         >
-          <img :src="PlantIcon" alt="" aria-hidden="true" class="h-20 w-20" />
+          <PlantIcon class="size-20" aria-hidden="true" />
         </span>
         <h1
           class="mb-2 text-3xl font-bold tracking-tight text-emerald-900 dark:text-slate-100"

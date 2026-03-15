@@ -119,7 +119,7 @@ export async function verifyMfa(payload: MfaVerifyRequest) {
   const isCodeCorrect = await Bun.password.verify(code, user.mfaToken)
 
   if (!isCodeCorrect) {
-    throw new Unauthorized(authMessage.authError)
+    throw new Unauthorized(authMessage.mfaCodeError)
   }
 
   const cleared = await UsersRepository.updateUserBy('uuid', user.uuid, {
