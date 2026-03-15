@@ -8,6 +8,7 @@
     PlantDto,
   } from '@plant-care/shared'
   import type { CareTimelinePayload, UpcomingItem } from '@/types'
+  import { CalendarIcon, CheckIcon } from '@/assets/svg'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
     PLANT_CARE_META.map((t) => [t.id, t]),
@@ -345,19 +346,7 @@
               aria-label="Mark as done"
               title="Mark as done"
             >
-              <svg
-                class="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
+              <CheckIcon class="size-5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -409,19 +398,7 @@
           v-if="enrichedEvents.length === 0"
           class="flex min-h-60 flex-1 flex-col items-center justify-center gap-4 px-4 pb-6 text-center opacity-60"
         >
-          <svg
-            class="h-12 w-12 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            ></path>
-          </svg>
+          <CalendarIcon class="size-12 text-slate-400" aria-hidden="true" />
           <p class="text-sm">No events recorded yet.</p>
         </div>
 

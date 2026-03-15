@@ -6,7 +6,14 @@
     MenuItems,
     Switch,
   } from '@headlessui/vue'
-  import { MoonIcon, PlantIcon, SunIcon } from '@/assets/svg'
+  import {
+    ChevronIcon,
+    LogoutIcon,
+    MoonIcon,
+    PlantIcon,
+    SettingsIcon,
+    SunIcon,
+  } from '@/assets/svg'
 
   defineProps<{
     userLabel: string
@@ -32,7 +39,7 @@
       <span
         class="inline-flex h-10 w-10 shrink-0 text-emerald-400/60 filter-[drop-shadow(0_0_0px_currentColor)] transition-[filter] duration-300 hover:filter-[drop-shadow(0_0_20px_currentColor)]"
       >
-        <img :src="PlantIcon" alt="" aria-hidden="true" class="h-10 w-10" />
+        <PlantIcon class="size-10" aria-hidden="true" />
       </span>
       <h1
         class="line-clamp-2 min-w-0 text-xl leading-tight font-bold text-emerald-900 dark:text-slate-100"
@@ -52,9 +59,8 @@
           class="inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white transition"
           :class="isDark ? 'translate-x-7' : 'translate-x-1'"
         >
-          <img
-            :src="isDark ? MoonIcon : SunIcon"
-            alt=""
+          <component
+            :is="isDark ? MoonIcon : SunIcon"
             class="h-4 w-4"
             aria-hidden="true"
           />
@@ -66,18 +72,10 @@
           class="inline-flex max-w-64 items-center gap-2 truncate rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold whitespace-nowrap text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-950"
         >
           <span class="min-w-0 truncate">Hello, {{ userLabel }}</span>
-          <svg
+          <ChevronIcon
+            class="size-4 shrink-0 text-slate-400"
             aria-hidden="true"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            class="h-4 w-4 shrink-0 text-slate-400"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06"
-              clip-rule="evenodd"
-            />
-          </svg>
+          />
         </MenuButton>
 
         <Transition
@@ -103,17 +101,7 @@
                       : 'text-slate-700 dark:text-slate-200'
                   "
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 640 640"
-                    fill="currentColor"
-                    class="size-4 shrink-0"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M541.4 162.6c7.6-7.6 20.3-5.7 24.1 4.3 6.8 17.7 10.5 37 10.5 57.1 0 88.4-71.6 160-160 160-17.5 0-34.4-2.8-50.2-8L178.9 562.9c-28.1 28.1-73.7 28.1-101.8 0s-28.1-73.7 0-101.8L264 274.2c-5.2-15.8-8-32.6-8-50.2 0-88.4 71.6-160 160-160 20.1 0 39.4 3.7 57.1 10.5 10 3.8 11.8 16.5 4.3 24.1l-88.7 88.7c-3 3-4.7 7.1-4.7 11.3V240c0 8.8 7.2 16 16 16h41.4c4.2 0 8.3-1.7 11.3-4.7z"
-                    />
-                  </svg>
+                  <SettingsIcon class="size-4 shrink-0" aria-hidden="true" />
                   <span>Settings</span>
                 </button>
               </MenuItem>
@@ -129,9 +117,8 @@
                       : 'text-slate-700 dark:text-slate-200'
                   "
                 >
-                  <img
-                    :src="isDark ? SunIcon : MoonIcon"
-                    alt=""
+                  <component
+                    :is="isDark ? SunIcon : MoonIcon"
                     class="size-4 shrink-0"
                     aria-hidden="true"
                   />
@@ -154,17 +141,7 @@
                       : 'text-slate-700 dark:text-slate-200'
                   "
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 640 640"
-                    fill="currentColor"
-                    class="size-4 shrink-0"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M224 160c17.7 0 32-14.3 32-32s-14.3-32-32-32h-64c-53 0-96 43-96 96v256c0 53 43 96 96 96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32h-64c-17.7 0-32-14.3-32-32V192c0-17.7 14.3-32 32-32zm342.6 182.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l73.4 73.4H256c-17.7 0-32 14.3-32 32s14.3 32 32 32h210.7l-73.4 73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l128-128z"
-                    />
-                  </svg>
+                  <LogoutIcon class="size-4 shrink-0" aria-hidden="true" />
                   <span>Log out</span>
                 </button>
               </MenuItem>

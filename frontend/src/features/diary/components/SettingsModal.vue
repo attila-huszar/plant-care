@@ -14,6 +14,7 @@
   } from '@headlessui/vue'
   import { useUserStore } from '@/features/auth/stores'
   import { usePlantsStore } from '@/features/diary/stores'
+  import { EditIcon, TrashIcon } from '@/assets/svg'
 
   const props = defineProps<{
     isOpen: boolean
@@ -489,17 +490,7 @@
                           title="Rename"
                           aria-label="Rename"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 640 640"
-                            fill="currentColor"
-                            class="h-4 w-4"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M416.9 85.2 372 130.1 509.9 268l44.9-44.9c13.6-13.5 21.2-31.9 21.2-51.1s-7.6-37.6-21.2-51.1l-35.7-35.7C505.6 71.6 487.2 64 468 64s-37.6 7.6-51.1 21.2M338.1 164 122.9 379.1c-10.7 10.7-18.5 24.1-22.6 38.7L64.9 545.6c-2.3 8.3 0 17.3 6.2 23.4s15.1 8.5 23.4 6.2l127.8-35.5c14.6-4.1 27.9-11.8 38.7-22.6l215-215.2z"
-                            />
-                          </svg>
+                          <EditIcon class="size-4" aria-hidden="true" />
                         </button>
                         <Popover v-slot="{ open, close }" class="relative">
                           <PopoverButton
@@ -516,16 +507,7 @@
                             "
                             aria-label="Remove"
                           >
-                            <svg
-                              aria-hidden="true"
-                              viewBox="0 0 640 640"
-                              fill="currentColor"
-                              class="h-4 w-4"
-                            >
-                              <path
-                                d="M232.7 69.9 224 96h-96c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-96l-8.7-26.1C402.9 56.8 390.7 48 376.9 48H263.1c-13.8 0-26 8.8-30.4 21.9M512 208H128l21.1 323.1c1.6 25.3 22.6 44.9 47.9 44.9h246c25.3 0 46.3-19.6 47.9-44.9z"
-                              />
-                            </svg>
+                            <TrashIcon class="size-4" aria-hidden="true" />
                           </PopoverButton>
 
                           <TransitionRoot as="template" :show="open">

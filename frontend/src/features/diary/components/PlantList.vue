@@ -14,7 +14,7 @@
     EventType,
     PlantDto,
   } from '@plant-care/shared'
-  import { PlantIcon } from '@/assets/svg'
+  import { PlantIcon, PlusIcon, TrashIcon } from '@/assets/svg'
 
   const BUILTIN_ACTION_META_BY_ID = new Map(
     PLANT_CARE_META.map((t) => [t.id, t]),
@@ -106,19 +106,7 @@
         @click="emit('add-plant')"
         class="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
       >
-        <svg
-          class="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          ></path>
-        </svg>
+        <PlusIcon class="size-5" aria-hidden="true" />
         Add Plant
       </button>
     </div>
@@ -131,7 +119,7 @@
       <div
         class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-500"
       >
-        <img :src="PlantIcon" alt="" aria-hidden="true" class="h-8 w-8" />
+        <PlantIcon class="size-8" aria-hidden="true" />
       </div>
       <h3
         class="mb-2 text-lg font-semibold text-emerald-900 dark:text-slate-100"
@@ -166,16 +154,7 @@
             @keydown.enter.stop
             @keydown.space.stop
           >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 640 640"
-              fill="currentColor"
-              class="size-4"
-            >
-              <path
-                d="M232.7 69.9 224 96h-96c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-96l-8.7-26.1C402.9 56.8 390.7 48 376.9 48H263.1c-13.8 0-26 8.8-30.4 21.9M512 208H128l21.1 323.1c1.6 25.3 22.6 44.9 47.9 44.9h246c25.3 0 46.3-19.6 47.9-44.9z"
-              />
-            </svg>
+            <TrashIcon class="size-4" aria-hidden="true" />
           </PopoverButton>
 
           <TransitionRoot as="template" :show="open">
@@ -228,7 +207,7 @@
         <div
           class="mb-2 flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br from-emerald-100 to-green-100 text-emerald-600 shadow-inner transition-transform duration-300 group-hover:scale-105"
         >
-          <img :src="PlantIcon" alt="" aria-hidden="true" class="h-12 w-12" />
+          <PlantIcon class="size-12" aria-hidden="true" />
         </div>
         <div>
           <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">
