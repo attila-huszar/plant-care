@@ -21,11 +21,17 @@
     PLANT_CARE_META.map((t) => [t.id, t]),
   )
 
-  const props = defineProps<{
-    plants: PlantDto[]
-    events: EventDto[]
-    customEvents?: CustomEventDto[]
-  }>()
+  const props = withDefaults(
+    defineProps<{
+      plants: PlantDto[]
+      events: EventDto[]
+      customEvents?: CustomEventDto[]
+      showHistoryCard?: boolean
+    }>(),
+    {
+      showHistoryCard: true,
+    },
+  )
 
   const emit = defineEmits<{
     care: [payload: CareTimelinePayload]
@@ -425,7 +431,14 @@
       </h2>
     </div>
 
-    <div class="grid min-h-0 flex-1 grid-rows-2 gap-4">
+    <div
+      class="grid min-h-0 gap-4"
+      :class="
+        props.showHistoryCard
+          ? 'flex-1 grid-rows-[auto_minmax(0,1fr)]'
+          : 'grid-rows-[auto]'
+      "
+    >
       <div
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
       >
@@ -445,11 +458,11 @@
           <div
             v-for="item in upcomingCare"
             :key="item.key"
-            class="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors"
+            class="flex items-start gap-3 rounded-xl px-3 py-3"
             :class="
               item.key === highlightedKey
                 ? 'bg-emerald-50/60 dark:bg-emerald-950/30'
-                : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                : ''
             "
           >
             <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
@@ -530,6 +543,7 @@
       </div>
 
       <div
+        v-if="props.showHistoryCard"
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
       >
         <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
@@ -579,15 +593,15 @@
           <p class="text-sm">No events recorded yet.</p>
         </div>
 
-        <div v-else class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4">
-          <div class="space-y-4">
+        <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
+          <div class="space-y-1">
             <div
               v-for="event in pagedHistoryEvents"
               :key="event.id"
-              class="flex items-start gap-4 rounded-xl border border-transparent p-4 transition-colors hover:border-slate-100 hover:bg-slate-50 dark:hover:border-slate-800 dark:hover:bg-slate-900"
+              class="flex items-start gap-3 rounded-xl px-3 py-3"
             >
               <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
                 {{ getTypeIcon(event.type) }}
               </div>
@@ -601,7 +615,10 @@
                     event.plantName
                   }}</span>
                 </p>
-                <div v-if="event.notes" class="mt-2">
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  {{ formatEventDate(event.date) }}
+                </p>
+                <div v-if="event.notes" class="mt-1">
                   <p
                     class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
                     :title="event.notes"
@@ -611,9 +628,6 @@
                     }}</span>
                   </p>
                 </div>
-                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                  {{ formatEventDate(event.date) }}
-                </p>
               </div>
             </div>
           </div>

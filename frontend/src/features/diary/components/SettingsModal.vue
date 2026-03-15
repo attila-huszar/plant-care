@@ -18,10 +18,12 @@
 
   const props = defineProps<{
     isOpen: boolean
+    showHistoryCard: boolean
   }>()
 
   const emit = defineEmits<{
     close: []
+    'update:showHistoryCard': [value: boolean]
   }>()
 
   const userStore = useUserStore()
@@ -242,6 +244,10 @@
   }
 
   const handleClose = () => emit('close')
+
+  const setShowHistoryCard = (value: boolean) => {
+    emit('update:showHistoryCard', value)
+  }
 </script>
 
 <template>
@@ -342,6 +348,44 @@
                     <span
                       class="inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white transition"
                       :class="draftEnabled ? 'translate-x-7' : 'translate-x-1'"
+                    />
+                  </Switch>
+                </div>
+              </div>
+
+              <div
+                class="mt-5 rounded-2xl border border-slate-200 bg-white/60 p-5 dark:border-slate-800 dark:bg-slate-950/30"
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <div class="min-w-0">
+                    <p
+                      class="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    >
+                      Show history card
+                    </p>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      Toggle the History card in the Activity section.
+                    </p>
+                  </div>
+
+                  <Switch
+                    :model-value="props.showHistoryCard"
+                    @update:model-value="setShowHistoryCard"
+                    class="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:outline-none dark:focus:ring-offset-slate-950"
+                    :class="
+                      props.showHistoryCard
+                        ? 'bg-emerald-600'
+                        : 'bg-slate-200 dark:bg-slate-700'
+                    "
+                  >
+                    <span class="sr-only">Toggle history card visibility</span>
+                    <span
+                      class="inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white transition"
+                      :class="
+                        props.showHistoryCard
+                          ? 'translate-x-7'
+                          : 'translate-x-1'
+                      "
                     />
                   </Switch>
                 </div>

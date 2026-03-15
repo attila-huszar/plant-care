@@ -47,8 +47,10 @@
         :key="row.key"
         class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
       >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div class="w-full shrink-0 sm:w-32">
+        <div
+          class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 sm:flex sm:items-end"
+        >
+          <div class="min-w-0 flex-1 shrink-0 sm:w-32 sm:flex-none">
             <label
               class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
             >
@@ -115,8 +117,18 @@
             </Listbox>
           </div>
 
+          <button
+            type="button"
+            class="inline-flex size-9.5 shrink-0 items-center justify-center self-end rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:order-3 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+            @click="removeRuleRow(row.key)"
+            aria-label="Remove action"
+            title="Remove"
+          >
+            <TrashIcon class="size-4" aria-hidden="true" />
+          </button>
+
           <div
-            class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end"
+            class="col-span-2 flex min-w-0 flex-1 flex-col gap-3 sm:order-2 sm:col-span-1 sm:flex-row sm:items-end"
           >
             <div
               class="min-w-0"
@@ -160,16 +172,6 @@
               />
             </div>
           </div>
-
-          <button
-            type="button"
-            class="inline-flex size-9.5 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-            @click="removeRuleRow(row.key)"
-            aria-label="Remove action"
-            title="Remove"
-          >
-            <TrashIcon class="size-4" aria-hidden="true" />
-          </button>
         </div>
 
         <div class="min-w-0">
