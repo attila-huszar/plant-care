@@ -9,3 +9,9 @@ export { default as SettingsIcon } from './settings.svg'
 export { default as PlusIcon } from './plus.svg'
 export { default as CheckIcon } from './check.svg'
 export { default as CalendarIcon } from './calendar.svg'
+export {
+  ELFSIGHT_MIC_ICON,
+  ELFSIGHT_SOUND_OFF_ICON,
+  ELFSIGHT_SOUND_ON_ICON,
+  type SvgIconSpec,
+} from './elfsight-voice-icons'

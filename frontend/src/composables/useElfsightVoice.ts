@@ -1,4 +1,17 @@
 import { onBeforeUnmount, onMounted } from 'vue'
+import {
+  findComposerInputNearSend,
+  getSpeechRecognition,
+  getSpeechSynthesis,
+  isElementVisible,
+  setComposerText,
+} from '@/utils'
+import {
+  ELFSIGHT_MIC_ICON,
+  ELFSIGHT_SOUND_OFF_ICON,
+  ELFSIGHT_SOUND_ON_ICON,
+  type SvgIconSpec,
+} from '@/assets/svg'
 
 export function useElfsightVoice() {
   let portalObserver: MutationObserver | null = null
@@ -9,119 +22,14 @@ export function useElfsightVoice() {
   const speakTimeoutById = new Map<string, number>()
   const lastSpokenTextById = new Map<string, string>()
 
-  function isVisible(el: Element | null): el is HTMLElement {
-    if (!el) return false
-    const node = el as HTMLElement
-    const style = window.getComputedStyle(node)
-    if (style.display === 'none' || style.visibility === 'hidden') return false
-    const rect = node.getBoundingClientRect()
-    return rect.width > 0 && rect.height > 0
-  }
-
-  function findComposerInputNearSend(
-    root: HTMLElement,
-    send: HTMLButtonElement,
-  ): HTMLElement | null {
-    const selectors = [
-      '#interactionInput',
-      'textarea',
-      'input[type="text"]',
-      'input:not([type])',
-      '[contenteditable="true"]',
-      '[role="textbox"]',
-    ]
-
-    const pickBest = (container: HTMLElement): HTMLElement | null => {
-      for (const selector of selectors) {
-        const el = container.querySelector<HTMLElement>(selector)
-        if (isVisible(el)) return el
-      }
-      return null
-    }
-
-    let current: HTMLElement | null = send
-    for (let i = 0; i < 8; i++) {
-      if (!current) break
-      const parentEl: HTMLElement | null = current.parentElement
-      if (!parentEl) break
-
-      const candidate = pickBest(parentEl)
-      if (candidate) return candidate
-
-      current = parentEl
-    }
-
-    const fallback = root.querySelector<HTMLElement>('#interactionInput')
-    return isVisible(fallback) ? fallback : null
-  }
-
-  function setComposerText(input: HTMLElement, text: string): boolean {
-    input.focus()
-
-    if (
-      input instanceof HTMLTextAreaElement ||
-      input instanceof HTMLInputElement
-    ) {
-      const proto =
-        input instanceof HTMLTextAreaElement
-          ? HTMLTextAreaElement.prototype
-          : HTMLInputElement.prototype
-      const valueDescriptor = Object.getOwnPropertyDescriptor(proto, 'value')
-      valueDescriptor?.set?.call(input, text)
-    } else if (
-      input.isContentEditable ||
-      input.getAttribute('contenteditable') === 'true'
-    ) {
-      input.textContent = text
-    } else {
-      return false
-    }
-
-    const inputEvent =
-      typeof InputEvent !== 'undefined'
-        ? new InputEvent('input', {
-            bubbles: true,
-            data: text,
-            inputType: 'insertText',
-          })
-        : new Event('input', { bubbles: true })
-
-    input.dispatchEvent(inputEvent)
-    return true
-  }
-
-  type SvgIconSpec = {
-    viewBox: string
-    pathD: string
-  }
-
-  const MIC_ICON: SvgIconSpec = {
-    viewBox: '0 0 640 640',
-    pathD:
-      'M320 64c-53 0-96 43-96 96v128c0 53 43 96 96 96s96-43 96-96V160c0-53-43-96-96-96M176 248c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 97.9 73.3 178.7 168 190.5V528h-48c-13.3 0-24 10.7-24 24s10.7 24 24 24h144c13.3 0 24-10.7 24-24s-10.7-24-24-24h-48v-49.5c94.7-11.8 168-92.6 168-190.5v-40c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 79.5-64.5 144-144 144s-144-64.5-144-144z',
-  }
-
-  const SOUND_ON_ICON: SvgIconSpec = {
-    viewBox: '0 0 640 640',
-    pathD:
-      'M112 416h48l134.1 119.2c6.4 5.7 14.6 8.8 23.1 8.8 19.2 0 34.8-15.6 34.8-34.8V130.8c0-19.2-15.6-34.8-34.8-34.8-8.5 0-16.7 3.1-23.1 8.8L160 224h-48c-26.5 0-48 21.5-48 48v96c0 26.5 21.5 48 48 48m393.1-245c-10.3-8.4-25.4-6.8-33.8 3.5s-6.8 25.4 3.5 33.8C507.3 234.7 528 274.9 528 320s-20.7 85.3-53.2 111.8c-10.3 8.4-11.8 23.5-3.5 33.8s23.5 11.8 33.8 3.5c43.2-35.2 70.9-88.9 70.9-149s-27.7-113.8-70.9-149zm-60.5 74.5c-10.3-8.4-25.4-6.8-33.8 3.5s-6.8 25.4 3.5 33.8C425.1 291.6 432 305 432 320s-6.9 28.4-17.7 37.3c-10.3 8.4-11.8 23.5-3.5 33.8s23.5 11.8 33.8 3.5c21.5-17.7 35.4-44.5 35.4-74.6s-13.9-56.9-35.5-74.5z',
-  }
-
-  const SOUND_OFF_ICON: SvgIconSpec = {
-    viewBox: '0 0 640 640',
-    pathD:
-      'M256 416h-48c-26.5 0-48-21.5-48-48v-96c0-26.5 21.5-48 48-48h48l134.1-119.2c6.4-5.7 14.6-8.8 23.1-8.8 19.2 0 34.8 15.6 34.8 34.8v378.4c0 19.2-15.6 34.8-34.8 34.8-8.5 0-16.7-3.1-23.1-8.8z',
-  }
-
-  function getSpeechRecognition(): SpeechRecognitionConstructor | undefined {
-    return window.SpeechRecognition ?? window.webkitSpeechRecognition
-  }
-
   function speak(text: string) {
-    speechSynthesis.cancel()
-    const utter = new SpeechSynthesisUtterance(text)
+    const { supported, synth, Utterance } = getSpeechSynthesis()
+    if (!supported || !synth || !Utterance) return
+
+    synth.cancel()
+    const utter = new Utterance(text)
     utter.lang = navigator.language || 'en-US'
-    speechSynthesis.speak(utter)
+    synth.speak(utter)
   }
 
   function extractAssistantMessageText(message: HTMLElement): string {
@@ -244,7 +152,7 @@ export function useElfsightVoice() {
       root.querySelectorAll<HTMLButtonElement>(
         'button[aria-label="Send message"]',
       ),
-    ).filter(isVisible)
+    ).filter(isElementVisible)
 
     const picked = sends
       .map((send) => ({ send, input: findComposerInputNearSend(root, send) }))
@@ -292,42 +200,51 @@ export function useElfsightVoice() {
       readBtn = createIconButton(send, {
         id: readId,
         label: 'Toggle read aloud',
-        icon: SOUND_OFF_ICON,
+        icon: ELFSIGHT_SOUND_OFF_ICON,
         title: 'Read aloud (off)',
       })
 
-      readBtn.addEventListener('click', () => {
-        isReadAloudEnabled = !isReadAloudEnabled
-        speechSynthesis.cancel()
+      if (!getSpeechSynthesis().supported) {
+        readBtn.disabled = true
+        readBtn.title = 'Read aloud not supported in this browser'
+        readBtn.style.opacity = '0.6'
+        readBtn.style.cursor = 'not-allowed'
+      } else {
+        readBtn.addEventListener('click', () => {
+          isReadAloudEnabled = !isReadAloudEnabled
+          getSpeechSynthesis().synth?.cancel()
 
-        readBtn!.title = isReadAloudEnabled
-          ? 'Read aloud (on)'
-          : 'Read aloud (off)'
+          readBtn!.title = isReadAloudEnabled
+            ? 'Read aloud (on)'
+            : 'Read aloud (off)'
 
-        const nextIcon = isReadAloudEnabled ? SOUND_ON_ICON : SOUND_OFF_ICON
-        const wrapper = readBtn!.querySelector('span[aria-hidden="true"]')
-        if (wrapper) {
-          const svgNs = 'http://www.w3.org/2000/svg'
-          const svg = document.createElementNS(svgNs, 'svg')
-          svg.setAttribute('viewBox', nextIcon.viewBox)
-          svg.setAttribute('fill', 'currentColor')
-          svg.setAttribute('width', '16')
-          svg.setAttribute('height', '16')
-          svg.style.display = 'block'
+          const nextIcon = isReadAloudEnabled
+            ? ELFSIGHT_SOUND_ON_ICON
+            : ELFSIGHT_SOUND_OFF_ICON
+          const wrapper = readBtn!.querySelector('span[aria-hidden="true"]')
+          if (wrapper) {
+            const svgNs = 'http://www.w3.org/2000/svg'
+            const svg = document.createElementNS(svgNs, 'svg')
+            svg.setAttribute('viewBox', nextIcon.viewBox)
+            svg.setAttribute('fill', 'currentColor')
+            svg.setAttribute('width', '16')
+            svg.setAttribute('height', '16')
+            svg.style.display = 'block'
 
-          const path = document.createElementNS(svgNs, 'path')
-          path.setAttribute('d', nextIcon.pathD)
-          svg.appendChild(path)
-          wrapper.replaceChildren(svg)
-        }
+            const path = document.createElementNS(svgNs, 'path')
+            path.setAttribute('d', nextIcon.pathD)
+            svg.appendChild(path)
+            wrapper.replaceChildren(svg)
+          }
 
-        if (isReadAloudEnabled) {
-          const last = Array.from(
-            root.querySelectorAll<HTMLElement>('[data-role="assistant"][id]'),
-          ).at(-1)
-          if (last) scheduleSpeak(root, last)
-        }
-      })
+          if (isReadAloudEnabled) {
+            const last = Array.from(
+              root.querySelectorAll<HTMLElement>('[data-role="assistant"][id]'),
+            ).at(-1)
+            if (last) scheduleSpeak(root, last)
+          }
+        })
+      }
     }
 
     if (readBtn.parentElement !== buttonHost) {
@@ -340,7 +257,7 @@ export function useElfsightVoice() {
       micBtn = createIconButton(send, {
         id: micId,
         label: 'Voice input',
-        icon: MIC_ICON,
+        icon: ELFSIGHT_MIC_ICON,
         title: 'Voice input',
       })
 
@@ -446,6 +363,6 @@ export function useElfsightVoice() {
     speakTimeoutById.clear()
     lastSpokenTextById.clear()
 
-    speechSynthesis.cancel()
+    getSpeechSynthesis().synth?.cancel()
   })
 }
