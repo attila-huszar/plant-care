@@ -124,5 +124,10 @@
       @close="closePlantModal"
     />
     <SettingsModal :is-open="isSettingsOpen" @close="closeSettings" />
+
+    <div
+      class="elfsight-app-bc426b86-ebaa-40ef-9518-c05b2bf1cb57"
+      data-elfsight-app-lazy
+    ></div>
   </div>
 </template>

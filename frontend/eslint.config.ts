@@ -43,6 +43,9 @@ export default defineConfig([
   {
     files: ['**/*.vue'],
     extends: [...vuePlugin.configs['flat/essential']],
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+    },
     languageOptions: {
       parser: vueParser,
       parserOptions: {
@@ -51,6 +54,16 @@ export default defineConfig([
         tsconfigRootDir,
         extraFileExtensions: ['.vue'],
       },
+    },
+    rules: {
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {
