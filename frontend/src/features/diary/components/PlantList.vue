@@ -220,6 +220,11 @@
           >
             <span class="sr-only">Last event</span>
             <span
+              class="self-center text-sm font-semibold text-slate-600 dark:text-slate-300"
+            >
+              Done
+            </span>
+            <span
               class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-200"
               :title="getTypeLabel(card.lastEvent.type)"
             >
@@ -231,7 +236,7 @@
               }}</span>
             </span>
             <span
-              class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+              class="self-center text-sm font-semibold text-slate-600 dark:text-slate-300"
               :title="formatCalendarDate(card.lastEvent.iso)"
             >
               {{ formatRelativeDay(card.lastEvent.iso) }}

@@ -58,6 +58,23 @@
     return map
   })
 
+  const latestNotesByPlantAndType = computed(() => {
+    const map = new Map<string, string>()
+
+    const sorted = [...props.events].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    )
+
+    for (const event of sorted) {
+      const notes = event.notes?.trim()
+      if (!notes) continue
+      const key = `${event.plantId}:${event.type}`
+      if (!map.has(key)) map.set(key, notes)
+    }
+
+    return map
+  })
+
   const getTypeIcon = (typeId: EventType) => {
     return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
   }
@@ -98,6 +115,9 @@
             plantName: plant.name,
             careRuleId: rule.id,
             type: rule.type,
+            notes:
+              rule.notes?.trim() ||
+              latestNotesByPlantAndType.value.get(lastEventKey),
             dueDate,
             diffDays,
             kind: 'recurring',
@@ -119,6 +139,9 @@
           plantName: plant.name,
           careRuleId: rule.id,
           type: rule.type,
+          notes:
+            rule.notes?.trim() ||
+            latestNotesByPlantAndType.value.get(`${plant.id}:${rule.type}`),
           dueDate,
           diffDays,
           kind: 'date',
@@ -264,7 +287,7 @@
 
   const openCompleteDialog = (item: (typeof upcomingCare.value)[number]) => {
     pendingCompleteItem.value = item
-    pendingNotes.value = ''
+    pendingNotes.value = item.notes?.trim() ?? ''
     isCompleteDialogOpen.value = true
   }
 
@@ -296,6 +319,7 @@
     if (!canCompleteItem(item)) return
     if (isCompleting(item.key)) return
 
+    const notes = item.notes?.trim() || undefined
     markCompleting(item.key)
 
     emit('care', {
@@ -303,6 +327,7 @@
       type: item.type,
       kind: item.kind,
       careRuleId: item.careRuleId,
+      ...(notes ? { notes } : {}),
     })
 
     window.setTimeout(() => {
@@ -352,7 +377,7 @@
                   </DialogTitle>
 
                   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Add optional notes for this event.
+                    Add optional notes for this task.
                   </p>
 
                   <div class="mt-4">
@@ -459,6 +484,16 @@
                   </span>
                   <span v-else>one-off</span>
                 </p>
+                <div v-if="item.notes" class="mt-1">
+                  <p
+                    class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+                    :title="item.notes"
+                  >
+                    <span class="min-w-0 wrap-break-word">{{
+                      item.notes
+                    }}</span>
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -566,12 +601,16 @@
                     event.plantName
                   }}</span>
                 </p>
-                <p
-                  v-if="event.notes"
-                  class="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400"
-                >
-                  {{ event.notes }}
-                </p>
+                <div v-if="event.notes" class="mt-2">
+                  <p
+                    class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+                    :title="event.notes"
+                  >
+                    <span class="min-w-0 wrap-break-word">{{
+                      event.notes
+                    }}</span>
+                  </p>
+                </div>
                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   {{ formatEventDate(event.date) }}
                 </p>

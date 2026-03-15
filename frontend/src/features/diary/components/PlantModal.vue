@@ -5,6 +5,10 @@
     Dialog,
     DialogPanel,
     DialogTitle,
+    Listbox,
+    ListboxButton,
+    ListboxOption,
+    ListboxOptions,
     Tab,
     TabGroup,
     TabList,
@@ -100,6 +104,18 @@
     )
   })
 
+  const latestNotesByType = computed(() => {
+    const map = new Map<EventType, string>()
+
+    for (const event of sortedHistory.value) {
+      const notes = event.notes?.trim()
+      if (!notes) continue
+      if (!map.has(event.type)) map.set(event.type, notes)
+    }
+
+    return map
+  })
+
   const DAY_MS = 1000 * 60 * 60 * 24
   const formatRelativeDay = (isoString: string) => {
     const date = new Date(isoString)
@@ -117,6 +133,7 @@
     type: EventType
     days: string
     date: string
+    notes: string
   }
 
   const ruleRows = ref<DraftCareRuleRow[]>([])
@@ -140,6 +157,7 @@
       type: r.type,
       days: r.kind === 'recurring' ? String(r.days) : '7',
       date: r.kind === 'date' ? toDateInputValue(new Date(r.date)) : '',
+      notes: r.notes ?? latestNotesByType.value.get(r.type) ?? '',
     }))
   }
 
@@ -217,6 +235,7 @@
       type: 'water',
       days: '7',
       date: '',
+      notes: '',
     })
   }
 
@@ -228,6 +247,14 @@
     if (row.kind !== 'date') return
     if (row.date) return
     row.date = toDateInputValue(new Date())
+  }
+
+  const setRowKind = (
+    row: DraftCareRuleRow,
+    kind: DraftCareRuleRow['kind'],
+  ) => {
+    row.kind = kind
+    ensureDateDefault(row)
   }
 
   const save = async () => {
@@ -285,6 +312,7 @@
     for (let i = 0; i < ruleRows.value.length; i += 1) {
       const row = ruleRows.value[i]
       if (!row.type) continue
+      const notes = row.notes.trim() || undefined
 
       if (row.kind === 'recurring') {
         const lastIndex = lastCadenceIndexByType.get(row.type)
@@ -298,6 +326,7 @@
           id: row.id,
           type: row.type,
           days,
+          ...(notes ? { notes } : {}),
         })
         continue
       }
@@ -310,6 +339,7 @@
         id: row.id,
         type: row.type,
         date: iso,
+        ...(notes ? { notes } : {}),
       })
     }
 
@@ -359,9 +389,7 @@
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
-        <div
-          class="flex min-h-full items-start justify-center p-4 sm:items-center sm:p-6"
-        >
+        <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
           <TransitionChild
             as="template"
             enter="ease-out duration-200"
@@ -492,101 +520,178 @@
                       <div
                         v-for="row in ruleRows"
                         :key="row.key"
-                        class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:flex-row sm:items-end dark:border-slate-800 dark:bg-slate-950/30"
+                        class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
                       >
-                        <div class="w-full shrink-0 sm:w-32">
+                        <div
+                          class="flex flex-col gap-3 sm:flex-row sm:items-end"
+                        >
+                          <div class="w-full shrink-0 sm:w-32">
+                            <label
+                              class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                            >
+                              Kind
+                            </label>
+                            <Listbox
+                              v-model="row.kind"
+                              as="div"
+                              class="relative"
+                              @update:model-value="setRowKind(row, $event)"
+                            >
+                              <ListboxButton
+                                class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                              >
+                                <span class="truncate">
+                                  {{
+                                    row.kind === 'recurring'
+                                      ? 'Recurring'
+                                      : 'One-off'
+                                  }}
+                                </span>
+                                <ChevronIcon
+                                  class="size-4 text-slate-400"
+                                  aria-hidden="true"
+                                />
+                              </ListboxButton>
+
+                              <ListboxOptions
+                                class="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg focus:outline-none dark:border-slate-800 dark:bg-slate-900"
+                              >
+                                <ListboxOption
+                                  value="recurring"
+                                  as="template"
+                                  v-slot="{ active, selected }"
+                                >
+                                  <li
+                                    class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2"
+                                    :class="
+                                      active
+                                        ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                                        : 'text-slate-700 dark:text-slate-200'
+                                    "
+                                  >
+                                    <span
+                                      :class="
+                                        selected
+                                          ? 'font-semibold'
+                                          : 'font-medium'
+                                      "
+                                    >
+                                      Recurring
+                                    </span>
+                                    <span
+                                      v-if="selected"
+                                      class="text-emerald-600"
+                                    >
+                                      ✓
+                                    </span>
+                                  </li>
+                                </ListboxOption>
+
+                                <ListboxOption
+                                  value="date"
+                                  as="template"
+                                  v-slot="{ active, selected }"
+                                >
+                                  <li
+                                    class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2"
+                                    :class="
+                                      active
+                                        ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                                        : 'text-slate-700 dark:text-slate-200'
+                                    "
+                                  >
+                                    <span
+                                      :class="
+                                        selected
+                                          ? 'font-semibold'
+                                          : 'font-medium'
+                                      "
+                                    >
+                                      One-off
+                                    </span>
+                                    <span
+                                      v-if="selected"
+                                      class="text-emerald-600"
+                                    >
+                                      ✓
+                                    </span>
+                                  </li>
+                                </ListboxOption>
+                              </ListboxOptions>
+                            </Listbox>
+                          </div>
+
+                          <div
+                            class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end"
+                          >
+                            <div
+                              class="min-w-0"
+                              :class="row.kind === 'date' ? 'flex-3' : 'flex-1'"
+                            >
+                              <ActionTypeListbox
+                                v-model="row.type"
+                                :options="typeOptions"
+                                label="Task"
+                              />
+                            </div>
+
+                            <div
+                              v-if="row.kind === 'recurring'"
+                              class="w-full shrink-0 sm:w-24"
+                            >
+                              <label
+                                class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                              >
+                                Days
+                              </label>
+                              <input
+                                v-model="row.days"
+                                type="number"
+                                min="1"
+                                inputmode="numeric"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                              />
+                            </div>
+
+                            <div v-else class="min-w-0 flex-2">
+                              <label
+                                class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                              >
+                                Date
+                              </label>
+                              <input
+                                v-model="row.date"
+                                type="date"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            class="inline-flex size-9.5 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                            @click="removeRuleRow(row.key)"
+                            aria-label="Remove action"
+                            title="Remove"
+                          >
+                            <TrashIcon class="size-4" aria-hidden="true" />
+                          </button>
+                        </div>
+
+                        <div class="min-w-0">
                           <label
                             class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
                           >
-                            Kind
+                            Notes (optional)
                           </label>
-                          <div class="flex items-end gap-2">
-                            <div class="relative min-w-0 flex-1">
-                              <select
-                                v-model="row.kind"
-                                @change="ensureDateDefault(row)"
-                                class="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                              >
-                                <option value="recurring">Recurring</option>
-                                <option value="date">One-off</option>
-                              </select>
-                              <span
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
-                              >
-                                <ChevronIcon
-                                  class="size-4"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:hidden dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                              @click="removeRuleRow(row.key)"
-                              aria-label="Remove action"
-                              title="Remove"
-                            >
-                              <TrashIcon class="size-4" aria-hidden="true" />
-                            </button>
-                          </div>
+                          <textarea
+                            v-model="row.notes"
+                            rows="2"
+                            maxlength="1000"
+                            placeholder="Helpful notes for this task"
+                            class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
+                          />
                         </div>
-
-                        <div
-                          class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end"
-                        >
-                          <div
-                            class="min-w-0"
-                            :class="row.kind === 'date' ? 'flex-3' : 'flex-1'"
-                          >
-                            <ActionTypeListbox
-                              v-model="row.type"
-                              :options="typeOptions"
-                              label="Task"
-                            />
-                          </div>
-
-                          <div
-                            v-if="row.kind === 'recurring'"
-                            class="w-full shrink-0 sm:w-24"
-                          >
-                            <label
-                              class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                            >
-                              Days
-                            </label>
-                            <input
-                              v-model="row.days"
-                              type="number"
-                              min="1"
-                              inputmode="numeric"
-                              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                            />
-                          </div>
-
-                          <div v-else class="min-w-0 flex-2">
-                            <label
-                              class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                            >
-                              Date
-                            </label>
-                            <input
-                              v-model="row.date"
-                              type="date"
-                              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          class="hidden size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:inline-flex dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                          @click="removeRuleRow(row.key)"
-                          aria-label="Remove action"
-                          title="Remove"
-                        >
-                          <TrashIcon class="size-4" aria-hidden="true" />
-                        </button>
                       </div>
                     </div>
 
@@ -624,15 +729,17 @@
                   as="div"
                   class="space-y-5"
                 >
-                  <TabList class="flex items-center gap-2">
+                  <TabList
+                    class="flex items-center gap-6 border-b border-slate-200 dark:border-slate-800"
+                  >
                     <Tab v-slot="{ selected }" as="template">
                       <button
                         type="button"
-                        class="rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+                        class="-mb-px border-b-2 px-1 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                         :class="
                           selected
-                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800'
+                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300'
+                            : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                         "
                       >
                         Care rules
@@ -642,11 +749,11 @@
                     <Tab v-slot="{ selected }" as="template">
                       <button
                         type="button"
-                        class="rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+                        class="-mb-px border-b-2 px-1 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                         :class="
                           selected
-                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800'
+                            ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300'
+                            : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                         "
                       >
                         History
@@ -673,108 +780,185 @@
                             <div
                               v-for="row in ruleRows"
                               :key="row.key"
-                              class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:flex-row sm:items-end dark:border-slate-800 dark:bg-slate-950/30"
+                              class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
                             >
-                              <div class="w-full shrink-0 sm:w-32">
+                              <div
+                                class="flex flex-col gap-3 sm:flex-row sm:items-end"
+                              >
+                                <div class="w-full shrink-0 sm:w-32">
+                                  <label
+                                    class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                                  >
+                                    Kind
+                                  </label>
+                                  <Listbox
+                                    v-model="row.kind"
+                                    as="div"
+                                    class="relative"
+                                    @update:model-value="
+                                      setRowKind(row, $event)
+                                    "
+                                  >
+                                    <ListboxButton
+                                      class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                                    >
+                                      <span class="truncate">
+                                        {{
+                                          row.kind === 'recurring'
+                                            ? 'Recurring'
+                                            : 'One-off'
+                                        }}
+                                      </span>
+                                      <ChevronIcon
+                                        class="size-4 text-slate-400"
+                                        aria-hidden="true"
+                                      />
+                                    </ListboxButton>
+
+                                    <ListboxOptions
+                                      class="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg focus:outline-none dark:border-slate-800 dark:bg-slate-900"
+                                    >
+                                      <ListboxOption
+                                        value="recurring"
+                                        as="template"
+                                        v-slot="{ active, selected }"
+                                      >
+                                        <li
+                                          class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2"
+                                          :class="
+                                            active
+                                              ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                                              : 'text-slate-700 dark:text-slate-200'
+                                          "
+                                        >
+                                          <span
+                                            :class="
+                                              selected
+                                                ? 'font-semibold'
+                                                : 'font-medium'
+                                            "
+                                          >
+                                            Recurring
+                                          </span>
+                                          <span
+                                            v-if="selected"
+                                            class="text-emerald-600"
+                                          >
+                                            ✓
+                                          </span>
+                                        </li>
+                                      </ListboxOption>
+
+                                      <ListboxOption
+                                        value="date"
+                                        as="template"
+                                        v-slot="{ active, selected }"
+                                      >
+                                        <li
+                                          class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2"
+                                          :class="
+                                            active
+                                              ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                                              : 'text-slate-700 dark:text-slate-200'
+                                          "
+                                        >
+                                          <span
+                                            :class="
+                                              selected
+                                                ? 'font-semibold'
+                                                : 'font-medium'
+                                            "
+                                          >
+                                            One-off
+                                          </span>
+                                          <span
+                                            v-if="selected"
+                                            class="text-emerald-600"
+                                          >
+                                            ✓
+                                          </span>
+                                        </li>
+                                      </ListboxOption>
+                                    </ListboxOptions>
+                                  </Listbox>
+                                </div>
+
+                                <div
+                                  class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end"
+                                >
+                                  <div
+                                    class="min-w-0"
+                                    :class="
+                                      row.kind === 'date' ? 'flex-3' : 'flex-1'
+                                    "
+                                  >
+                                    <ActionTypeListbox
+                                      v-model="row.type"
+                                      :options="typeOptions"
+                                      label="Task"
+                                    />
+                                  </div>
+
+                                  <div
+                                    v-if="row.kind === 'recurring'"
+                                    class="w-full shrink-0 sm:w-24"
+                                  >
+                                    <label
+                                      class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                                    >
+                                      Days
+                                    </label>
+                                    <input
+                                      v-model="row.days"
+                                      type="number"
+                                      min="1"
+                                      inputmode="numeric"
+                                      class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                                    />
+                                  </div>
+
+                                  <div v-else class="min-w-0 flex-2">
+                                    <label
+                                      class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                                    >
+                                      Date
+                                    </label>
+                                    <input
+                                      v-model="row.date"
+                                      type="date"
+                                      class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+                                    />
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  class="inline-flex size-9.5 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                                  @click="removeRuleRow(row.key)"
+                                  aria-label="Remove action"
+                                  title="Remove"
+                                >
+                                  <TrashIcon
+                                    class="size-4"
+                                    aria-hidden="true"
+                                  />
+                                </button>
+                              </div>
+
+                              <div class="min-w-0">
                                 <label
                                   class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
                                 >
-                                  Kind
+                                  Notes (optional)
                                 </label>
-                                <div class="flex items-end gap-2">
-                                  <div class="relative min-w-0 flex-1">
-                                    <select
-                                      v-model="row.kind"
-                                      @change="ensureDateDefault(row)"
-                                      class="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                                    >
-                                      <option value="recurring">
-                                        Recurring
-                                      </option>
-                                      <option value="date">One-off</option>
-                                    </select>
-                                    <span
-                                      class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
-                                    >
-                                      <ChevronIcon
-                                        class="size-4"
-                                        aria-hidden="true"
-                                      />
-                                    </span>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:hidden dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                                    @click="removeRuleRow(row.key)"
-                                    aria-label="Remove action"
-                                    title="Remove"
-                                  >
-                                    <TrashIcon
-                                      class="size-4"
-                                      aria-hidden="true"
-                                    />
-                                  </button>
-                                </div>
+                                <textarea
+                                  v-model="row.notes"
+                                  rows="2"
+                                  maxlength="1000"
+                                  placeholder="Helpful notes for this task"
+                                  class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
+                                />
                               </div>
-
-                              <div
-                                class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end"
-                              >
-                                <div
-                                  class="min-w-0"
-                                  :class="
-                                    row.kind === 'date' ? 'flex-3' : 'flex-1'
-                                  "
-                                >
-                                  <ActionTypeListbox
-                                    v-model="row.type"
-                                    :options="typeOptions"
-                                    label="Task"
-                                  />
-                                </div>
-
-                                <div
-                                  v-if="row.kind === 'recurring'"
-                                  class="w-full shrink-0 sm:w-24"
-                                >
-                                  <label
-                                    class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                                  >
-                                    Days
-                                  </label>
-                                  <input
-                                    v-model="row.days"
-                                    type="number"
-                                    min="1"
-                                    inputmode="numeric"
-                                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                                  />
-                                </div>
-
-                                <div v-else class="min-w-0 flex-2">
-                                  <label
-                                    class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                                  >
-                                    Date
-                                  </label>
-                                  <input
-                                    v-model="row.date"
-                                    type="date"
-                                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-                                  />
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                class="hidden size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:inline-flex dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                                @click="removeRuleRow(row.key)"
-                                aria-label="Remove action"
-                                title="Remove"
-                              >
-                                <TrashIcon class="size-4" aria-hidden="true" />
-                              </button>
                             </div>
                           </div>
 
