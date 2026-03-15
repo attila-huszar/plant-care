@@ -2,6 +2,7 @@
   import { computed, onMounted, ref } from 'vue'
   import { useDark } from '@vueuse/core'
   import { useRouter } from 'vue-router'
+  import { useElfsightVoice } from '@/composables'
   import type { CareTimelinePayload } from '@/types'
   import { useAuthStore, useUserStore } from '../../auth/stores'
   import {
@@ -18,6 +19,8 @@
   const router = useRouter()
   const plantsStore = usePlantsStore()
   const isDark = useDark()
+  useElfsightVoice()
+
   const userLabel = computed(() => {
     return userStore.profile?.firstName ?? userStore.profile?.email ?? ''
   })
@@ -52,6 +55,13 @@
 
   const closeSettings = () => {
     isSettingsOpen.value = false
+  }
+
+  const removePlant = async (payload: { plantId: number }) => {
+    if (isPlantModalOpen.value && plantModalPlantId.value === payload.plantId) {
+      closePlantModal()
+    }
+    await plantsStore.removePlant(payload.plantId)
   }
 
   onMounted(() => {
@@ -95,6 +105,7 @@
           :customEvents="userStore.customEvents"
           @add-plant="openAddPlantModal"
           @edit-plant="openEditPlantModal"
+          @remove-plant="removePlant"
         />
       </div>
       <div class="h-full min-h-100">

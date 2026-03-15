@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import type {
     CustomEventDto,
@@ -172,6 +172,55 @@
       })
   })
 
+  const HISTORY_PAGE_SIZE = 6
+  const historyPage = ref(1)
+
+  const historyTotalPages = computed(() => {
+    return Math.max(
+      1,
+      Math.ceil(enrichedEvents.value.length / HISTORY_PAGE_SIZE),
+    )
+  })
+
+  const historyPageSafe = computed(() => {
+    return Math.min(Math.max(1, historyPage.value), historyTotalPages.value)
+  })
+
+  const historySliceStart = computed(() => {
+    return (historyPageSafe.value - 1) * HISTORY_PAGE_SIZE
+  })
+
+  const pagedHistoryEvents = computed(() => {
+    return enrichedEvents.value.slice(
+      historySliceStart.value,
+      historySliceStart.value + HISTORY_PAGE_SIZE,
+    )
+  })
+
+  const canHistoryPrev = computed(() => historyPageSafe.value > 1)
+  const canHistoryNext = computed(
+    () => historyPageSafe.value < historyTotalPages.value,
+  )
+
+  const historyPrev = () => {
+    if (!canHistoryPrev.value) return
+    historyPage.value = historyPageSafe.value - 1
+  }
+
+  const historyNext = () => {
+    if (!canHistoryNext.value) return
+    historyPage.value = historyPageSafe.value + 1
+  }
+
+  watch(
+    () => enrichedEvents.value.length,
+    () => {
+      if (historyPage.value > historyTotalPages.value) {
+        historyPage.value = historyTotalPages.value
+      }
+    },
+  )
+
   const completingKeys = ref<Set<string>>(new Set())
 
   const isCompleting = (key: string) => {
@@ -318,9 +367,42 @@
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
       >
         <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            History
-          </h3>
+          <div class="flex items-center justify-between gap-3">
+            <h3
+              class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+            >
+              History
+            </h3>
+
+            <div
+              v-if="enrichedEvents.length > HISTORY_PAGE_SIZE"
+              class="flex items-center gap-2"
+            >
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                {{ historyPageSafe }} / {{ historyTotalPages }}
+              </span>
+              <button
+                type="button"
+                class="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                :disabled="!canHistoryPrev"
+                @click="historyPrev"
+                aria-label="Previous history page"
+                title="Previous"
+              >
+                <span aria-hidden="true">←</span>
+              </button>
+              <button
+                type="button"
+                class="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                :disabled="!canHistoryNext"
+                @click="historyNext"
+                aria-label="Next history page"
+                title="Next"
+              >
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div
@@ -346,7 +428,7 @@
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4">
           <div class="space-y-4">
             <div
-              v-for="event in enrichedEvents"
+              v-for="event in pagedHistoryEvents"
               :key="event.id"
               class="flex items-start gap-4 rounded-xl border border-transparent p-4 transition-colors hover:border-slate-100 hover:bg-slate-50 dark:hover:border-slate-800 dark:hover:bg-slate-900"
             >

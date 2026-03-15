@@ -5,6 +5,9 @@
     Dialog,
     DialogPanel,
     DialogTitle,
+    Popover,
+    PopoverButton,
+    PopoverPanel,
     Switch,
     TransitionChild,
     TransitionRoot,
@@ -219,16 +222,13 @@
     cancelRename()
   }
 
-  const removeCustomEvent = async (id: string, name: string) => {
+  const removeCustomEvent = async (id: string) => {
     if (!userStore.profile) return
     if (userStore.customEventsLoading) return
     if (!canRemoveCustomEvent(id)) return
 
     apiError.value = null
     apiSuccess.value = null
-
-    const confirmed = window.confirm(`Remove custom event "${name}"?`)
-    if (!confirmed) return
 
     const result = await userStore.removeCustomEvent(id)
     if (!result.ok) {
@@ -501,32 +501,87 @@
                             />
                           </svg>
                         </button>
-                        <button
-                          type="button"
-                          class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                          :disabled="
-                            userStore.customEventsLoading ||
-                            !canRemoveCustomEvent(evt.id)
-                          "
-                          :title="
-                            canRemoveCustomEvent(evt.id)
-                              ? 'Remove'
-                              : 'Remove is disabled while this event is used by plants or history'
-                          "
-                          @click="removeCustomEvent(evt.id, evt.name)"
-                          aria-label="Remove"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 640 640"
-                            fill="currentColor"
-                            class="h-4 w-4"
+                        <Popover v-slot="{ open, close }" class="relative">
+                          <PopoverButton
+                            type="button"
+                            class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                            :disabled="
+                              userStore.customEventsLoading ||
+                              !canRemoveCustomEvent(evt.id)
+                            "
+                            :title="
+                              canRemoveCustomEvent(evt.id)
+                                ? 'Remove'
+                                : 'Remove is disabled while this event is used by plants or history'
+                            "
+                            aria-label="Remove"
                           >
-                            <path
-                              d="M232.7 69.9 224 96h-96c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-96l-8.7-26.1C402.9 56.8 390.7 48 376.9 48H263.1c-13.8 0-26 8.8-30.4 21.9M512 208H128l21.1 323.1c1.6 25.3 22.6 44.9 47.9 44.9h246c25.3 0 46.3-19.6 47.9-44.9z"
-                            />
-                          </svg>
-                        </button>
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 640 640"
+                              fill="currentColor"
+                              class="h-4 w-4"
+                            >
+                              <path
+                                d="M232.7 69.9 224 96h-96c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-96l-8.7-26.1C402.9 56.8 390.7 48 376.9 48H263.1c-13.8 0-26 8.8-30.4 21.9M512 208H128l21.1 323.1c1.6 25.3 22.6 44.9 47.9 44.9h246c25.3 0 46.3-19.6 47.9-44.9z"
+                              />
+                            </svg>
+                          </PopoverButton>
+
+                          <TransitionRoot as="template" :show="open">
+                            <TransitionChild
+                              as="template"
+                              enter="ease-out duration-150"
+                              enter-from="opacity-0 scale-95"
+                              enter-to="opacity-100 scale-100"
+                              leave="ease-in duration-100"
+                              leave-from="opacity-100 scale-100"
+                              leave-to="opacity-0 scale-95"
+                            >
+                              <PopoverPanel
+                                class="absolute right-0 bottom-full z-20 mb-1 w-72 origin-bottom-right rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-xl focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                              >
+                                <p
+                                  class="font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                  Remove custom event?
+                                </p>
+                                <p
+                                  class="mt-1 text-slate-600 dark:text-slate-300"
+                                >
+                                  This will permanently remove
+                                  <span class="font-medium">{{ evt.name }}</span
+                                  >.
+                                </p>
+
+                                <div
+                                  class="mt-4 flex items-center justify-end gap-2"
+                                >
+                                  <button
+                                    type="button"
+                                    class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                                    @click="close()"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-500 disabled:opacity-60"
+                                    :disabled="userStore.customEventsLoading"
+                                    @click="
+                                      async () => {
+                                        await removeCustomEvent(evt.id)
+                                        close()
+                                      }
+                                    "
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </PopoverPanel>
+                            </TransitionChild>
+                          </TransitionRoot>
+                        </Popover>
                       </div>
                     </li>
                   </ul>
