@@ -1,0 +1,51 @@
+/* Tailwind custom dark variant */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------ */
+/* THEME TOKENS                                     */
+/* ------------------------------------------------ */
+
+@theme {
+  /* plant greens */
+
+  --color-plant-50: #f4f9f4;
+  --color-plant-100: #e3f1e6;
+  --color-plant-200: #c8e3ce;
+  --color-plant-300: #a6d2b2;
+  --color-plant-400: #7fbe93;
+  --color-plant-500: #5da978;
+  --color-plant-600: #468760;
+  --color-plant-700: #35694a;
+  --color-plant-800: #274f37;
+  --color-plant-900: #1c3827;
+
+  /* water tones */
+
+  --color-water-100: #def4fb;
+  --color-water-200: #bfe8f5;
+  --color-water-300: #9ad7eb;
+  --color-water-400: #6fc1de;
+  --color-water-500: #4ba7c9;
+
+  /* soil tones */
+
+  --color-soil-100: #f4ede7;
+  --color-soil-200: #e6d6c9;
+  --color-soil-300: #d3bba7;
+  --color-soil-400: #b8997d;
+  --color-soil-500: #9b7b61;
+
+  /* watercolor paper background */
+
+  --color-paper-light: #fbfaf6;
+  --color-paper: #f6f3ec;
+  --color-paper-dark: #ece7dd;
+}
+
+/* dark mode color adjustments */
+
+.dark {
+  --color-paper-light: #1c2621;
+  --color-paper: #24322b;
+}

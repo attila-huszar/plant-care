@@ -1,0 +1,160 @@
+@layer utilities {
+  /* ------------------------------------------------ */
+  /* WATERCOLOUR UI EFFECTS                           */
+  /* ------------------------------------------------ */
+
+  /* subtle lift for cards and buttons */
+
+  .soft-hover {
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .soft-hover:hover {
+    transform: translateY(-1px) scale(1.02);
+  }
+
+  /* watercolor soft shadow */
+
+  .shadow-watercolor {
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.08),
+      0 8px 20px rgba(0, 0, 0, 0.05);
+  }
+
+  /* slightly irregular rounded look */
+
+  .rounded-organic {
+    border-radius: 18px;
+  }
+
+  /* ------------------------------------------------ */
+  /* BACKGROUNDS                                      */
+  /* ------------------------------------------------ */
+
+  /* watercolor paper style */
+
+  .paper-bg {
+    background-color: var(--color-paper-light);
+  }
+
+  .dark .paper-bg {
+    background-color: var(--color-paper);
+  }
+
+  /* soft gradient background */
+
+  .gradient-plant {
+    background: linear-gradient(
+      135deg,
+      var(--color-plant-100),
+      var(--color-water-100)
+    );
+  }
+
+  .dark .gradient-plant {
+    background: linear-gradient(135deg, #24322b, #1c2621);
+  }
+
+  /* ------------------------------------------------ */
+  /* ANIMATION UTILITIES                              */
+  /* ------------------------------------------------ */
+
+  .fade-in {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* droplet animation helper */
+
+  .animate-drop {
+    animation: drop 3s infinite ease-in-out;
+  }
+
+  @keyframes drop {
+    0% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    60% {
+      transform: translateY(16px);
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* ------------------------------------------------ */
+  /* GLASS / WATERCOLOR PANEL                         */
+  /* ------------------------------------------------ */
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 20px;
+  }
+
+  .dark .glass-card {
+    background: rgba(36, 50, 43, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* ------------------------------------------------ */
+  /* WATERCOLOR PAPER TEXTURE                         */
+  /* ------------------------------------------------ */
+
+  .paper-texture {
+    position: relative;
+  }
+
+  .paper-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+
+    background-image: radial-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+
+    background-size: 6px 6px;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .dark .paper-texture::before {
+    opacity: 0.15;
+  }
+
+  /* ------------------------------------------------ */
+  /* ORGANIC BORDER (HAND-DRAWN FEEL)                 */
+  /* ------------------------------------------------ */
+
+  .border-organic {
+    border-radius: 22px 18px 20px 24px;
+  }
+
+  /* ------------------------------------------------ */
+  /* WATERCOLOR BUTTON PRESS                          */
+  /* ------------------------------------------------ */
+
+  .press-soft {
+    transition: transform 0.08s ease;
+  }
+
+  .press-soft:active {
+    transform: scale(0.97);
+  }
+}

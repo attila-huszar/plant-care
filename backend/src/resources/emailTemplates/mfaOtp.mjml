@@ -11,16 +11,25 @@
           Use the code below to finish signing in:
         </mj-text>
 
-        <mj-text
-          align="center"
-          font-size="28px"
-          font-weight="bold"
-          letter-spacing="6px"
-          padding="18px 0"
-          css-class="otp-code"
-        >
-          {{ code }}
-        </mj-text>
+        <mj-table align="center" padding="12px 0 18px">
+          <tr>
+            <td
+              style="
+                background: #eef6ff;
+                border: 1px solid #d6e7ff;
+                border-radius: 10px;
+                padding: 16px 22px;
+                text-align: center;
+                font-size: 28px;
+                font-weight: 700;
+                letter-spacing: 6px;
+                color: #111111;
+              "
+            >
+              {{ code }}
+            </td>
+          </tr>
+        </mj-table>
 
         <mj-text font-size="13px" color="#888" padding-bottom="20px">
           <em>This code expires in 10 minutes.</em>
@@ -40,4 +49,3 @@
     </mj-section>
   </mj-body>
 </mjml>
-
