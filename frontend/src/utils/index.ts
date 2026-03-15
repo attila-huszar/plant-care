@@ -1,3 +1,5 @@
 export * from './dateInput'
 export * from './emailProvider'
 export * from './apiResult'
+export * from './dom'
+export * from './webSpeech'

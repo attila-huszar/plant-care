@@ -11,15 +11,25 @@
           Use the code below to finish signing in:
         </mj-text>
 
-        <mj-text
-          align="center"
-          font-size="28px"
-          font-weight="bold"
-          letter-spacing="6px"
-          padding="18px 0"
-          css-class="otp-code"
-        >
-          {{ code }}
+        <mj-text>
+          <span
+            style="
+              display: inline-block;
+              background: #ffffff;
+              border: 1px solid #cbd5e1;
+              border-radius: 12px;
+              padding: 14px 22px;
+              text-align: center;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 28px;
+              font-weight: 700;
+              letter-spacing: 6px;
+              color: #111111;
+              white-space: nowrap;
+            "
+          >
+            {{ code }}
+          </span>
         </mj-text>
 
         <mj-text font-size="13px" color="#888" padding-bottom="20px">
@@ -40,4 +50,3 @@
     </mj-section>
   </mj-body>
 </mjml>
-

@@ -3,8 +3,8 @@ import { type UserInsert } from '@/types'
 
 const admin: UserInsert = {
   uuid: crypto.randomUUID(),
-  firstName: 'Admin',
-  lastName: 'Admin',
+  firstName: 'Demo User',
+  lastName: 'Seeded',
   email: env.adminEmail!,
   password: Bun.password.hashSync(env.adminPassword!),
   verified: true,

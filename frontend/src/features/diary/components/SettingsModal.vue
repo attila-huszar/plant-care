@@ -5,12 +5,16 @@
     Dialog,
     DialogPanel,
     DialogTitle,
+    Popover,
+    PopoverButton,
+    PopoverPanel,
     Switch,
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
   import { useUserStore } from '@/features/auth/stores'
   import { usePlantsStore } from '@/features/diary/stores'
+  import { EditIcon, TrashIcon } from '@/assets/svg'
 
   const props = defineProps<{
     isOpen: boolean
@@ -219,16 +223,13 @@
     cancelRename()
   }
 
-  const removeCustomEvent = async (id: string, name: string) => {
+  const removeCustomEvent = async (id: string) => {
     if (!userStore.profile) return
     if (userStore.customEventsLoading) return
     if (!canRemoveCustomEvent(id)) return
 
     apiError.value = null
     apiSuccess.value = null
-
-    const confirmed = window.confirm(`Remove custom event "${name}"?`)
-    if (!confirmed) return
 
     const result = await userStore.removeCustomEvent(id)
     if (!result.ok) {
@@ -489,44 +490,80 @@
                           title="Rename"
                           aria-label="Rename"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 640 640"
-                            fill="currentColor"
-                            class="h-4 w-4"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M416.9 85.2 372 130.1 509.9 268l44.9-44.9c13.6-13.5 21.2-31.9 21.2-51.1s-7.6-37.6-21.2-51.1l-35.7-35.7C505.6 71.6 487.2 64 468 64s-37.6 7.6-51.1 21.2M338.1 164 122.9 379.1c-10.7 10.7-18.5 24.1-22.6 38.7L64.9 545.6c-2.3 8.3 0 17.3 6.2 23.4s15.1 8.5 23.4 6.2l127.8-35.5c14.6-4.1 27.9-11.8 38.7-22.6l215-215.2z"
-                            />
-                          </svg>
+                          <EditIcon class="size-4" aria-hidden="true" />
                         </button>
-                        <button
-                          type="button"
-                          class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                          :disabled="
-                            userStore.customEventsLoading ||
-                            !canRemoveCustomEvent(evt.id)
-                          "
-                          :title="
-                            canRemoveCustomEvent(evt.id)
-                              ? 'Remove'
-                              : 'Remove is disabled while this event is used by plants or history'
-                          "
-                          @click="removeCustomEvent(evt.id, evt.name)"
-                          aria-label="Remove"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 640 640"
-                            fill="currentColor"
-                            class="h-4 w-4"
+                        <Popover v-slot="{ open, close }" class="relative">
+                          <PopoverButton
+                            type="button"
+                            class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                            :disabled="
+                              userStore.customEventsLoading ||
+                              !canRemoveCustomEvent(evt.id)
+                            "
+                            :title="
+                              canRemoveCustomEvent(evt.id)
+                                ? 'Remove'
+                                : 'Remove is disabled while this event is used by plants or history'
+                            "
+                            aria-label="Remove"
                           >
-                            <path
-                              d="M232.7 69.9 224 96h-96c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-96l-8.7-26.1C402.9 56.8 390.7 48 376.9 48H263.1c-13.8 0-26 8.8-30.4 21.9M512 208H128l21.1 323.1c1.6 25.3 22.6 44.9 47.9 44.9h246c25.3 0 46.3-19.6 47.9-44.9z"
-                            />
-                          </svg>
-                        </button>
+                            <TrashIcon class="size-4" aria-hidden="true" />
+                          </PopoverButton>
+
+                          <TransitionRoot as="template" :show="open">
+                            <TransitionChild
+                              as="template"
+                              enter="ease-out duration-150"
+                              enter-from="opacity-0 scale-95"
+                              enter-to="opacity-100 scale-100"
+                              leave="ease-in duration-100"
+                              leave-from="opacity-100 scale-100"
+                              leave-to="opacity-0 scale-95"
+                            >
+                              <PopoverPanel
+                                class="absolute right-0 bottom-full z-20 mb-1 w-72 origin-bottom-right rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-xl focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                              >
+                                <p
+                                  class="font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                  Remove custom event?
+                                </p>
+                                <p
+                                  class="mt-1 text-slate-600 dark:text-slate-300"
+                                >
+                                  This will permanently remove
+                                  <span class="font-medium">{{ evt.name }}</span
+                                  >.
+                                </p>
+
+                                <div
+                                  class="mt-4 flex items-center justify-end gap-2"
+                                >
+                                  <button
+                                    type="button"
+                                    class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                                    @click="close()"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-500 disabled:opacity-60"
+                                    :disabled="userStore.customEventsLoading"
+                                    @click="
+                                      async () => {
+                                        await removeCustomEvent(evt.id)
+                                        close()
+                                      }
+                                    "
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </PopoverPanel>
+                            </TransitionChild>
+                          </TransitionRoot>
+                        </Popover>
                       </div>
                     </li>
                   </ul>

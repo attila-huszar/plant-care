@@ -9,7 +9,7 @@
 
 <template>
   <div
-    class="flex min-h-screen flex-col bg-linear-to-br from-green-50 to-emerald-100 font-sans text-slate-800 selection:bg-emerald-500 selection:text-white dark:from-slate-950 dark:to-slate-900 dark:text-slate-100"
+    class="flex min-h-screen flex-col bg-linear-to-br from-green-50 to-emerald-100 text-slate-800 selection:bg-emerald-500 selection:text-white dark:from-slate-950 dark:to-slate-900 dark:text-slate-100"
   >
     <RouterView v-slot="{ Component }">
       <Transition name="fade" mode="out-in">
