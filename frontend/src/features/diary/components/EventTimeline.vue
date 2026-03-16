@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
-  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -14,12 +13,14 @@
     EventType,
     PlantDto,
   } from '@plant-care/shared'
+  import {
+    buildCustomTypeNameById,
+    formatRelativeDayFromIsoToNow,
+    getEventIcon,
+    getEventLabel,
+  } from '@/features/diary/utils'
   import type { CareTimelinePayload, UpcomingItem } from '@/types'
   import { CalendarIcon, CheckIcon } from '@/assets/svg'
-
-  const BUILTIN_ACTION_META_BY_ID = new Map(
-    PLANT_CARE_META.map((t) => [t.id, t]),
-  )
 
   const props = withDefaults(
     defineProps<{
@@ -45,11 +46,7 @@
   }
 
   const customTypeNameById = computed(() => {
-    const map = new Map<string, string>()
-    for (const t of props.customEvents ?? []) {
-      map.set(t.id, t.name)
-    }
-    return map
+    return buildCustomTypeNameById(props.customEvents ?? [])
   })
 
   const latestEventMsByPlantAndType = computed(() => {
@@ -81,14 +78,8 @@
     return map
   })
 
-  const getTypeIcon = (typeId: EventType) => {
-    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
-  }
-
   const getTypeLabel = (typeId: EventType) => {
-    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
-    if (builtinLabel) return builtinLabel
-    return customTypeNameById.value.get(typeId) ?? typeId
+    return getEventLabel(typeId, customTypeNameById.value)
   }
 
   const upcomingCareAll = computed(() => {
@@ -185,11 +176,7 @@
   }
 
   const formatEventDate = (isoString: string) => {
-    const date = new Date(isoString)
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.round((date.getTime() - Date.now()) / DAY_MS),
-      'day',
-    )
+    return formatRelativeDayFromIsoToNow(isoString)
   }
 
   const enrichedEvents = computed(() => {
@@ -458,7 +445,7 @@
                 <div
                   class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                 >
-                  {{ getTypeIcon(item.type) }}
+                  {{ getEventIcon(item.type) }}
                 </div>
                 <div class="min-w-0 flex-1">
                   <p
@@ -593,7 +580,7 @@
               <div
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
-                {{ getTypeIcon(event.type) }}
+                {{ getEventIcon(event.type) }}
               </div>
               <div class="min-w-0 flex-1">
                 <p

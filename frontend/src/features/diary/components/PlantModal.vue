@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, nextTick, ref, watch } from 'vue'
-  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
+  import { PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -15,6 +15,12 @@
   } from '@headlessui/vue'
   import type { CareRule, EventDto, EventType } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
+  import {
+    buildCustomTypeNameById,
+    formatRelativeDayFromIsoToNow,
+    getEventIcon,
+    getEventLabel,
+  } from '@/features/diary/utils'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
   import { EditIcon } from '@/assets/svg'
   import { usePlantsStore } from '../stores'
@@ -50,10 +56,6 @@
 
   const builtinTypeIds = new Set(PLANT_CARE_META.map((t) => t.id))
 
-  const BUILTIN_ACTION_META_BY_ID = new Map(
-    PLANT_CARE_META.map((t) => [t.id, t]),
-  )
-
   const typeOptions = computed(() => {
     const options: { id: EventType; label: string }[] = []
 
@@ -76,21 +78,11 @@
   })
 
   const customTypeNameById = computed(() => {
-    const map = new Map<string, string>()
-    for (const t of userStore.customEvents) {
-      map.set(t.id, t.name)
-    }
-    return map
+    return buildCustomTypeNameById(userStore.customEvents)
   })
 
-  const getTypeIcon = (typeId: EventType) => {
-    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
-  }
-
   const getTypeLabel = (typeId: EventType) => {
-    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
-    if (builtinLabel) return builtinLabel
-    return customTypeNameById.value.get(typeId) ?? typeId
+    return getEventLabel(typeId, customTypeNameById.value)
   }
 
   const sortedHistory = computed<EventDto[]>(() => {
@@ -112,14 +104,8 @@
     return map
   })
 
-  const DAY_MS = 1000 * 60 * 60 * 24
   const formatRelativeDay = (isoString: string) => {
-    const date = new Date(isoString)
-    if (!Number.isFinite(date.getTime())) return ''
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.round((date.getTime() - Date.now()) / DAY_MS),
-      'day',
-    )
+    return formatRelativeDayFromIsoToNow(isoString)
   }
 
   type DraftCareRuleRow = {
@@ -616,7 +602,7 @@
                             <div
                               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                             >
-                              {{ getTypeIcon(event.type) }}
+                              {{ getEventIcon(event.type) }}
                             </div>
 
                             <div class="min-w-0 flex-1">

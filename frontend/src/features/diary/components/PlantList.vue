@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { computed } from 'vue'
-  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import {
     Popover,
     PopoverButton,
@@ -14,11 +13,14 @@
     EventType,
     PlantDto,
   } from '@plant-care/shared'
+  import {
+    buildCustomTypeNameById,
+    formatMediumDateFromIso,
+    formatRelativeDayFromIsoToToday,
+    getEventIcon,
+    getEventLabel,
+  } from '@/features/diary/utils'
   import { PlantIcon, PlusIcon, TrashIcon } from '@/assets/svg'
-
-  const BUILTIN_ACTION_META_BY_ID = new Map(
-    PLANT_CARE_META.map((t) => [t.id, t]),
-  )
 
   const props = defineProps<{
     plants: PlantDto[]
@@ -32,24 +34,12 @@
     'remove-plant': [payload: { plantId: number }]
   }>()
 
-  const DAY_MS = 1000 * 60 * 60 * 24
-
   const customTypeNameById = computed(() => {
-    const map = new Map<string, string>()
-    for (const t of props.customEvents) {
-      map.set(t.id, t.name)
-    }
-    return map
+    return buildCustomTypeNameById(props.customEvents)
   })
 
-  const getTypeIcon = (typeId: EventType) => {
-    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
-  }
-
   const getTypeLabel = (typeId: EventType) => {
-    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
-    if (builtinLabel) return builtinLabel
-    return customTypeNameById.value.get(typeId) ?? typeId
+    return getEventLabel(typeId, customTypeNameById.value)
   }
 
   const lastEventByPlantId = computed(() => {
@@ -68,23 +58,11 @@
   })
 
   const formatRelativeDay = (isoString: string) => {
-    const date = new Date(isoString)
-    const day = new Date(date)
-    day.setHours(0, 0, 0, 0)
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const diffDays = Math.round((day.getTime() - today.getTime()) / DAY_MS)
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      diffDays,
-      'day',
-    )
+    return formatRelativeDayFromIsoToToday(isoString)
   }
 
   const formatCalendarDate = (isoString: string) => {
-    const date = new Date(isoString)
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(date)
+    return formatMediumDateFromIso(isoString)
   }
 
   const plantCards = computed(() => {
@@ -229,7 +207,7 @@
               :title="getTypeLabel(card.lastEvent.type)"
             >
               <span aria-hidden="true">{{
-                getTypeIcon(card.lastEvent.type)
+                getEventIcon(card.lastEvent.type)
               }}</span>
               <span class="truncate">{{
                 getTypeLabel(card.lastEvent.type)
