@@ -60,7 +60,8 @@ Frontend:
 copy frontend/.env.template frontend/.env
 ```
 
-Update values in both files as needed.
+Update values in both files as needed.  
+If you want to test a feature that requires email sending, you can setup credentials for it following this guide (for gmail accounts): https://medium.com/rails-to-rescue/how-to-set-up-smtp-credentials-with-gmail-for-your-app-send-email-cf236d11087d
 
 ### 3. Start backend, run migrations/seed once
 
