@@ -1,5 +1,4 @@
 export const userMessage = {
-  noSession: 'Session unavailable.',
   verifyFirst: 'Please verify your email address before logging in.',
   emailTaken: 'Email address is already registered.',
   emailSendFailed:
