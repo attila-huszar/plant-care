@@ -162,27 +162,19 @@
     return upcomingCareAll.value.slice(0, 6)
   })
 
-  const highlightedKey = computed(() => {
-    let best: (typeof upcomingCare.value)[number] | null = null
-    let bestAbs = Number.POSITIVE_INFINITY
-
-    for (const item of upcomingCare.value) {
-      const abs = Math.abs(item.diffDays)
-      if (abs < bestAbs) {
-        bestAbs = abs
-        best = item
-        continue
-      }
-
-      if (abs === bestAbs && best) {
-        const a = Math.abs(item.dueDate.getTime() - Date.now())
-        const b = Math.abs(best.dueDate.getTime() - Date.now())
-        if (a < b) best = item
-      }
+  const getUpcomingItemClasses = (
+    item: (typeof upcomingCare.value)[number],
+  ) => {
+    if (item.diffDays < 0) {
+      return 'border border-amber-200/80 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-950/20'
     }
 
-    return best?.key ?? null
-  })
+    if (item.diffDays === 0) {
+      return 'border border-emerald-200/80 bg-emerald-50/60 dark:border-emerald-500/20 dark:bg-emerald-950/30'
+    }
+
+    return 'border border-transparent'
+  }
 
   const formatDueLabel = (diffDays: number) => {
     if (diffDays === 0) return 'Today'
@@ -455,89 +447,87 @@
         </div>
 
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
-          <div
-            v-for="item in upcomingCare"
-            :key="item.key"
-            class="flex items-start gap-3 rounded-xl px-3 py-3"
-            :class="
-              item.key === highlightedKey
-                ? 'bg-emerald-50/60 dark:bg-emerald-950/30'
-                : ''
-            "
-          >
-            <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
-              <div
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
-              >
-                {{ getTypeIcon(item.type) }}
-              </div>
-              <div class="min-w-0 flex-1">
-                <p
-                  class="text-sm font-medium text-slate-900 dark:text-slate-100"
+          <div class="space-y-2">
+            <div
+              v-for="item in upcomingCare"
+              :key="item.key"
+              class="flex items-start gap-3 rounded-xl px-3 py-3"
+              :class="getUpcomingItemClasses(item)"
+            >
+              <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
+                <div
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                 >
-                  <span>{{ getTypeLabel(item.type) }}</span>
-                  for
-                  <span class="font-bold text-emerald-700">{{
-                    item.plantName
-                  }}</span>
-                </p>
-                <p
-                  class="mt-0.5 text-xs"
-                  :class="
-                    item.diffDays < 0
-                      ? 'text-rose-600'
-                      : item.diffDays <= 2
-                        ? 'text-amber-600'
-                        : 'text-slate-500 dark:text-slate-400'
-                  "
-                >
-                  {{ formatDueLabel(item.diffDays) }} •
-                  <span v-if="item.kind === 'recurring'">
-                    every {{ item.days }} days
-                  </span>
-                  <span v-else>one-off</span>
-                </p>
-                <div v-if="item.notes" class="mt-1">
+                  {{ getTypeIcon(item.type) }}
+                </div>
+                <div class="min-w-0 flex-1">
                   <p
-                    class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
-                    :title="item.notes"
+                    class="text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
-                    <span class="min-w-0 wrap-break-word">{{
-                      item.notes
+                    <span>{{ getTypeLabel(item.type) }}</span>
+                    for
+                    <span class="font-bold text-emerald-700">{{
+                      item.plantName
                     }}</span>
                   </p>
+                  <p
+                    class="mt-0.5 text-xs"
+                    :class="
+                      item.diffDays < 0
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : item.diffDays <= 2
+                          ? 'text-amber-600 dark:text-amber-300'
+                          : 'text-slate-500 dark:text-slate-400'
+                    "
+                  >
+                    {{ formatDueLabel(item.diffDays) }} •
+                    <span v-if="item.kind === 'recurring'">
+                      every {{ item.days }} days
+                    </span>
+                    <span v-else>one-off</span>
+                  </p>
+                  <div v-if="item.notes" class="mt-1">
+                    <p
+                      class="inline-flex max-w-full items-start gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+                      :title="item.notes"
+                    >
+                      <span class="min-w-0 wrap-break-word">{{
+                        item.notes
+                      }}</span>
+                    </p>
+                  </div>
                 </div>
               </div>
+
+              <button
+                v-if="canCompleteItem(item)"
+                type="button"
+                class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                @click.stop="openCompleteDialog(item)"
+                :disabled="isCompleting(item.key)"
+                aria-label="Add notes"
+                title="Add notes"
+              >
+                <span aria-hidden="true">⋯</span>
+              </button>
+
+              <button
+                v-if="canCompleteItem(item)"
+                type="button"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                :class="
+                  isCompleting(item.key)
+                    ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20'
+                    : 'border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/60 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800'
+                "
+                @click.stop="completeItemQuick(item)"
+                :disabled="isCompleting(item.key)"
+                aria-label="Mark as done"
+                title="Mark as done"
+              >
+                <CheckIcon class="size-5" aria-hidden="true" />
+              </button>
             </div>
-
-            <button
-              v-if="canCompleteItem(item)"
-              type="button"
-              class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-              @click.stop="openCompleteDialog(item)"
-              :disabled="isCompleting(item.key)"
-              aria-label="Add notes"
-              title="Add notes"
-            >
-              <span aria-hidden="true">⋯</span>
-            </button>
-
-            <button
-              v-if="canCompleteItem(item)"
-              type="button"
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-              :class="
-                isCompleting(item.key)
-                  ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20'
-                  : 'border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/60 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800'
-              "
-              @click.stop="completeItemQuick(item)"
-              :disabled="isCompleting(item.key)"
-              aria-label="Mark as done"
-              title="Mark as done"
-            >
-              <CheckIcon class="size-5" aria-hidden="true" />
-            </button>
           </div>
         </div>
       </div>
