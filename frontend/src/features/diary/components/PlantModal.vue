@@ -308,7 +308,7 @@
     for (let i = 0; i < ruleRows.value.length; i += 1) {
       const row = ruleRows.value[i]
       if (!row.type) continue
-      const notes = row.notes.trim() || undefined
+      const notes = row.notes.trim()
 
       if (row.kind === 'recurring') {
         const lastIndex = lastCadenceIndexByType.get(row.type)
@@ -322,7 +322,7 @@
           id: row.id,
           type: row.type,
           days,
-          ...(notes ? { notes } : {}),
+          notes,
         })
         continue
       }
@@ -335,7 +335,7 @@
         id: row.id,
         type: row.type,
         date: iso,
-        ...(notes ? { notes } : {}),
+        notes,
       })
     }
 
