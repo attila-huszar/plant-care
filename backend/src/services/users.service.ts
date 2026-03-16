@@ -104,25 +104,19 @@ export async function verifyMfa(payload: MfaVerifyRequest) {
     throw new Forbidden(userMessage.verifyFirst)
   }
 
-  if (!user.mfaEnabled || !user.mfaToken || !user.mfaExpires) {
-    throw new Unauthorized(authMessage.mfaPendingRequired)
+  if (!user.mfaEnabled) {
+    throw new Unauthorized(authMessage.credentialsInvalid)
   }
 
-  if (new Date(user.mfaExpires) < new Date()) {
-    const clearedExpiredMfa = await UsersRepository.updateUserBy(
-      'uuid',
-      user.uuid,
-      {
-        mfaToken: null,
-        mfaExpires: null,
-      },
-    )
+  if (!user.mfaToken || !user.mfaExpires) {
+    throw new Unauthorized(authMessage.mfaCodeExpired)
+  }
 
-    if (!clearedExpiredMfa) {
-      throw new Internal(authMessage.mfaStateUpdateError)
-    }
+  const now = Date.now()
+  const expires = new Date(user.mfaExpires).getTime()
 
-    throw new Unauthorized(authMessage.mfaExpired)
+  if (now > expires) {
+    throw new Unauthorized(authMessage.mfaCodeExpired)
   }
 
   const isCodeCorrect = await Bun.password.verify(code, user.mfaToken)
@@ -131,16 +125,13 @@ export async function verifyMfa(payload: MfaVerifyRequest) {
     throw new Unauthorized(authMessage.mfaCodeError)
   }
 
-  const cleared = await UsersRepository.updateUserBy('uuid', user.uuid, {
+  void UsersRepository.updateUserBy('uuid', user.uuid, {
     mfaToken: null,
     mfaExpires: null,
   })
 
-  if (!cleared) {
-    throw new Internal(authMessage.mfaStateUpdateError)
-  }
+  const timestamp = Math.floor(now / 1000)
 
-  const timestamp = Math.floor(Date.now() / 1000)
   const accessToken = await signAccessToken(user.uuid, timestamp)
   const refreshToken = await signRefreshToken(user.uuid, timestamp)
 
