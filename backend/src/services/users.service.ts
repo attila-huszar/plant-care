@@ -35,7 +35,7 @@ export async function loginUser(loginRequest: LoginRequest) {
   const user = await UsersRepository.getUserBy('email', email)
 
   if (!user) {
-    throw new Unauthorized(authMessage.authError)
+    throw new Unauthorized(authMessage.credentialsInvalid)
   }
 
   if (!user.verified) {
@@ -45,7 +45,7 @@ export async function loginUser(loginRequest: LoginRequest) {
   const isPasswordCorrect = await Bun.password.verify(password, user.password)
 
   if (!isPasswordCorrect) {
-    throw new Unauthorized(authMessage.authError)
+    throw new Unauthorized(authMessage.credentialsInvalid)
   }
 
   if (user.mfaEnabled) {
@@ -59,7 +59,7 @@ export async function loginUser(loginRequest: LoginRequest) {
     })
 
     if (!updated) {
-      throw new Error(userMessage.updateError)
+      throw new Internal(authMessage.mfaStateUpdateError)
     }
 
     try {
@@ -97,23 +97,26 @@ export async function verifyMfa(payload: MfaVerifyRequest) {
   const user = await UsersRepository.getUserBy('email', email)
 
   if (!user) {
-    throw new Unauthorized(authMessage.authError)
+    throw new Unauthorized(authMessage.credentialsInvalid)
   }
 
   if (!user.verified) {
     throw new Forbidden(userMessage.verifyFirst)
   }
 
-  if (!user.mfaEnabled || !user.mfaToken || !user.mfaExpires) {
-    throw new Unauthorized(authMessage.authError)
+  if (!user.mfaEnabled) {
+    throw new Unauthorized(authMessage.credentialsInvalid)
   }
 
-  if (new Date(user.mfaExpires) < new Date()) {
-    await UsersRepository.updateUserBy('uuid', user.uuid, {
-      mfaToken: null,
-      mfaExpires: null,
-    })
-    throw new Unauthorized(authMessage.authError)
+  if (!user.mfaToken || !user.mfaExpires) {
+    throw new Unauthorized(authMessage.mfaCodeExpired)
+  }
+
+  const now = Date.now()
+  const expires = new Date(user.mfaExpires).getTime()
+
+  if (now > expires) {
+    throw new Unauthorized(authMessage.mfaCodeExpired)
   }
 
   const isCodeCorrect = await Bun.password.verify(code, user.mfaToken)
@@ -122,16 +125,13 @@ export async function verifyMfa(payload: MfaVerifyRequest) {
     throw new Unauthorized(authMessage.mfaCodeError)
   }
 
-  const cleared = await UsersRepository.updateUserBy('uuid', user.uuid, {
+  void UsersRepository.updateUserBy('uuid', user.uuid, {
     mfaToken: null,
     mfaExpires: null,
   })
 
-  if (!cleared) {
-    throw new Error(userMessage.updateError)
-  }
+  const timestamp = Math.floor(now / 1000)
 
-  const timestamp = Math.floor(Date.now() / 1000)
   const accessToken = await signAccessToken(user.uuid, timestamp)
   const refreshToken = await signRefreshToken(user.uuid, timestamp)
 
@@ -166,7 +166,7 @@ export async function registerUser(registerRequest: RegisterRequest) {
   const userCreated = await UsersRepository.createUser(newUser)
 
   if (!userCreated) {
-    throw new Error(userMessage.createError)
+    throw new Internal(userMessage.createFailed)
   }
 
   try {
@@ -179,7 +179,7 @@ export async function registerUser(registerRequest: RegisterRequest) {
     await UsersRepository.deleteUserBy('uuid', userCreated.uuid)
 
     throw new Internal(
-      userMessage.sendEmail,
+      userMessage.emailSendFailed,
       'ServiceUnavailable',
       status.SERVICE_UNAVAILABLE,
     )
@@ -210,7 +210,7 @@ export async function verifyUser(verificationRequest: VerificationRequest) {
   })
 
   if (!userUpdated) {
-    throw new Error(userMessage.updateError)
+    throw new Internal(authMessage.verifyEmailFailed)
   }
 
   return { email: userUpdated.email }
@@ -237,7 +237,7 @@ export async function passwordResetRequest(
   })
 
   if (!userUpdated) {
-    throw new Error(userMessage.updateError)
+    throw new Internal(authMessage.passwordResetRequestFailed)
   }
 
   try {
@@ -283,7 +283,7 @@ export async function passwordResetSubmit(
   const user = await UsersRepository.getUserBy('passwordResetToken', token)
 
   if (!user) {
-    throw new NotFound(userMessage.getError)
+    throw new BadRequest(authMessage.invalidToken)
   }
 
   const expiry = user.passwordResetExpires
@@ -298,7 +298,7 @@ export async function passwordResetSubmit(
   })
 
   if (!userUpdated) {
-    throw new Error(userMessage.updateError)
+    throw new Internal(authMessage.passwordResetSubmitFailed)
   }
 
   return { message: userMessage.passwordResetSuccess }
@@ -319,7 +319,7 @@ export async function getUserProfile(
     if (options?.optional) {
       return null
     }
-    throw new NotFound(userMessage.getError)
+    throw new NotFound(userMessage.notFound)
   }
 
   return toPublicUser(user)
@@ -332,7 +332,7 @@ export async function updateUserProfile(
   const user = await UsersRepository.getUserBy('uuid', uuid)
 
   if (!user) {
-    throw new NotFound(userMessage.getError)
+    throw new NotFound(userMessage.notFound)
   }
 
   const updateFields: UserUpdate = { ...updatePayload }
@@ -351,7 +351,7 @@ export async function updateUserProfile(
   })
 
   if (!userUpdated) {
-    throw new Error(userMessage.updateError)
+    throw new Internal(userMessage.updateFailed)
   }
 
   return toPublicUser(userUpdated)

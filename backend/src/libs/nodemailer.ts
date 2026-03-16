@@ -96,6 +96,6 @@ export async function sendMail(
 
     return await transporter.sendMail(mailOptions)
   } catch (error) {
-    throw new Error(userMessage.sendEmail, { cause: error })
+    throw new Error(userMessage.emailSendFailed, { cause: error })
   }
 }
