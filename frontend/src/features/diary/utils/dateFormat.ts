@@ -1,39 +1,43 @@
-const DAY_MS = 1000 * 60 * 60 * 24
+export const MS_PER_DAY = 1000 * 60 * 60 * 24
 
-const RELATIVE_DAY_FORMATTER = new Intl.RelativeTimeFormat('en', {
-  numeric: 'auto',
-})
-
-const MEDIUM_DATE_FORMATTER = new Intl.DateTimeFormat('en', {
-  dateStyle: 'medium',
-})
-
-const isValidDate = (date: Date) => Number.isFinite(date.getTime())
-
-export const formatRelativeDayFromIsoToToday = (isoString: string) => {
-  const date = new Date(isoString)
-  if (!isValidDate(date)) return ''
-
-  const day = new Date(date)
-  day.setHours(0, 0, 0, 0)
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const diffDays = Math.round((day.getTime() - today.getTime()) / DAY_MS)
-  return RELATIVE_DAY_FORMATTER.format(diffDays, 'day')
+const parseIsoMs = (isoString: string) => {
+  const ms = Date.parse(isoString)
+  if (!Number.isFinite(ms)) return null
+  return ms
 }
 
-export const formatRelativeDayFromIsoToNow = (isoString: string) => {
-  const date = new Date(isoString)
-  if (!isValidDate(date)) return ''
-
-  const diffDays = Math.round((date.getTime() - Date.now()) / DAY_MS)
-  return RELATIVE_DAY_FORMATTER.format(diffDays, 'day')
+export const startOfDayMs = (ms: number) => {
+  const date = new Date(ms)
+  date.setHours(0, 0, 0, 0)
+  return date.getTime()
 }
 
-export const formatMediumDateFromIso = (isoString: string) => {
-  const date = new Date(isoString)
-  if (!isValidDate(date)) return ''
-  return MEDIUM_DATE_FORMATTER.format(date)
+export const formatRelativeDay = (isoString: string) => {
+  const ms = parseIsoMs(isoString)
+  if (ms === null) return ''
+
+  const dayMs = startOfDayMs(ms)
+  const todayMs = startOfDayMs(Date.now())
+
+  const diffDays = Math.round((dayMs - todayMs) / MS_PER_DAY)
+  return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+    diffDays,
+    'day',
+  )
+}
+
+export const formatMediumDate = (isoString: string) => {
+  const ms = parseIsoMs(isoString)
+  if (ms === null) return ''
+  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(
+    new Date(ms),
+  )
+}
+
+export const formatDueLabel = (diffDays: number) => {
+  if (diffDays === 0) return 'Today'
+  const abs = Math.abs(diffDays)
+  const unit = abs === 1 ? 'day' : 'days'
+  if (diffDays > 0) return `In ${abs} ${unit}`
+  return `Overdue by ${abs} ${unit}`
 }

@@ -14,9 +14,9 @@
     PlantDto,
   } from '@plant-care/shared'
   import {
-    buildCustomTypeNameById,
-    formatMediumDateFromIso,
-    formatRelativeDayFromIsoToToday,
+    buildCustomEventsMap,
+    formatMediumDate as formatCalendarDate,
+    formatRelativeDay,
     getEventIcon,
     getEventLabel,
   } from '@/features/diary/utils'
@@ -35,12 +35,8 @@
   }>()
 
   const customTypeNameById = computed(() => {
-    return buildCustomTypeNameById(props.customEvents)
+    return buildCustomEventsMap(props.customEvents)
   })
-
-  const getTypeLabel = (typeId: EventType) => {
-    return getEventLabel(typeId, customTypeNameById.value)
-  }
 
   const lastEventByPlantId = computed(() => {
     const map = new Map<number, { iso: string; ms: number; type: EventType }>()
@@ -56,14 +52,6 @@
 
     return map
   })
-
-  const formatRelativeDay = (isoString: string) => {
-    return formatRelativeDayFromIsoToToday(isoString)
-  }
-
-  const formatCalendarDate = (isoString: string) => {
-    return formatMediumDateFromIso(isoString)
-  }
 
   const plantCards = computed(() => {
     const lastByPlantId = lastEventByPlantId.value
@@ -204,13 +192,13 @@
             </span>
             <span
               class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-200"
-              :title="getTypeLabel(card.lastEvent.type)"
+              :title="getEventLabel(card.lastEvent.type, customTypeNameById)"
             >
               <span aria-hidden="true">{{
                 getEventIcon(card.lastEvent.type)
               }}</span>
               <span class="truncate">{{
-                getTypeLabel(card.lastEvent.type)
+                getEventLabel(card.lastEvent.type, customTypeNameById)
               }}</span>
             </span>
             <span

@@ -7,19 +7,16 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type {
-    CustomEventDto,
-    EventDto,
-    EventType,
-    PlantDto,
-  } from '@plant-care/shared'
+  import type { CustomEventDto, EventDto, PlantDto } from '@plant-care/shared'
   import {
-    buildCustomTypeNameById,
-    formatRelativeDayFromIsoToNow,
+    buildCustomEventsMap,
+    buildUpcomingCareItems,
+    formatDueLabel,
+    formatRelativeDay,
     getEventIcon,
     getEventLabel,
   } from '@/features/diary/utils'
-  import type { CareTimelinePayload, UpcomingItem } from '@/types'
+  import type { CareTimelinePayload } from '@/types'
   import { CalendarIcon, CheckIcon } from '@/assets/svg'
 
   const props = withDefaults(
@@ -38,115 +35,12 @@
     care: [payload: CareTimelinePayload]
   }>()
 
-  const DAY_MS = 1000 * 60 * 60 * 24
-  const startOfDayMs = (ms: number) => {
-    const date = new Date(ms)
-    date.setHours(0, 0, 0, 0)
-    return date.getTime()
-  }
-
   const customTypeNameById = computed(() => {
-    return buildCustomTypeNameById(props.customEvents ?? [])
+    return buildCustomEventsMap(props.customEvents ?? [])
   })
-
-  const latestEventMsByPlantAndType = computed(() => {
-    const map = new Map<string, number>()
-    for (const event of props.events) {
-      const ms = new Date(event.date).getTime()
-      if (!Number.isFinite(ms)) continue
-      const key = `${event.plantId}:${event.type}`
-      const prev = map.get(key)
-      if (prev === undefined || ms > prev) map.set(key, ms)
-    }
-    return map
-  })
-
-  const latestNotesByPlantAndType = computed(() => {
-    const map = new Map<string, string>()
-
-    const sorted = [...props.events].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    )
-
-    for (const event of sorted) {
-      const notes = event.notes?.trim()
-      if (!notes) continue
-      const key = `${event.plantId}:${event.type}`
-      if (!map.has(key)) map.set(key, notes)
-    }
-
-    return map
-  })
-
-  const getTypeLabel = (typeId: EventType) => {
-    return getEventLabel(typeId, customTypeNameById.value)
-  }
 
   const upcomingCareAll = computed(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayMs = today.getTime()
-
-    const items: UpcomingItem[] = []
-
-    for (const plant of props.plants) {
-      for (const rule of plant.careRules ?? []) {
-        if (!rule) continue
-
-        if (rule.kind === 'recurring') {
-          if (rule.days <= 0) continue
-
-          const key = `${plant.id}:${rule.id}`
-          const lastEventKey = `${plant.id}:${rule.type}`
-          const lastEventMs =
-            latestEventMsByPlantAndType.value.get(lastEventKey)
-          const baseMs = startOfDayMs(lastEventMs ?? todayMs)
-
-          const dueDayMs = baseMs + rule.days * DAY_MS
-          const dueDate = new Date(dueDayMs)
-          const diffDays = Math.round((dueDayMs - todayMs) / DAY_MS)
-
-          items.push({
-            key: String(key),
-            plantId: plant.id,
-            plantName: plant.name,
-            careRuleId: rule.id,
-            type: rule.type,
-            notes:
-              rule.notes?.trim() ||
-              latestNotesByPlantAndType.value.get(lastEventKey),
-            dueDate,
-            diffDays,
-            kind: 'recurring',
-            days: rule.days,
-          })
-          continue
-        }
-
-        const dueMs = new Date(rule.date).getTime()
-        if (!Number.isFinite(dueMs)) continue
-
-        const dueDayMs = startOfDayMs(dueMs)
-        const dueDate = new Date(dueDayMs)
-        const diffDays = Math.round((dueDayMs - todayMs) / DAY_MS)
-
-        items.push({
-          key: String(`${plant.id}:${rule.id}`),
-          plantId: plant.id,
-          plantName: plant.name,
-          careRuleId: rule.id,
-          type: rule.type,
-          notes:
-            rule.notes?.trim() ||
-            latestNotesByPlantAndType.value.get(`${plant.id}:${rule.type}`),
-          dueDate,
-          diffDays,
-          kind: 'date',
-        })
-      }
-    }
-
-    return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+    return buildUpcomingCareItems(props.plants, props.events)
   })
 
   const upcomingCare = computed(() => {
@@ -165,18 +59,6 @@
     }
 
     return 'border border-transparent'
-  }
-
-  const formatDueLabel = (diffDays: number) => {
-    if (diffDays === 0) return 'Today'
-    const abs = Math.abs(diffDays)
-    const unit = abs === 1 ? 'day' : 'days'
-    if (diffDays > 0) return `In ${abs} ${unit}`
-    return `Overdue by ${abs} ${unit}`
-  }
-
-  const formatEventDate = (isoString: string) => {
-    return formatRelativeDayFromIsoToNow(isoString)
   }
 
   const enrichedEvents = computed(() => {
@@ -451,7 +333,9 @@
                   <p
                     class="text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
-                    <span>{{ getTypeLabel(item.type) }}</span>
+                    <span>{{
+                      getEventLabel(item.type, customTypeNameById)
+                    }}</span>
                     for
                     <span class="font-bold text-emerald-700">{{
                       item.plantName
@@ -586,14 +470,16 @@
                 <p
                   class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
-                  <span>{{ getTypeLabel(event.type) }}</span>
+                  <span>{{
+                    getEventLabel(event.type, customTypeNameById)
+                  }}</span>
                   for
                   <span class="font-bold text-emerald-700">{{
                     event.plantName
                   }}</span>
                 </p>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  {{ formatEventDate(event.date) }}
+                  {{ formatRelativeDay(event.date) }}
                 </p>
                 <div v-if="event.notes" class="mt-1">
                   <p

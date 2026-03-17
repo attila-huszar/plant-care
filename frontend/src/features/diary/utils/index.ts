@@ -1,2 +1,2 @@
 export * from './dateFormat'
-export * from './eventTypeMeta'
+export * from './diaryUtils'

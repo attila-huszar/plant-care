@@ -16,8 +16,8 @@
   import type { CareRule, EventDto, EventType } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
   import {
-    buildCustomTypeNameById,
-    formatRelativeDayFromIsoToNow,
+    buildCustomEventsMap,
+    formatRelativeDay,
     getEventIcon,
     getEventLabel,
   } from '@/features/diary/utils'
@@ -78,7 +78,7 @@
   })
 
   const customTypeNameById = computed(() => {
-    return buildCustomTypeNameById(userStore.customEvents)
+    return buildCustomEventsMap(userStore.customEvents)
   })
 
   const getTypeLabel = (typeId: EventType) => {
@@ -103,10 +103,6 @@
 
     return map
   })
-
-  const formatRelativeDay = (isoString: string) => {
-    return formatRelativeDayFromIsoToNow(isoString)
-  }
 
   type DraftCareRuleRow = {
     key: string
