@@ -214,6 +214,7 @@ export const usePlantsStore = defineStore('plants', () => {
     if (!p) return
 
     const nextSchedules = p.schedules.filter((t) => t.id !== scheduleId)
+    if (nextSchedules.length === p.schedules.length) return
 
     return updatePlant(plantId, { schedules: nextSchedules })
   }

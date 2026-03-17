@@ -57,6 +57,10 @@ export const useAuthStore = defineStore('auth', () => {
       const result = toApiResult<unknown>(res)
 
       if (!result.ok) {
+        if (result.status === 401 || result.status === 403) {
+          canRefresh.value = false
+          clearAuth()
+        }
         return null
       }
 
@@ -296,11 +300,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async () => {
+    error.value = null
+
     if (!accessToken.value) {
       await refresh()
     }
 
-    if (accessToken.value) {
+    if (!accessToken.value) {
+      error.value = 'Unable to refresh session for logout'
+      return
+    }
+
+    const tryLogout = async () => {
       const res = await useApiFetch(
         API_PATHS.users.logout,
         withAuth(accessToken),
@@ -308,10 +319,30 @@ export const useAuthStore = defineStore('auth', () => {
         .post()
         .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
-      if (result.ok) {
-        safeValidate(logoutResponseSchema, result.data)
+      return toApiResult<unknown>(res)
+    }
+
+    let result = await tryLogout()
+
+    if (!result.ok && result.status === 401) {
+      await refresh()
+      if (!accessToken.value) {
+        error.value = 'Unable to refresh session for logout'
+        return
       }
+      result = await tryLogout()
+    }
+
+    if (!result.ok) {
+      error.value = result.error
+      return
+    }
+
+    const data = safeValidate(logoutResponseSchema, result.data)
+    if (!data) {
+      const message = 'Invalid server response'
+      error.value = message
+      return
     }
 
     clearAuth()

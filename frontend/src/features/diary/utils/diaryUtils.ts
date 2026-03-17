@@ -51,11 +51,16 @@ const buildLatestEventsMap = (events: readonly EventDto[]) => {
 const buildLatestNotesMap = (events: readonly EventDto[]) => {
   const map = new Map<string, string>()
 
-  const sorted = [...events].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  )
+  const datedEvents: { event: EventDto; ms: number }[] = []
+  for (const event of events) {
+    const ms = new Date(event.date).getTime()
+    if (!Number.isFinite(ms)) continue
+    datedEvents.push({ event, ms })
+  }
 
-  for (const event of sorted) {
+  datedEvents.sort((a, b) => b.ms - a.ms)
+
+  for (const { event } of datedEvents) {
     const notes = event.notes?.trim()
     if (!notes) continue
     const key = `${event.plantId}:${event.type}`
@@ -87,7 +92,9 @@ export const buildUpcomingCareItems = (
         const lastEventMs = latestEventMsByPlantAndType.get(lastEventKey)
         const baseMs = startOfDayMs(lastEventMs ?? todayMs)
 
-        const dueDayMs = baseMs + rule.days * MS_PER_DAY
+        const dueBase = new Date(baseMs)
+        dueBase.setDate(dueBase.getDate() + rule.days)
+        const dueDayMs = startOfDayMs(dueBase.getTime())
         const dueDate = new Date(dueDayMs)
         const diffDays = Math.round((dueDayMs - todayMs) / MS_PER_DAY)
         const ruleNotes = rule.notes?.trim()

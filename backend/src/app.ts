@@ -10,7 +10,7 @@ import { API_PATHS } from './constants'
 import { plants, users } from './controllers'
 import { initMailer } from './libs'
 import { authMiddleware, payloadLimiter } from './middleware'
-import { ngrokForward } from './utils'
+import { ngrokForward, shortHash } from './utils'
 
 const app = new Hono()
 const api = new Hono()
@@ -27,13 +27,13 @@ const limiter = rateLimiter({
       c.req.header('X-Forwarded-For') ??
       c.req.header('X-Real-Ip')
 
-    if (forwarded) {
-      return forwarded.split(',')[0]!.trim()
-    }
+    const forwardedIp = forwarded ? forwarded.split(',')[0]!.trim() : 'unknown'
 
-    const userAgent = c.req.header('User-Agent') ?? 'unknown'
+    const userAgent = c.req.header('User-Agent') ?? ''
     const acceptLanguage = c.req.header('Accept-Language') ?? ''
-    return `${userAgent}:${acceptLanguage}`
+    const fingerprint = shortHash(`${userAgent}|${acceptLanguage}`)
+
+    return `${forwardedIp}:${fingerprint}`
   },
 })
 

@@ -1,5 +1,13 @@
 export const MS_PER_DAY = 1000 * 60 * 60 * 24
 
+const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', {
+  numeric: 'auto',
+})
+
+const mediumDateFormatter = new Intl.DateTimeFormat('en', {
+  dateStyle: 'medium',
+})
+
 const parseIsoMs = (isoString: string) => {
   const ms = Date.parse(isoString)
   if (!Number.isFinite(ms)) return null
@@ -20,18 +28,13 @@ export const formatRelativeDay = (isoString: string) => {
   const todayMs = startOfDayMs(Date.now())
 
   const diffDays = Math.round((dayMs - todayMs) / MS_PER_DAY)
-  return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-    diffDays,
-    'day',
-  )
+  return relativeTimeFormatter.format(diffDays, 'day')
 }
 
 export const formatMediumDate = (isoString: string) => {
   const ms = parseIsoMs(isoString)
   if (ms === null) return ''
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(
-    new Date(ms),
-  )
+  return mediumDateFormatter.format(new Date(ms))
 }
 
 export const formatDueLabel = (diffDays: number) => {
