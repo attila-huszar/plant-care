@@ -16,13 +16,11 @@ import { toApiResult } from '@/utils'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
-  const bootstrapped = ref(false)
+  const canRefresh = ref(true)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => accessToken.value !== null)
-
-  let bootstrapPromise: Promise<void> | null = null
 
   const clearAuth = () => {
     accessToken.value = null
@@ -30,43 +28,32 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const refresh = async (): Promise<string | null> => {
-    isLoading.value = true
-    error.value = null
+    if (!canRefresh.value) return null
+
     try {
       const res = await useApiFetch(API_PATHS.users.refresh)
         .post()
         .json<{ accessToken: string | null }>()
 
       const result = toApiResult<{ accessToken: string | null }>(res)
+
       if (!result.ok) {
-        error.value = result.error
+        return null
+      }
+
+      if (!result.data.accessToken) {
+        canRefresh.value = false
         clearAuth()
         return null
       }
 
+      canRefresh.value = true
       accessToken.value = result.data.accessToken
+
       return accessToken.value
-    } finally {
-      isLoading.value = false
+    } catch {
+      return null
     }
-  }
-
-  const bootstrap = async () => {
-    if (bootstrapped.value) return
-    if (bootstrapPromise) return bootstrapPromise
-
-    bootstrapPromise = (async () => {
-      const token = await refresh()
-      if (!token) {
-        bootstrapped.value = true
-        return
-      }
-      bootstrapped.value = true
-    })().finally(() => {
-      bootstrapPromise = null
-    })
-
-    return bootstrapPromise
   }
 
   const login = async (
@@ -99,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       if ('accessToken' in result.data) {
         accessToken.value = result.data.accessToken
+        canRefresh.value = true
       }
 
       return result
@@ -126,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       accessToken.value = result.data.accessToken
+      canRefresh.value = true
       return result
     } finally {
       isLoading.value = false
@@ -240,17 +229,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     clearAuth()
-    bootstrapped.value = true
+    canRefresh.value = false
   }
 
   return {
     accessToken,
-    bootstrapped,
     isAuthenticated,
     isLoading,
     error,
     refresh,
-    bootstrap,
     login,
     mfaVerify,
     register,

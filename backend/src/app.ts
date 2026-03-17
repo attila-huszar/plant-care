@@ -21,8 +21,20 @@ const limiter = rateLimiter({
   message: { error: 'Too many requests' },
   statusCode: 429,
   standardHeaders: 'draft-6',
-  keyGenerator: (c) =>
-    c.req.header('X-Forwarded-For') ?? c.req.header('X-Real-Ip') ?? 'unknown',
+  keyGenerator: (c) => {
+    const forwarded =
+      c.req.header('CF-Connecting-IP') ??
+      c.req.header('X-Forwarded-For') ??
+      c.req.header('X-Real-Ip')
+
+    if (forwarded) {
+      return forwarded.split(',')[0]!.trim()
+    }
+
+    const userAgent = c.req.header('User-Agent') ?? 'unknown'
+    const acceptLanguage = c.req.header('Accept-Language') ?? ''
+    return `${userAgent}:${acceptLanguage}`
+  },
 })
 
 const corsMiddleware = cors({
