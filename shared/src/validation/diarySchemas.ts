@@ -10,7 +10,7 @@ export type EventType = string
 
 const eventTypeSchema = z.string().trim().min(1).max(60)
 
-export const careRuleSchema = z.discriminatedUnion('kind', [
+export const scheduleSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('recurring'),
     id: z.uuid(),
@@ -27,7 +27,7 @@ export const careRuleSchema = z.discriminatedUnion('kind', [
   }),
 ])
 
-export const careRulesSchema = z.array(careRuleSchema)
+export const schedulesSchema = z.array(scheduleSchema)
 
 const eventBaseSchema = z.object({
   type: eventTypeSchema,
@@ -37,7 +37,7 @@ const eventBaseSchema = z.object({
 
 const plantBaseSchema = z.strictObject({
   name: plantNameSchema,
-  careRules: careRulesSchema,
+  schedules: schedulesSchema,
   imageUrl: imageUrlSchema.nullable().optional(),
 })
 
@@ -48,7 +48,7 @@ export const createCustomEventRequestSchema = z.object({
 })
 
 export const createPlantRequestSchema = plantBaseSchema.extend({
-  careRules: careRulesSchema.default([]),
+  schedules: schedulesSchema.default([]),
 })
 
 export const updatePlantRequestSchema = plantBaseSchema.partial()

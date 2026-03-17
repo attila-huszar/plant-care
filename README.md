@@ -1,6 +1,6 @@
 # Plant Care
 
-Plant Care is a full-stack monorepo for tracking plants, care rules, and care history.
+Plant Care is a full-stack monorepo for tracking plants, schedules, and care history.
 
 It contains:
 

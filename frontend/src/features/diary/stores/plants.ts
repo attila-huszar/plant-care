@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
 import {
@@ -15,22 +15,15 @@ import type {
 } from '@plant-care/shared'
 import { useAuthStore } from '@/features/auth/stores'
 import { useApiFetch, withAuth } from '@/composables'
+import { toApiResult } from '@/utils'
 
 export const usePlantsStore = defineStore('plants', () => {
   const plants = ref<PlantDto[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-
-  const eventsLoading = ref(false)
-  const eventsError = ref<string | null>(null)
-
-  const setError = (message: string | null) => {
-    error.value = message
-  }
-
-  const setEventsError = (message: string | null) => {
-    eventsError.value = message
-  }
+  const events = computed(() => {
+    return plants.value.flatMap((p) => p.history)
+  })
+  const plantsReq = reactive({ loading: false, error: null as string | null })
+  const eventsReq = reactive({ loading: false, error: null as string | null })
 
   const authStore = useAuthStore()
 
@@ -38,37 +31,108 @@ export const usePlantsStore = defineStore('plants', () => {
     return useApiFetch(path, withAuth(authStore.accessToken))
   }
 
-  const runRequest = async <T>(
-    loadingRef: { value: boolean },
-    setErrorFn: (message: string | null) => void,
-    errorMessage: string,
-    task: () => Promise<T | null>,
-  ) => {
-    loadingRef.value = true
-    setErrorFn(null)
-    try {
-      const result = await task()
-      if (result === null) {
-        setErrorFn(errorMessage)
-        return null
-      }
-      return result
-    } catch (e) {
-      console.error(errorMessage, e)
-      setErrorFn(errorMessage)
-      return null
-    } finally {
-      loadingRef.value = false
-    }
-  }
-
   const setPlants = (next: PlantDto[]) => {
     plants.value = next
   }
 
-  const events = computed(() => {
-    return plants.value.flatMap((p) => p.history)
-  })
+  const getPlants = async () => {
+    plantsReq.loading = true
+    plantsReq.error = null
+    try {
+      const res = await apiFetch(API_PATHS.plants.root).get().json<unknown>()
+
+      const apiResult = toApiResult<unknown>(res)
+      if (!apiResult.ok) {
+        plantsReq.error = 'Failed to load plants'
+        return
+      }
+
+      const data = validate(listPlantsResponseSchema, apiResult.data)
+      setPlants(data.plants)
+    } catch (e) {
+      console.error('Failed to load plants', e)
+      plantsReq.error = 'Failed to load plants'
+    } finally {
+      plantsReq.loading = false
+    }
+  }
+
+  const addPlant = async (plant: CreatePlantRequest) => {
+    plantsReq.loading = true
+    plantsReq.error = null
+    try {
+      const res = await apiFetch(API_PATHS.plants.root)
+        .post(plant, 'json')
+        .json<unknown>()
+
+      const apiResult = toApiResult<unknown>(res)
+      if (!apiResult.ok) {
+        plantsReq.error = 'Failed to add plant'
+        return null
+      }
+
+      const data = validate(plantDtoSchema, apiResult.data)
+      upsertPlant(data)
+      return data
+    } catch (e) {
+      console.error('Failed to add plant', e)
+      plantsReq.error = 'Failed to add plant'
+      return null
+    } finally {
+      plantsReq.loading = false
+    }
+  }
+
+  const removePlant = async (id: number) => {
+    plantsReq.loading = true
+    plantsReq.error = null
+    try {
+      const res = await apiFetch(API_PATHS.plants.byId(id)).delete().text()
+
+      const apiResult = toApiResult(res)
+      if (!apiResult.ok) {
+        plantsReq.error = 'Failed to remove plant'
+        return null
+      }
+
+      plants.value = plants.value.filter((p) => p.id !== id)
+      return true
+    } catch (e) {
+      console.error('Failed to remove plant', e)
+      plantsReq.error = 'Failed to remove plant'
+      return null
+    } finally {
+      plantsReq.loading = false
+    }
+  }
+
+  const updatePlant = async (plantId: number, patch: UpdatePlantRequest) => {
+    if (Object.keys(patch).length === 0) return null
+
+    plantsReq.loading = true
+    plantsReq.error = null
+    try {
+      const res = await apiFetch(API_PATHS.plants.byId(plantId))
+        .put(patch, 'json')
+        .json<unknown>()
+
+      const apiResult = toApiResult<unknown>(res)
+      if (!apiResult.ok) {
+        plantsReq.error = 'Failed to update plant'
+        return null
+      }
+
+      const data = validate(plantDtoSchema, apiResult.data)
+      upsertPlant(data)
+      return data
+    } catch (e) {
+      console.error('Failed to update plant', e)
+      plantsReq.error = 'Failed to update plant'
+      return null
+    } finally {
+      plantsReq.loading = false
+    }
+  }
 
   const upsertPlant = (plant: PlantDto) => {
     const idx = plants.value.findIndex((p) => p.id === plant.id)
@@ -76,163 +140,105 @@ export const usePlantsStore = defineStore('plants', () => {
       plants.value = [...plants.value, plant]
       return
     }
-    plants.value = plants.value.map((p) => (p.id === plant.id ? plant : p))
-  }
 
-  const removeEventFromPlants = (eventId: number) => {
-    plants.value = plants.value.map((p) => ({
-      ...p,
-      history: p.history.filter((e) => e.id !== eventId),
-    }))
+    const next = [...plants.value]
+    next[idx] = plant
+    plants.value = next
   }
 
   const addEvent = async (
     event: CreateEventRequest & { plantId: PlantDto['id'] },
   ) => {
-    return runRequest(
-      eventsLoading,
-      setEventsError,
-      'Failed to add event',
-      async () => {
-        const { plantId, ...body } = event
-        const res = await apiFetch(API_PATHS.plants.events(plantId))
-          .post(body, 'json')
-          .json<unknown>()
+    eventsReq.loading = true
+    eventsReq.error = null
+    try {
+      const { plantId, ...body } = event
+      const res = await apiFetch(API_PATHS.plants.events(plantId))
+        .post(body, 'json')
+        .json<unknown>()
 
-        if (res.response.value?.ok && res.data.value) {
-          const data = validate(createEventResponseSchema, res.data.value)
-          upsertPlant(data.plant)
-          return data.event
-        }
-
+      const apiResult = toApiResult<unknown>(res)
+      if (!apiResult.ok) {
+        eventsReq.error = 'Failed to add event'
         return null
-      },
-    )
+      }
+
+      const data = validate(createEventResponseSchema, apiResult.data)
+      upsertPlant(data.plant)
+      return data.event
+    } catch (e) {
+      console.error('Failed to add event', e)
+      eventsReq.error = 'Failed to add event'
+      return null
+    } finally {
+      eventsReq.loading = false
+    }
   }
 
   const removeEvent = async (plantId: number, eventId: number) => {
-    return runRequest(
-      eventsLoading,
-      setEventsError,
-      'Failed to remove event',
-      async () => {
-        const res = await apiFetch(API_PATHS.plants.eventById(plantId, eventId))
-          .delete()
-          .text()
+    eventsReq.loading = true
+    eventsReq.error = null
+    try {
+      const res = await apiFetch(API_PATHS.plants.eventById(plantId, eventId))
+        .delete()
+        .text()
 
-        if (res.response.value?.ok) {
-          removeEventFromPlants(eventId)
-          return true
-        }
-
-        return null
-      },
-    )
-  }
-
-  const loadPlants = async () => {
-    await runRequest(isLoading, setError, 'Failed to load plants', async () => {
-      const res = await apiFetch(API_PATHS.plants.root).get().json<unknown>()
-
-      if (!res.response.value?.ok) {
+      const apiResult = toApiResult(res)
+      if (!apiResult.ok) {
+        eventsReq.error = 'Failed to remove event'
         return null
       }
 
-      const data = validate(listPlantsResponseSchema, res.data.value)
-      setPlants(data.plants)
+      const idx = plants.value.findIndex((p) => p.id === plantId)
+      if (idx !== -1) {
+        const plant = plants.value[idx]
+        const next = [...plants.value]
+        next[idx] = {
+          ...plant,
+          history: plant.history.filter((e) => e.id !== eventId),
+        }
+        plants.value = next
+      }
       return true
-    })
-  }
-
-  const addPlant = async (plant: CreatePlantRequest) => {
-    return runRequest(isLoading, setError, 'Failed to add plant', async () => {
-      const res = await apiFetch(API_PATHS.plants.root)
-        .post(plant, 'json')
-        .json<unknown>()
-
-      if (res.response.value?.ok && res.data.value) {
-        const data = validate(plantDtoSchema, res.data.value)
-        upsertPlant(data)
-        return data
-      }
-
+    } catch (e) {
+      console.error('Failed to remove event', e)
+      eventsReq.error = 'Failed to remove event'
       return null
-    })
+    } finally {
+      eventsReq.loading = false
+    }
   }
 
-  const removePlant = async (id: number) => {
-    return runRequest(
-      isLoading,
-      setError,
-      'Failed to remove plant',
-      async () => {
-        const res = await apiFetch(API_PATHS.plants.byId(id)).delete().text()
-
-        if (res.response.value?.ok) {
-          plants.value = plants.value.filter((p) => p.id !== id)
-          return true
-        }
-
-        return null
-      },
-    )
-  }
-
-  const updatePlant = async (plantId: number, patch: UpdatePlantRequest) => {
-    if (!patch || Object.keys(patch).length === 0) return null
-
-    return runRequest(
-      isLoading,
-      setError,
-      'Failed to update plant',
-      async () => {
-        const res = await apiFetch(API_PATHS.plants.byId(plantId))
-          .put(patch, 'json')
-          .json<unknown>()
-
-        if (res.response.value?.ok && res.data.value) {
-          const data = validate(plantDtoSchema, res.data.value)
-          upsertPlant(data)
-          return data
-        }
-
-        return null
-      },
-    )
-  }
-
-  const removeCareRuleItem = async (plantId: number, careRuleId: string) => {
+  const removeSchedule = async (plantId: number, scheduleId: string) => {
     const p = plants.value.find((plant) => plant.id === plantId)
     if (!p) return
 
-    const nextCareRules = p.careRules.filter((r) => r.id !== careRuleId)
+    const nextSchedules = p.schedules.filter((t) => t.id !== scheduleId)
 
-    return updatePlant(plantId, { careRules: nextCareRules })
+    return updatePlant(plantId, { schedules: nextSchedules })
   }
 
   const clear = () => {
     plants.value = []
-    isLoading.value = false
-    error.value = null
-    eventsLoading.value = false
-    eventsError.value = null
+    plantsReq.loading = false
+    plantsReq.error = null
+    eventsReq.loading = false
+    eventsReq.error = null
   }
 
   return {
     plants,
     events,
-    isLoading,
-    error,
-    eventsLoading,
-    eventsError,
-    loadPlants,
+    plantsReq,
+    eventsReq,
+    getPlants,
     addPlant,
     removePlant,
     addEvent,
     removeEvent,
     upsertPlant,
     updatePlant,
-    removeCareRuleItem,
+    removeSchedule,
     clear,
   }
 })

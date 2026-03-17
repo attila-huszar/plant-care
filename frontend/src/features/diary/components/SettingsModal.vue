@@ -46,8 +46,8 @@
     const counts = new Map<string, number>()
 
     for (const plant of plantsStore.plants) {
-      for (const rule of plant.careRules) {
-        counts.set(rule.type, (counts.get(rule.type) ?? 0) + 1)
+      for (const schedule of plant.schedules) {
+        counts.set(schedule.type, (counts.get(schedule.type) ?? 0) + 1)
       }
 
       for (const event of plant.history) {

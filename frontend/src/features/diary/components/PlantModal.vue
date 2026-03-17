@@ -13,7 +13,7 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type { CareRule, EventDto, EventType } from '@plant-care/shared'
+  import type { EventDto, EventType, Schedule } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
   import {
     buildCustomEventsMap,
@@ -24,7 +24,7 @@
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
   import { EditIcon } from '@/assets/svg'
   import { usePlantsStore } from '../stores'
-  import CareRulesEditor from './CareRulesEditor.vue'
+  import SchedulesEditor from './SchedulesEditor.vue'
 
   const props = defineProps<{
     isOpen: boolean
@@ -68,10 +68,10 @@
     }
 
     if (plant.value) {
-      for (const rule of plant.value.careRules) {
-        const exists = options.some((o) => o.id === rule.type)
+      for (const schedule of plant.value.schedules) {
+        const exists = options.some((o) => o.id === schedule.type)
         if (!exists) {
-          options.push({ id: rule.type, label: rule.type })
+          options.push({ id: schedule.type, label: schedule.type })
         }
       }
     }
@@ -102,7 +102,7 @@
     return map
   })
 
-  type DraftCareRuleRow = {
+  type DraftScheduleRow = {
     key: string
     id: string
     kind: 'recurring' | 'date'
@@ -112,7 +112,7 @@
     notes: string
   }
 
-  const ruleRows = ref<DraftCareRuleRow[]>([])
+  const ruleRows = ref<DraftScheduleRow[]>([])
 
   const toDays = (value: string) => {
     const parsed = Number.parseInt(value, 10)
@@ -126,14 +126,14 @@
       return
     }
 
-    ruleRows.value = plant.value.careRules.map((r) => ({
+    ruleRows.value = plant.value.schedules.map((t) => ({
       key: crypto.randomUUID(),
-      id: r.id,
-      kind: r.kind,
-      type: r.type,
-      days: r.kind === 'recurring' ? String(r.days) : '7',
-      date: r.kind === 'date' ? toDateInputValue(new Date(r.date)) : '',
-      notes: r.notes ?? latestNotesByType.value.get(r.type) ?? '',
+      id: t.id,
+      kind: t.kind,
+      type: t.type,
+      days: t.kind === 'recurring' ? String(t.days) : '7',
+      date: t.kind === 'date' ? toDateInputValue(new Date(t.date)) : '',
+      notes: t.notes ?? latestNotesByType.value.get(t.type) ?? '',
     }))
   }
 
@@ -219,15 +219,15 @@
     ruleRows.value = ruleRows.value.filter((r) => r.key !== key)
   }
 
-  const ensureDateDefault = (row: DraftCareRuleRow) => {
+  const ensureDateDefault = (row: DraftScheduleRow) => {
     if (row.kind !== 'date') return
     if (row.date) return
     row.date = toDateInputValue(new Date())
   }
 
   const setRowKind = (
-    row: DraftCareRuleRow,
-    kind: DraftCareRuleRow['kind'],
+    row: DraftScheduleRow,
+    kind: DraftScheduleRow['kind'],
   ) => {
     row.kind = kind
     ensureDateDefault(row)
@@ -283,7 +283,7 @@
       lastCadenceIndexByType.set(row.type, i)
     }
 
-    const careRules: CareRule[] = []
+    const schedules: Schedule[] = []
 
     for (let i = 0; i < ruleRows.value.length; i += 1) {
       const row = ruleRows.value[i]
@@ -297,7 +297,7 @@
         const days = toDays(row.days)
         if (!days) continue
 
-        careRules.push({
+        schedules.push({
           kind: 'recurring',
           id: row.id,
           type: row.type,
@@ -310,7 +310,7 @@
       const iso = toIsoFromDateInput(row.date)
       if (!iso) continue
 
-      careRules.push({
+      schedules.push({
         kind: 'date',
         id: row.id,
         type: row.type,
@@ -325,7 +325,7 @@
 
       const result = await plantsStore.addPlant({
         name,
-        careRules,
+        schedules,
       })
       if (result) emit('close')
       return
@@ -336,7 +336,7 @@
     const nextName = draftName.value.trim()
     const result = await plantsStore.updatePlant(plant.value.id, {
       ...(nextName && nextName !== plant.value.name ? { name: nextName } : {}),
-      careRules,
+      schedules,
     })
     if (result) emit('close')
   }
@@ -482,7 +482,7 @@
                     </div>
                   </div>
 
-                  <CareRulesEditor
+                  <SchedulesEditor
                     :rule-rows="ruleRows"
                     :type-options="typeOptions"
                     :add-rule-row="addRuleRow"
@@ -549,7 +549,7 @@
                   <TabPanels>
                     <TabPanel class="focus:outline-none">
                       <form @submit.prevent="save" class="space-y-5">
-                        <CareRulesEditor
+                        <SchedulesEditor
                           :rule-rows="ruleRows"
                           :type-options="typeOptions"
                           :add-rule-row="addRuleRow"

@@ -9,7 +9,7 @@
   import { ChevronIcon, TrashIcon } from '@/assets/svg'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 
-  type DraftCareRuleRow = {
+  type DraftScheduleRow = {
     key: string
     id: string
     kind: 'recurring' | 'date'
@@ -19,15 +19,15 @@
     notes: string
   }
 
-  type CareRulesEditorProps = {
-    ruleRows: DraftCareRuleRow[]
+  type SchedulesEditorProps = {
+    ruleRows: DraftScheduleRow[]
     typeOptions: { id: EventType; label: string }[]
     addRuleRow: () => void
     removeRuleRow(_key: string): void
-    setRowKind(_row: DraftCareRuleRow, _kind: DraftCareRuleRow['kind']): void
+    setRowKind(_row: DraftScheduleRow, _kind: DraftScheduleRow['kind']): void
   }
 
-  defineProps<CareRulesEditorProps>()
+  defineProps<SchedulesEditorProps>()
 </script>
 
 <template>
@@ -37,7 +37,7 @@
       class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
     >
       <p class="text-sm text-slate-600 dark:text-slate-300">
-        No care rules yet. Add a task to start.
+        No schedules yet. Add a schedule to start.
       </p>
     </div>
 
@@ -137,7 +137,7 @@
               <ActionTypeListbox
                 v-model="row.type"
                 :options="typeOptions"
-                label="Task"
+                label="Schedule"
               />
             </div>
 
@@ -184,7 +184,7 @@
             v-model="row.notes"
             rows="2"
             maxlength="1000"
-            placeholder="Helpful notes for this task"
+            placeholder="Helpful notes for this schedule"
             class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
           />
         </div>
@@ -197,7 +197,7 @@
       class="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
     >
       <span aria-hidden="true">+</span>
-      Add new task
+      Add new schedule
     </button>
   </div>
 </template>

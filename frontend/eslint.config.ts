@@ -56,6 +56,7 @@ export default defineConfig([
       },
     },
     rules: {
+      'vue/no-undef-components': 'error',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',

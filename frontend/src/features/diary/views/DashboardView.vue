@@ -66,7 +66,7 @@
   }
 
   onMounted(() => {
-    void Promise.all([plantsStore.loadPlants(), userStore.bootstrap()])
+    void Promise.all([plantsStore.getPlants(), userStore.bootstrap()])
   })
 
   const handleCare = async (payload: CareTimelinePayload) => {
@@ -80,7 +80,7 @@
     if (!event) return
 
     if (payload.kind === 'date') {
-      await plantsStore.removeCareRuleItem(payload.plantId, payload.careRuleId)
+      await plantsStore.removeSchedule(payload.plantId, payload.scheduleId)
     }
   }
 </script>

@@ -6,8 +6,10 @@ import type {
   PublicUser,
   UserProfileUpdateRequest,
 } from '@plant-care/shared'
+import type { ApiResult } from '@plant-care/shared'
+import { publicUserSchema, validate } from '@plant-care/shared'
 import { useApiFetch, withAuth } from '@/composables'
-import { type ApiResult, toResult } from '@/utils'
+import { toApiResult } from '@/utils'
 import { useAuthStore } from './auth'
 
 export const useUserStore = defineStore('user', () => {
@@ -43,18 +45,12 @@ export const useUserStore = defineStore('user', () => {
     },
   )
 
-  // Uses shared result helpers from `@/lib/apiResult`.
-
   const getWithAuthRetry = async <T>(path: string): Promise<ApiResult<T>> => {
     const res = await useApiFetch(path, withAuth(authStore.accessToken))
       .get()
       .json<T>()
 
-    let result = toResult<T>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
+    let result = toApiResult<T>(res)
 
     if (!result.ok && result.status === 401) {
       const token = await authStore.refresh()
@@ -64,11 +60,7 @@ export const useUserStore = defineStore('user', () => {
         .get()
         .json<T>()
 
-      result = toResult<T>({
-        response: retry.response.value,
-        body: retry.data.value,
-        fetchError: retry.error.value,
-      })
+      result = toApiResult<T>(retry)
     }
 
     return result
@@ -82,11 +74,7 @@ export const useUserStore = defineStore('user', () => {
       .patch(payload, 'json')
       .json<T>()
 
-    let result = toResult<T>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
+    let result = toApiResult<T>(res)
 
     if (!result.ok && result.status === 401) {
       const token = await authStore.refresh()
@@ -96,11 +84,7 @@ export const useUserStore = defineStore('user', () => {
         .patch(payload, 'json')
         .json<T>()
 
-      result = toResult<T>({
-        response: retry.response.value,
-        body: retry.data.value,
-        fetchError: retry.error.value,
-      })
+      result = toApiResult<T>(retry)
     }
 
     return result
@@ -111,15 +95,18 @@ export const useUserStore = defineStore('user', () => {
     error.value = null
     try {
       const result = await getWithAuthRetry<PublicUser>(API_PATHS.users.profile)
-      if (result.ok) {
-        profile.value = result.data
-        customEvents.value = result.data.customEvents ?? []
-      } else {
+
+      if (!result.ok) {
         profile.value = null
         customEvents.value = []
         error.value = result.error
+        return result
       }
-      return result
+
+      const data = validate(publicUserSchema, result.data)
+      profile.value = data
+      customEvents.value = data.customEvents
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -136,14 +123,15 @@ export const useUserStore = defineStore('user', () => {
         payload,
       )
 
-      if (result.ok) {
-        profile.value = result.data
-        customEvents.value = result.data.customEvents ?? []
-      } else {
+      if (!result.ok) {
         error.value = result.error
+        return result
       }
 
-      return result
+      const data = validate(publicUserSchema, result.data)
+      profile.value = data
+      customEvents.value = data.customEvents
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -250,13 +238,11 @@ export const useUserStore = defineStore('user', () => {
         }
       }
 
-      const renamed = (updated.data.customEvents ?? []).find((t) => t.id === id)
+      const renamed = updated.data.customEvents.find((t) => t.id === id)
       if (!renamed) {
-        return {
-          ok: false,
-          status: null,
-          error: 'Failed to rename custom event',
-        }
+        const message = 'Failed to rename custom event'
+        customEventsError.value = message
+        return { ok: false, status: null, error: message }
       }
 
       return { ok: true, data: renamed }

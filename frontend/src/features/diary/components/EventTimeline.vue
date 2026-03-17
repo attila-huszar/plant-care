@@ -27,6 +27,7 @@
       showHistoryCard?: boolean
     }>(),
     {
+      customEvents: () => [],
       showHistoryCard: true,
     },
   )
@@ -36,7 +37,7 @@
   }>()
 
   const customTypeNameById = computed(() => {
-    return buildCustomEventsMap(props.customEvents ?? [])
+    return buildCustomEventsMap(props.customEvents)
   })
 
   const upcomingCareAll = computed(() => {
@@ -171,7 +172,7 @@
       plantId: item.plantId,
       type: item.type,
       kind: item.kind,
-      careRuleId: item.careRuleId,
+      scheduleId: item.scheduleId,
       ...(notes ? { notes } : {}),
     })
 
@@ -193,7 +194,7 @@
       plantId: item.plantId,
       type: item.type,
       kind: item.kind,
-      careRuleId: item.careRuleId,
+      scheduleId: item.scheduleId,
       ...(notes ? { notes } : {}),
     })
 
@@ -244,7 +245,7 @@
                   </DialogTitle>
 
                   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Add optional notes for this task.
+                    Add optional notes for this schedule.
                   </p>
 
                   <div class="mt-4">

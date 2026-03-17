@@ -78,7 +78,7 @@ export const buildUpcomingCareItems = (
   const items: UpcomingItem[] = []
 
   for (const plant of plants) {
-    for (const rule of plant.careRules) {
+    for (const rule of plant.schedules) {
       if (rule.kind === 'recurring') {
         if (rule.days <= 0) continue
 
@@ -96,7 +96,7 @@ export const buildUpcomingCareItems = (
           key: String(key),
           plantId: plant.id,
           plantName: plant.name,
-          careRuleId: rule.id,
+          scheduleId: rule.id,
           type: rule.type,
           notes:
             ruleNotes && ruleNotes.length > 0
@@ -122,7 +122,7 @@ export const buildUpcomingCareItems = (
         key: String(`${plant.id}:${rule.id}`),
         plantId: plant.id,
         plantName: plant.name,
-        careRuleId: rule.id,
+        scheduleId: rule.id,
         type: rule.type,
         notes:
           ruleNotes && ruleNotes.length > 0
