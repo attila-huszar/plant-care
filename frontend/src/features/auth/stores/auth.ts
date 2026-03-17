@@ -1,14 +1,33 @@
 import { computed, ref } from 'vue'
 import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
+import {
+  loginResponseSchema,
+  logoutResponseSchema,
+  mfaVerifyResponseSchema,
+  passwordResetRequestResponseSchema,
+  passwordResetSubmitResponseSchema,
+  passwordResetTokenResponseSchema,
+  refreshResponseSchema,
+  registerResponseSchema,
+  safeValidate,
+  verificationResponseSchema,
+} from '@plant-care/shared'
 import type {
   LoginRequest,
+  LoginResponse,
   MfaVerifyRequest,
+  MfaVerifyResponse,
   PasswordResetRequest,
+  PasswordResetRequestResponse,
   PasswordResetSubmit,
+  PasswordResetSubmitResponse,
   PasswordResetToken,
+  PasswordResetTokenResponse,
   RegisterRequest,
+  RegisterResponse,
   VerificationRequest,
+  VerificationResponse,
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
 import { useApiFetch, withAuth } from '@/composables'
@@ -33,22 +52,25 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await useApiFetch(API_PATHS.users.refresh)
         .post()
-        .json<{ accessToken: string | null }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ accessToken: string | null }>(res)
+      const result = toApiResult<unknown>(res)
 
       if (!result.ok) {
         return null
       }
 
-      if (!result.data.accessToken) {
+      const data = safeValidate(refreshResponseSchema, result.data)
+      if (!data) return null
+
+      if (!data.accessToken) {
         canRefresh.value = false
         clearAuth()
         return null
       }
 
       canRefresh.value = true
-      accessToken.value = result.data.accessToken
+      accessToken.value = data.accessToken
 
       return accessToken.value
     } catch {
@@ -58,38 +80,34 @@ export const useAuthStore = defineStore('auth', () => {
 
   const login = async (
     payload: LoginRequest,
-  ): Promise<
-    ApiResult<
-      | { mfaPending: true; email: string }
-      | { accessToken: string; firstName: string }
-    >
-  > => {
+  ): Promise<ApiResult<LoginResponse>> => {
     isLoading.value = true
     error.value = null
     try {
       const res = await useApiFetch(API_PATHS.users.login)
         .post(payload, 'json')
-        .json<
-          | { mfaPending: true; email: string }
-          | { accessToken: string; firstName: string }
-        >()
+        .json<unknown>()
 
-      const result = toApiResult<
-        | { mfaPending: true; email: string }
-        | { accessToken: string; firstName: string }
-      >(res)
+      const result = toApiResult<unknown>(res)
 
       if (!result.ok) {
         error.value = result.error
         return result
       }
 
-      if ('accessToken' in result.data) {
-        accessToken.value = result.data.accessToken
+      const data = safeValidate(loginResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      if ('accessToken' in data) {
+        accessToken.value = data.accessToken
         canRefresh.value = true
       }
 
-      return result
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -97,25 +115,30 @@ export const useAuthStore = defineStore('auth', () => {
 
   const mfaVerify = async (
     payload: MfaVerifyRequest,
-  ): Promise<ApiResult<{ accessToken: string; firstName: string }>> => {
+  ): Promise<ApiResult<MfaVerifyResponse>> => {
     isLoading.value = true
     error.value = null
     try {
       const res = await useApiFetch(API_PATHS.users.mfaVerify)
         .post(payload, 'json')
-        .json<{ accessToken: string; firstName: string }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ accessToken: string; firstName: string }>(
-        res,
-      )
+      const result = toApiResult<unknown>(res)
       if (!result.ok) {
         error.value = result.error
         return result
       }
 
-      accessToken.value = result.data.accessToken
+      const data = safeValidate(mfaVerifyResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      accessToken.value = data.accessToken
       canRefresh.value = true
-      return result
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -123,7 +146,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const register = async (
     payload: RegisterRequest,
-  ): Promise<ApiResult<{ email: string }>> => {
+  ): Promise<ApiResult<RegisterResponse>> => {
     const formData = new FormData()
     formData.set('firstName', payload.firstName)
     formData.set('lastName', payload.lastName)
@@ -135,11 +158,22 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await useApiFetch(API_PATHS.users.register)
         .post(formData)
-        .json<{ email: string }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ email: string }>(res)
-      if (!result.ok) error.value = result.error
-      return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(registerResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -147,17 +181,28 @@ export const useAuthStore = defineStore('auth', () => {
 
   const verifyEmail = async (
     payload: VerificationRequest,
-  ): Promise<ApiResult<{ email: string }>> => {
+  ): Promise<ApiResult<VerificationResponse>> => {
     isLoading.value = true
     error.value = null
     try {
       const res = await useApiFetch(API_PATHS.users.verification)
         .post(payload, 'json')
-        .json<{ email: string }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ email: string }>(res)
-      if (!result.ok) error.value = result.error
-      return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(verificationResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -165,17 +210,28 @@ export const useAuthStore = defineStore('auth', () => {
 
   const requestPasswordReset = async (
     payload: PasswordResetRequest,
-  ): Promise<ApiResult<{ message: string }>> => {
+  ): Promise<ApiResult<PasswordResetRequestResponse>> => {
     isLoading.value = true
     error.value = null
     try {
       const res = await useApiFetch(API_PATHS.users.passwordResetRequest)
         .post(payload, 'json')
-        .json<{ message: string }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ message: string }>(res)
-      if (!result.ok) error.value = result.error
-      return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(passwordResetRequestResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -183,17 +239,28 @@ export const useAuthStore = defineStore('auth', () => {
 
   const validatePasswordResetToken = async (
     payload: PasswordResetToken,
-  ): Promise<ApiResult<{ token: string }>> => {
+  ): Promise<ApiResult<PasswordResetTokenResponse>> => {
     isLoading.value = true
     error.value = null
     try {
       const res = await useApiFetch(API_PATHS.users.passwordResetToken)
         .post(payload, 'json')
-        .json<{ token: string }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ token: string }>(res)
-      if (!result.ok) error.value = result.error
-      return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(passwordResetTokenResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -201,17 +268,28 @@ export const useAuthStore = defineStore('auth', () => {
 
   const submitPasswordReset = async (
     payload: PasswordResetSubmit,
-  ): Promise<ApiResult<{ message: string }>> => {
+  ): Promise<ApiResult<PasswordResetSubmitResponse>> => {
     isLoading.value = true
     error.value = null
     try {
       const res = await useApiFetch(API_PATHS.users.passwordResetSubmit)
         .post(payload, 'json')
-        .json<{ message: string }>()
+        .json<unknown>()
 
-      const result = toApiResult<{ message: string }>(res)
-      if (!result.ok) error.value = result.error
-      return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(passwordResetSubmitResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -223,9 +301,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     if (accessToken.value) {
-      await useApiFetch(API_PATHS.users.logout, withAuth(accessToken))
+      const res = await useApiFetch(
+        API_PATHS.users.logout,
+        withAuth(accessToken),
+      )
         .post()
-        .json()
+        .json<unknown>()
+
+      const result = toApiResult<unknown>(res)
+      if (result.ok) {
+        safeValidate(logoutResponseSchema, result.data)
+      }
     }
 
     clearAuth()

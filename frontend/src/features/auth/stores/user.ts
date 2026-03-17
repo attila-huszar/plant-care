@@ -4,7 +4,9 @@ import { defineStore } from 'pinia'
 import type {
   CustomEventDto,
   PublicUser,
+  UserProfileResponse,
   UserProfileUpdateRequest,
+  UserProfileUpdateResponse,
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
 import { publicUserSchema, validate } from '@plant-care/shared'
@@ -90,11 +92,13 @@ export const useUserStore = defineStore('user', () => {
     return result
   }
 
-  const loadProfile = async (): Promise<ApiResult<PublicUser>> => {
+  const loadProfile = async (): Promise<ApiResult<UserProfileResponse>> => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await getWithAuthRetry<PublicUser>(API_PATHS.users.profile)
+      const result = await getWithAuthRetry<UserProfileResponse>(
+        API_PATHS.users.profile,
+      )
 
       if (!result.ok) {
         profile.value = null
@@ -114,11 +118,11 @@ export const useUserStore = defineStore('user', () => {
 
   const updateProfile = async (
     payload: UserProfileUpdateRequest,
-  ): Promise<ApiResult<PublicUser>> => {
+  ): Promise<ApiResult<UserProfileUpdateResponse>> => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await patchWithAuthRetry<PublicUser>(
+      const result = await patchWithAuthRetry<UserProfileUpdateResponse>(
         API_PATHS.users.profile,
         payload,
       )
@@ -137,7 +141,9 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  const toggleMfa = async (enable: boolean): Promise<ApiResult<PublicUser>> =>
+  const toggleMfa = async (
+    enable: boolean,
+  ): Promise<ApiResult<UserProfileUpdateResponse>> =>
     updateProfile({ mfaEnabled: enable })
 
   const reservedTypeIdsLower = new Set(
