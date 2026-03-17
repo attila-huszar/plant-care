@@ -535,21 +535,23 @@
                           <EditIcon class="size-4" aria-hidden="true" />
                         </button>
                         <Popover v-slot="{ open, close }" class="relative">
-                          <PopoverButton
-                            type="button"
-                            class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-                            :disabled="
-                              userStore.customEventsLoading ||
-                              !canRemoveCustomEvent(evt.id)
-                            "
-                            :title="
-                              canRemoveCustomEvent(evt.id)
-                                ? 'Remove'
-                                : 'Remove is disabled while this event is used by plants or history'
-                            "
-                            aria-label="Remove"
-                          >
-                            <TrashIcon class="size-4" aria-hidden="true" />
+                          <PopoverButton as="template">
+                            <button
+                              type="button"
+                              class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                              :disabled="
+                                userStore.customEventsLoading ||
+                                !canRemoveCustomEvent(evt.id)
+                              "
+                              :title="
+                                canRemoveCustomEvent(evt.id)
+                                  ? 'Remove'
+                                  : 'Remove is disabled while this event is used by plants or history'
+                              "
+                              aria-label="Remove"
+                            >
+                              <TrashIcon class="size-4" aria-hidden="true" />
+                            </button>
                           </PopoverButton>
 
                           <TransitionRoot as="template" :show="open">

@@ -110,17 +110,19 @@
         class="group relative flex cursor-pointer flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm transition-all duration-300 hover:border-emerald-300 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-emerald-400 dark:focus-visible:ring-offset-slate-950"
       >
         <Popover v-slot="{ open, close }" class="absolute top-3 right-3">
-          <PopoverButton
-            type="button"
-            class="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 opacity-0 shadow-sm transition-all group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-            :class="open ? 'opacity-100' : ''"
-            title="Remove plant"
-            aria-label="Remove plant"
-            @click.stop
-            @keydown.enter.stop
-            @keydown.space.stop
-          >
-            <TrashIcon class="size-4" aria-hidden="true" />
+          <PopoverButton as="template">
+            <button
+              type="button"
+              class="inline-flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 opacity-0 shadow-sm transition-all group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+              :class="open ? 'opacity-100' : ''"
+              title="Remove plant"
+              aria-label="Remove plant"
+              @click.stop
+              @keydown.enter.stop
+              @keydown.space.stop
+            >
+              <TrashIcon class="size-4" aria-hidden="true" />
+            </button>
           </PopoverButton>
 
           <TransitionRoot as="template" :show="open">
@@ -135,35 +137,36 @@
             >
               <PopoverPanel
                 class="absolute right-0 z-20 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm text-slate-700 shadow-xl focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                @click.stop
               >
-                <p class="font-semibold text-slate-900 dark:text-slate-100">
-                  Remove plant?
-                </p>
-                <p class="mt-1 text-slate-600 dark:text-slate-300">
-                  This will permanently remove
-                  <span class="font-medium">{{ card.plant.name }}</span
-                  >.
-                </p>
+                <div @click.stop>
+                  <p class="font-semibold text-slate-900 dark:text-slate-100">
+                    Remove plant?
+                  </p>
+                  <p class="mt-1 text-slate-600 dark:text-slate-300">
+                    This will permanently remove
+                    <span class="font-medium">{{ card.plant.name }}</span
+                    >.
+                  </p>
 
-                <div class="mt-4 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
-                    @click="close()"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-500"
-                    @click="
-                      (emit('remove-plant', { plantId: card.plant.id }),
-                      close())
-                    "
-                  >
-                    Remove
-                  </button>
+                  <div class="mt-4 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                      @click="close()"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-500"
+                      @click="
+                        (emit('remove-plant', { plantId: card.plant.id }),
+                        close())
+                      "
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               </PopoverPanel>
             </TransitionChild>
