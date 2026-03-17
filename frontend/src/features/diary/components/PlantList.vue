@@ -41,7 +41,7 @@
   const lastEventByPlantId = computed(() => {
     const map = new Map<number, { iso: string; ms: number; type: EventType }>()
 
-    for (const event of props.events ?? []) {
+    for (const event of props.events) {
       const ms = new Date(event.date).getTime()
       if (!Number.isFinite(ms)) continue
       const current = map.get(event.plantId)

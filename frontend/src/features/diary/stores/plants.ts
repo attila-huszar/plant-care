@@ -2,7 +2,6 @@ import { computed, ref } from 'vue'
 import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
 import {
-  careRuleSchema,
   createEventResponseSchema,
   listPlantsResponseSchema,
   plantDtoSchema,
@@ -206,9 +205,7 @@ export const usePlantsStore = defineStore('plants', () => {
     const p = plants.value.find((plant) => plant.id === plantId)
     if (!p) return
 
-    const nextCareRules = (p.careRules ?? [])
-      .filter((r) => r.id !== careRuleId)
-      .filter((rule) => careRuleSchema.safeParse(rule).success)
+    const nextCareRules = p.careRules.filter((r) => r.id !== careRuleId)
 
     return updatePlant(plantId, { careRules: nextCareRules })
   }

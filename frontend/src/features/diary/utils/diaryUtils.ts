@@ -32,10 +32,11 @@ export const getEventLabel = (
 ) => {
   const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
   if (builtinLabel) return builtinLabel
+
   return customNameById?.get(typeId) ?? typeId
 }
 
-const buildLatestEventMap = (events: readonly EventDto[]) => {
+const buildLatestEventsMap = (events: readonly EventDto[]) => {
   const map = new Map<string, number>()
   for (const event of events) {
     const ms = new Date(event.date).getTime()
@@ -60,7 +61,6 @@ const buildLatestNotesMap = (events: readonly EventDto[]) => {
     const key = `${event.plantId}:${event.type}`
     if (!map.has(key)) map.set(key, notes)
   }
-
   return map
 }
 
@@ -72,15 +72,13 @@ export const buildUpcomingCareItems = (
   today.setHours(0, 0, 0, 0)
   const todayMs = today.getTime()
 
-  const latestEventMsByPlantAndType = buildLatestEventMap(events)
+  const latestEventMsByPlantAndType = buildLatestEventsMap(events)
   const latestNotesByPlantAndType = buildLatestNotesMap(events)
 
   const items: UpcomingItem[] = []
 
   for (const plant of plants) {
-    for (const rule of plant.careRules ?? []) {
-      if (!rule) continue
-
+    for (const rule of plant.careRules) {
       if (rule.kind === 'recurring') {
         if (rule.days <= 0) continue
 

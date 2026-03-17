@@ -67,10 +67,12 @@
       options.push({ id: t.id, label: t.name })
     }
 
-    for (const rule of plant.value?.careRules ?? []) {
-      const exists = options.some((o) => o.id === rule.type)
-      if (!exists) {
-        options.push({ id: rule.type, label: rule.type })
+    if (plant.value) {
+      for (const rule of plant.value.careRules) {
+        const exists = options.some((o) => o.id === rule.type)
+        if (!exists) {
+          options.push({ id: rule.type, label: rule.type })
+        }
       }
     }
 
@@ -81,13 +83,9 @@
     return buildCustomEventsMap(userStore.customEvents)
   })
 
-  const getTypeLabel = (typeId: EventType) => {
-    return getEventLabel(typeId, customTypeNameById.value)
-  }
-
   const sortedHistory = computed<EventDto[]>(() => {
     if (!plant.value) return []
-    return [...(plant.value.history ?? [])].sort(
+    return [...plant.value.history].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     )
   })
@@ -128,7 +126,7 @@
       return
     }
 
-    ruleRows.value = (plant.value.careRules ?? []).map((r) => ({
+    ruleRows.value = plant.value.careRules.map((r) => ({
       key: crypto.randomUUID(),
       id: r.id,
       kind: r.kind,
@@ -608,7 +606,12 @@
                                 <p
                                   class="text-sm font-semibold text-slate-900 dark:text-slate-100"
                                 >
-                                  {{ getTypeLabel(event.type) }}
+                                  {{
+                                    getEventLabel(
+                                      event.type,
+                                      customTypeNameById,
+                                    )
+                                  }}
                                 </p>
                                 <p
                                   class="shrink-0 text-xs text-slate-400 dark:text-slate-500"

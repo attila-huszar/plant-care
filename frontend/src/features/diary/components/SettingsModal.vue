@@ -45,14 +45,12 @@
   const customEventUsageById = computed(() => {
     const counts = new Map<string, number>()
 
-    for (const plant of plantsStore.plants ?? []) {
-      for (const rule of plant.careRules ?? []) {
-        if (!rule?.type) continue
+    for (const plant of plantsStore.plants) {
+      for (const rule of plant.careRules) {
         counts.set(rule.type, (counts.get(rule.type) ?? 0) + 1)
       }
 
-      for (const event of plant.history ?? []) {
-        if (!event?.type) continue
+      for (const event of plant.history) {
         counts.set(event.type, (counts.get(event.type) ?? 0) + 1)
       }
     }
