@@ -83,58 +83,55 @@ export const buildUpcomingCareItems = (
   const items: UpcomingItem[] = []
 
   for (const plant of plants) {
-    for (const rule of plant.schedules) {
-      if (rule.kind === 'recurring') {
-        if (rule.days <= 0) continue
+    for (const schedule of plant.schedules) {
+      if (schedule.kind === 'recurring') {
+        if (schedule.days <= 0) continue
 
-        const key = `${plant.id}:${rule.id}`
-        const lastEventKey = `${plant.id}:${rule.type}`
+        const key = `${plant.id}:${schedule.id}`
+        const lastEventKey = `${plant.id}:${schedule.type}`
         const lastEventMs = latestEventMsByPlantAndType.get(lastEventKey)
         const baseMs = startOfDayMs(lastEventMs ?? todayMs)
 
         const dueBase = new Date(baseMs)
-        dueBase.setDate(dueBase.getDate() + rule.days)
+        dueBase.setDate(dueBase.getDate() + schedule.days)
         const dueDayMs = startOfDayMs(dueBase.getTime())
         const dueDate = new Date(dueDayMs)
         const diffDays = Math.round((dueDayMs - todayMs) / MS_PER_DAY)
-        const ruleNotes = rule.notes?.trim()
 
         items.push({
           key: String(key),
           plantId: plant.id,
           plantName: plant.name,
-          scheduleId: rule.id,
-          type: rule.type,
+          scheduleId: schedule.id,
+          type: schedule.type,
           notes:
-            ruleNotes && ruleNotes.length > 0
-              ? ruleNotes
-              : latestNotesByPlantAndType.get(lastEventKey),
+            schedule.notes?.trim() ||
+            latestNotesByPlantAndType.get(lastEventKey),
           dueDate,
           diffDays,
           kind: 'recurring',
-          days: rule.days,
+          days: schedule.days,
         })
         continue
       }
 
-      const dueMs = new Date(rule.date).getTime()
+      const dueMs = new Date(schedule.date).getTime()
       if (!Number.isFinite(dueMs)) continue
 
       const dueDayMs = startOfDayMs(dueMs)
       const dueDate = new Date(dueDayMs)
       const diffDays = Math.round((dueDayMs - todayMs) / MS_PER_DAY)
-      const ruleNotes = rule.notes?.trim()
+      const scheduleNotes = schedule.notes?.trim()
 
       items.push({
-        key: String(`${plant.id}:${rule.id}`),
+        key: String(`${plant.id}:${schedule.id}`),
         plantId: plant.id,
         plantName: plant.name,
-        scheduleId: rule.id,
-        type: rule.type,
+        scheduleId: schedule.id,
+        type: schedule.type,
         notes:
-          ruleNotes && ruleNotes.length > 0
-            ? ruleNotes
-            : latestNotesByPlantAndType.get(`${plant.id}:${rule.type}`),
+          scheduleNotes ??
+          latestNotesByPlantAndType.get(`${plant.id}:${schedule.type}`),
         dueDate,
         diffDays,
         kind: 'date',

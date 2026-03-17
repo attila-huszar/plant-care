@@ -38,6 +38,14 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/consistent-type-definitions': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': [
+        'error',
+        {
+          ignorePrimitives: {
+            string: true,
+          },
+        },
+      ],
     },
   },
   {
@@ -63,6 +71,14 @@ export default defineConfig([
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/prefer-nullish-coalescing': [
+        'error',
+        {
+          ignorePrimitives: {
+            string: true,
+          },
         },
       ],
     },
