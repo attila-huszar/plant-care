@@ -13,7 +13,8 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type { EventDto, EventType, Schedule } from '@plant-care/shared'
+  import { safeValidate, uuidSchema } from '@plant-care/shared'
+  import type { Event, Schedule } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
   import {
     buildCustomEventsMap,
@@ -45,6 +46,7 @@
   const originalName = ref('')
   const plantNameInput = ref<HTMLInputElement | null>(null)
   const selectedTabIndex = ref(0)
+  const saveError = ref<string | null>(null)
 
   const plant = computed(() => {
     const plantId = stablePlantId.value
@@ -57,7 +59,7 @@
   const builtinTypeIds = new Set(PLANT_CARE_META.map((t) => t.id))
 
   const typeOptions = computed(() => {
-    const options: { id: EventType; label: string }[] = []
+    const options: { id: string; label: string }[] = []
 
     for (const t of PLANT_CARE_META) {
       options.push({ id: t.id, label: t.label })
@@ -83,7 +85,7 @@
     return buildCustomEventsMap(userStore.customEvents)
   })
 
-  const sortedHistory = computed<EventDto[]>(() => {
+  const sortedHistory = computed<Event[]>(() => {
     if (!plant.value) return []
     return [...plant.value.history].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -91,7 +93,7 @@
   })
 
   const latestNotesByType = computed(() => {
-    const map = new Map<EventType, string>()
+    const map = new Map<string, string>()
 
     for (const event of sortedHistory.value) {
       const notes = event.notes?.trim()
@@ -106,7 +108,7 @@
     key: string
     id: string
     kind: 'recurring' | 'date'
-    type: EventType
+    type: string
     days: string
     date: string
     notes: string
@@ -237,6 +239,8 @@
   }
 
   const save = async () => {
+    saveError.value = null
+
     scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       type: row.type.trim(),
@@ -247,11 +251,11 @@
     ]
 
     const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
-    const idByLabelLower = new Map<string, EventType>()
+    const idByLabelLower = new Map<string, string>()
     for (const opt of typeOptions.value) {
       idByLabelLower.set(opt.label.toLowerCase(), opt.id)
     }
-    const resolvedTypeByInput = new Map<EventType, EventType>()
+    const resolvedTypeByInput = new Map<string, string>()
 
     for (const inputType of usedTypes) {
       const normalizedType =
@@ -265,10 +269,19 @@
         continue
       }
 
+      if (safeValidate(uuidSchema, normalizedType)) {
+        saveError.value =
+          'A schedule uses an unknown custom event type. Please pick an existing type or create a new one.'
+        return
+      }
+
       if (normalizedType.length > 60) return
 
       const result = await userStore.createCustomEvent(normalizedType)
-      if (!result.ok) return
+      if (!result.ok) {
+        saveError.value = result.error
+        return
+      }
 
       resolvedTypeByInput.set(inputType, result.data.id)
     }
@@ -559,6 +572,13 @@
                           :remove-schedule-row="removeScheduleRow"
                           :set-row-kind="setRowKind"
                         />
+
+                        <div
+                          v-if="saveError"
+                          class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                        >
+                          {{ saveError }}
+                        </div>
 
                         <div class="flex flex-col gap-3 pt-2 sm:flex-row">
                           <button

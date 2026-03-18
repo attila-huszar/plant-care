@@ -7,12 +7,7 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type {
-    CustomEventDto,
-    EventDto,
-    EventType,
-    PlantDto,
-  } from '@plant-care/shared'
+  import type { CustomEvent, Event, Plant } from '@plant-care/shared'
   import {
     buildCustomEventsMap,
     formatMediumDate as formatCalendarDate,
@@ -23,9 +18,9 @@
   import { PlantIcon, PlusIcon, TrashIcon } from '@/assets/svg'
 
   const props = defineProps<{
-    plants: PlantDto[]
-    events: EventDto[]
-    customEvents: CustomEventDto[]
+    plants: Plant[]
+    events: Event[]
+    customEvents: CustomEvent[]
   }>()
 
   const emit = defineEmits<{
@@ -39,7 +34,7 @@
   })
 
   const lastEventByPlantId = computed(() => {
-    const map = new Map<number, { iso: string; ms: number; type: EventType }>()
+    const map = new Map<number, { iso: string; ms: number; type: string }>()
 
     for (const event of props.events) {
       const ms = new Date(event.date).getTime()

@@ -1,18 +1,18 @@
-import type { EventType, PlantDto, Schedule } from '@plant-care/shared'
+import type { Plant, Schedule } from '@plant-care/shared'
 
 export type UpcomingItem = {
   key: string
-  plantId: PlantDto['id']
-  plantName: PlantDto['name']
+  plantId: Plant['id']
+  plantName: Plant['name']
   scheduleId: Schedule['id']
-  type: EventType
+  type: string
   notes?: string
   dueDate: Date
   diffDays: number
 } & ({ kind: 'recurring'; days: number } | { kind: 'date' })
 
 export type CareTimelinePayload = {
-  plantId: PlantDto['id']
+  plantId: Plant['id']
   type: Schedule['type']
   kind: Schedule['kind']
   scheduleId: Schedule['id']

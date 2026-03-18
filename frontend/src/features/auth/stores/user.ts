@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { API_PATHS, PLANT_CARE_META } from '@/constants'
 import { defineStore } from 'pinia'
 import type {
-  CustomEventDto,
+  CustomEvent,
   PublicUser,
   UserProfileResponse,
   UserProfileUpdateRequest,
@@ -10,14 +10,14 @@ import type {
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
 import { publicUserSchema, safeValidate } from '@plant-care/shared'
-import { useApiFetch, useApiFetchAuthRetry, withAuth } from '@/composables'
+import { useAuthedApi } from '@/composables'
 import { useAuthStore } from './auth'
 
 export const useUserStore = defineStore('user', () => {
   const profile = ref<PublicUser | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  const customEvents = ref<CustomEventDto[]>([])
+  const customEvents = ref<CustomEvent[]>([])
   const customEventsLoading = ref(false)
   const customEventsError = ref<string | null>(null)
 
@@ -25,7 +25,7 @@ export const useUserStore = defineStore('user', () => {
   let bootstrapPromise: Promise<void> | null = null
 
   const authStore = useAuthStore()
-  const { fetchWithAuthRetry } = useApiFetchAuthRetry()
+  const api = useAuthedApi()
 
   const isReady = computed(() => profile.value !== null)
 
@@ -47,28 +47,11 @@ export const useUserStore = defineStore('user', () => {
     },
   )
 
-  const getWithAuthRetry = async <T>(path: string): Promise<ApiResult<T>> => {
-    return fetchWithAuthRetry<T>(() =>
-      useApiFetch(path, withAuth(authStore.accessToken)).get().json<T>(),
-    )
-  }
-
-  const patchWithAuthRetry = async <T>(
-    path: string,
-    payload: unknown,
-  ): Promise<ApiResult<T>> => {
-    return fetchWithAuthRetry<T>(() =>
-      useApiFetch(path, withAuth(authStore.accessToken))
-        .patch(payload, 'json')
-        .json<T>(),
-    )
-  }
-
   const loadProfile = async (): Promise<ApiResult<UserProfileResponse>> => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await getWithAuthRetry<UserProfileResponse>(
+      const result = await api.getJson<UserProfileResponse>(
         API_PATHS.users.profile,
       )
 
@@ -102,7 +85,7 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await patchWithAuthRetry<UserProfileUpdateResponse>(
+      const result = await api.patchJson<UserProfileUpdateResponse>(
         API_PATHS.users.profile,
         payload,
       )
@@ -138,7 +121,7 @@ export const useUserStore = defineStore('user', () => {
 
   const createCustomEvent = async (
     name: string,
-  ): Promise<ApiResult<CustomEventDto>> => {
+  ): Promise<ApiResult<CustomEvent>> => {
     const trimmed = name.trim()
     if (!trimmed) {
       return { ok: false, status: null, error: 'Name is required' }
@@ -160,7 +143,7 @@ export const useUserStore = defineStore('user', () => {
     customEventsLoading.value = true
     customEventsError.value = null
     try {
-      const created: CustomEventDto = { id: crypto.randomUUID(), name: trimmed }
+      const created: CustomEvent = { id: crypto.randomUUID(), name: trimmed }
       const next = [...customEvents.value, created]
 
       const updated = await updateProfile({ customEvents: next })
@@ -184,7 +167,7 @@ export const useUserStore = defineStore('user', () => {
   const renameCustomEvent = async (
     id: string,
     name: string,
-  ): Promise<ApiResult<CustomEventDto>> => {
+  ): Promise<ApiResult<CustomEvent>> => {
     const trimmed = name.trim()
     if (!trimmed) {
       return { ok: false, status: null, error: 'Name is required' }

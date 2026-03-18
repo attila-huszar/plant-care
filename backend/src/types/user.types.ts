@@ -5,12 +5,12 @@ import type {
   userUpdateSchema,
 } from '@/schemas'
 
-export type User = z.infer<typeof userSelectSchema>
-export type UserInsert = z.infer<typeof userInsertSchema>
-export type UserUpdate = z.infer<typeof userUpdateSchema>
+export type UserRow = z.infer<typeof userSelectSchema>
+export type UserInsertRow = z.infer<typeof userInsertSchema>
+export type UserUpdateRow = z.infer<typeof userUpdateSchema>
 
 export type GetUserBy = Extract<
-  keyof User,
+  keyof UserRow,
   | 'id'
   | 'uuid'
   | 'email'

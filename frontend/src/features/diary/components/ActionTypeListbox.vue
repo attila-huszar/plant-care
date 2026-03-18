@@ -8,19 +8,18 @@
     ComboboxOption,
     ComboboxOptions,
   } from '@headlessui/vue'
-  import type { EventType } from '@plant-care/shared'
   import { ChevronIcon } from '@/assets/svg'
 
-  type Option = { id: EventType; label: string }
+  type Option = { id: string; label: string }
 
   const props = defineProps<{
-    modelValue: EventType
-    options: { id: EventType; label: string }[]
+    modelValue: string
+    options: { id: string; label: string }[]
     label?: string
   }>()
 
   const emit = defineEmits<{
-    'update:modelValue': [value: EventType]
+    'update:modelValue': [value: string]
   }>()
 
   const query = ref('')

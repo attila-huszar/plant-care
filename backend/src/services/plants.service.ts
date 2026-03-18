@@ -6,7 +6,7 @@ import {
 } from '@/repositories'
 import { toPublicEvent, toPublicPlant } from '@/utils'
 import { Internal, NotFound, Unauthorized } from '@/errors'
-import type { Event, PlantInsert } from '@/types'
+import type { EventRow, PlantInsertRow } from '@/types'
 
 export const getPlants = async (uuid: string) => {
   const user = await UsersRepository.getUserBy('uuid', uuid)
@@ -17,7 +17,7 @@ export const getPlants = async (uuid: string) => {
     EventsRepository.getEventsByUserId(user.id),
   ])
 
-  const eventsByPlantId = new Map<number, Event[]>()
+  const eventsByPlantId = new Map<number, EventRow[]>()
 
   for (const event of events) {
     const list = eventsByPlantId.get(event.plantId)
@@ -43,7 +43,7 @@ export const createPlant = async (
   const user = await UsersRepository.getUserBy('uuid', userUuid)
   if (!user) throw new Unauthorized()
 
-  const insertPayload: PlantInsert = {
+  const insertPayload: PlantInsertRow = {
     ...payload,
     userId: user.id,
   }

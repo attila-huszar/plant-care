@@ -1,4 +1,4 @@
-import type { CustomEventDto } from '@plant-care/shared'
+import type { CustomEvent } from '@plant-care/shared'
 import { sql } from 'drizzle-orm'
 import {
   int,
@@ -34,7 +34,7 @@ export const usersTable = sqliteTable(
     mfaToken: text('mfa_token'),
     mfaExpires: integer('mfa_expires', { mode: 'timestamp' }).$type<Date>(),
     customEvents: text('custom_events', { mode: 'json' }).$type<
-      CustomEventDto[]
+      CustomEvent[]
     >(),
     ...timestamps,
   },

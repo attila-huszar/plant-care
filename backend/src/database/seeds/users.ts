@@ -1,7 +1,7 @@
 import { env } from '@/config'
-import { type UserInsert } from '@/types'
+import { type UserInsertRow } from '@/types'
 
-const admin: UserInsert = {
+const admin: UserInsertRow = {
   uuid: crypto.randomUUID(),
   firstName: 'Demo User',
   lastName: 'Seeded',

@@ -7,7 +7,7 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type { CustomEventDto, EventDto, PlantDto } from '@plant-care/shared'
+  import type { CustomEvent, Event, Plant } from '@plant-care/shared'
   import {
     buildCustomEventsMap,
     buildUpcomingCareItems,
@@ -21,9 +21,9 @@
 
   const props = withDefaults(
     defineProps<{
-      plants: PlantDto[]
-      events: EventDto[]
-      customEvents?: CustomEventDto[]
+      plants: Plant[]
+      events: Event[]
+      customEvents?: CustomEvent[]
       showHistoryCard?: boolean
     }>(),
     {

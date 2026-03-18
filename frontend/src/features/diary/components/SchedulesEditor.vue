@@ -5,7 +5,6 @@
     ListboxOption,
     ListboxOptions,
   } from '@headlessui/vue'
-  import type { EventType } from '@plant-care/shared'
   import { ChevronIcon, TrashIcon } from '@/assets/svg'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 
@@ -13,7 +12,7 @@
     key: string
     id: string
     kind: 'recurring' | 'date'
-    type: EventType
+    type: string
     days: string
     date: string
     notes: string
@@ -21,7 +20,7 @@
 
   type SchedulesEditorProps = {
     scheduleRows: DraftScheduleRow[]
-    typeOptions: { id: EventType; label: string }[]
+    typeOptions: { id: string; label: string }[]
     addScheduleRow: () => void
     removeScheduleRow(_key: string): void
     setRowKind(_row: DraftScheduleRow, _kind: DraftScheduleRow['kind']): void

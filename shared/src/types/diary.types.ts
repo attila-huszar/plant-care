@@ -4,17 +4,17 @@ import type {
   createEventRequestSchema,
   createEventResponseSchema,
   createPlantRequestSchema,
-  customEventDtoSchema,
-  eventDtoSchema,
+  customEventSchema,
+  eventSchema,
   listPlantsResponseSchema,
-  plantDtoSchema,
+  plantSchema,
   scheduleSchema,
   updatePlantRequestSchema,
 } from '../validation'
 
 export type Schedule = z.infer<typeof scheduleSchema>
-export type PlantDto = z.infer<typeof plantDtoSchema>
-export type EventDto = z.infer<typeof eventDtoSchema>
+export type Plant = z.infer<typeof plantSchema>
+export type Event = z.infer<typeof eventSchema>
 export type ListPlantsResponse = z.infer<typeof listPlantsResponseSchema>
 export type CreateEventRequest = z.infer<typeof createEventRequestSchema>
 export type CreatePlantRequest = z.infer<typeof createPlantRequestSchema>
@@ -23,4 +23,4 @@ export type CreateCustomEventRequest = z.infer<
   typeof createCustomEventRequestSchema
 >
 export type CreateEventResponse = z.infer<typeof createEventResponseSchema>
-export type CustomEventDto = z.infer<typeof customEventDtoSchema>
+export type CustomEvent = z.infer<typeof customEventSchema>

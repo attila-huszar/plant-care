@@ -1,12 +1,12 @@
 import { and, eq, inArray, lt } from 'drizzle-orm'
 import { sqlite } from '@/db'
 import { usersTable } from '@/models'
-import type { GetUserBy, User, UserInsert, UserUpdate } from '@/types'
+import type { GetUserBy, UserInsertRow, UserRow, UserUpdateRow } from '@/types'
 
 export async function getUserBy(
   field: GetUserBy,
   value: string | number,
-): Promise<User | null> {
+): Promise<UserRow | null> {
   const [user] = await sqlite
     .select()
     .from(usersTable)
@@ -15,7 +15,9 @@ export async function getUserBy(
   return user ?? null
 }
 
-export async function createUser(values: UserInsert): Promise<User | null> {
+export async function createUser(
+  values: UserInsertRow,
+): Promise<UserRow | null> {
   const [createdUser] = await sqlite
     .insert(usersTable)
     .values(values)
@@ -26,8 +28,8 @@ export async function createUser(values: UserInsert): Promise<User | null> {
 export async function updateUserBy(
   field: GetUserBy,
   value: string | number,
-  fields: UserUpdate,
-): Promise<User | null> {
+  fields: UserUpdateRow,
+): Promise<UserRow | null> {
   const [updatedUser] = await sqlite
     .update(usersTable)
     .set(fields)
@@ -36,7 +38,7 @@ export async function updateUserBy(
   return updatedUser ?? null
 }
 
-export async function getAllUsers(): Promise<User[]> {
+export async function getAllUsers(): Promise<UserRow[]> {
   const users = await sqlite.select().from(usersTable)
   return users
 }
@@ -44,7 +46,7 @@ export async function getAllUsers(): Promise<User[]> {
 export async function deleteUserBy(
   field: GetUserBy,
   value: string | number,
-): Promise<User['email'] | null> {
+): Promise<UserRow['email'] | null> {
   const [deletedUser] = await sqlite
     .delete(usersTable)
     .where(eq(usersTable[field], value))
@@ -55,12 +57,12 @@ export async function deleteUserBy(
 
 export async function deleteUsersByIds(
   userIds: number[],
-): Promise<User['id'][]> {
+): Promise<UserRow['id'][]> {
   await sqlite.delete(usersTable).where(inArray(usersTable.id, userIds))
   return userIds
 }
 
-export async function cleanupExpiredPasswordResetTokens(): Promise<User[]> {
+export async function cleanupExpiredPasswordResetTokens(): Promise<UserRow[]> {
   const updatedUsers = await sqlite
     .update(usersTable)
     .set({
@@ -72,7 +74,7 @@ export async function cleanupExpiredPasswordResetTokens(): Promise<User[]> {
   return updatedUsers
 }
 
-export async function cleanupUnverifiedUsers(): Promise<User[]> {
+export async function cleanupUnverifiedUsers(): Promise<UserRow[]> {
   const deletedUsers = await sqlite
     .delete(usersTable)
     .where(

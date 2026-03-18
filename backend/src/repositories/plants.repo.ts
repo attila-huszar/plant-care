@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { sqlite } from '@/db'
 import { plantsTable } from '@/models'
-import type { PlantInsert, PlantUpdate } from '@/types'
+import type { PlantInsertRow, PlantUpdateRow } from '@/types'
 
 export const getPlantsByUserId = async (userId: number) => {
   return sqlite.select().from(plantsTable).where(eq(plantsTable.userId, userId))
@@ -17,13 +17,13 @@ export const getPlantById = async (plantId: number) => {
   return plants[0] ?? null
 }
 
-export const insertPlant = async (data: PlantInsert) => {
+export const insertPlant = async (data: PlantInsertRow) => {
   const result = await sqlite.insert(plantsTable).values(data).returning()
 
   return result[0] ?? null
 }
 
-export const updatePlant = async (plantId: number, data: PlantUpdate) => {
+export const updatePlant = async (plantId: number, data: PlantUpdateRow) => {
   const result = await sqlite
     .update(plantsTable)
     .set({ ...data, updatedAt: new Date() })

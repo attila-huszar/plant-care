@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { sqlite } from '@/db'
 import { eventsTable } from '@/models'
-import type { EventInsert } from '@/types'
+import type { EventInsertRow } from '@/types'
 
 export const getEventsByUserId = async (userId: number) => {
   return sqlite.select().from(eventsTable).where(eq(eventsTable.userId, userId))
@@ -24,7 +24,7 @@ export const getEventById = async (eventId: number) => {
   return result[0] ?? null
 }
 
-export const insertEvent = async (data: EventInsert) => {
+export const insertEvent = async (data: EventInsertRow) => {
   const result = await sqlite.insert(eventsTable).values(data).returning()
 
   return result[0] ?? null

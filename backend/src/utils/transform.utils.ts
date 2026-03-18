@@ -1,7 +1,7 @@
-import type { EventDto, PlantDto, PublicUser } from '@plant-care/shared'
-import type { Event, Plant, User } from '@/types'
+import type { Event, Plant, PublicUser } from '@plant-care/shared'
+import type { EventRow, PlantRow, UserRow } from '@/types'
 
-export const toPublicUser = (user: User): PublicUser => {
+export const toPublicUser = (user: UserRow): PublicUser => {
   const {
     id,
     password,
@@ -21,12 +21,12 @@ export const toPublicUser = (user: User): PublicUser => {
   return { ...publicUser, customEvents: customEvents ?? [] }
 }
 
-export const toPublicPlant = (plant: Plant): Omit<PlantDto, 'history'> => {
+export const toPublicPlant = (plant: PlantRow): Omit<Plant, 'history'> => {
   const { userId, createdAt, updatedAt, ...publicPlant } = plant
   return publicPlant
 }
 
-export const toPublicEvent = (event: Event): EventDto => {
+export const toPublicEvent = (event: EventRow): Event => {
   const { userId, createdAt, updatedAt, ...publicEvent } = event
   return publicEvent
 }

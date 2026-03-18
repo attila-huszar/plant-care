@@ -1,14 +1,10 @@
 import { z } from 'zod'
-
-const idSchema = z.coerce.number().int()
+import { idSchema } from './commonSchemas'
 
 const plantNameSchema = z.string().trim().min(1).max(60)
-const imageUrlSchema = z.string().trim().max(2048)
-const notesSchema = z.string().trim().max(1000)
-
-export type EventType = string
-
 const eventTypeSchema = z.string().trim().min(1).max(60)
+const notesSchema = z.string().trim().max(1000)
+const imageUrlSchema = z.string().trim().max(2048)
 
 export const scheduleSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -53,7 +49,7 @@ export const createPlantRequestSchema = plantBaseSchema.extend({
 
 export const updatePlantRequestSchema = plantBaseSchema.partial()
 
-export const eventDtoSchema = z.strictObject({
+export const eventSchema = z.strictObject({
   id: idSchema,
   plantId: idSchema,
   type: eventTypeSchema,
@@ -61,21 +57,21 @@ export const eventDtoSchema = z.strictObject({
   notes: notesSchema.nullable(),
 })
 
-export const customEventDtoSchema = z.strictObject({
+export const customEventSchema = z.strictObject({
   id: z.uuid(),
   name: eventTypeSchema,
 })
 
-export const plantDtoSchema = plantBaseSchema.extend({
+export const plantSchema = plantBaseSchema.extend({
   id: idSchema,
-  history: z.array(eventDtoSchema),
+  history: z.array(eventSchema),
 })
 
 export const listPlantsResponseSchema = z.strictObject({
-  plants: z.array(plantDtoSchema),
+  plants: z.array(plantSchema),
 })
 
 export const createEventResponseSchema = z.strictObject({
-  event: eventDtoSchema,
-  plant: plantDtoSchema,
+  event: eventSchema,
+  plant: plantSchema,
 })

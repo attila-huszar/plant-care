@@ -1,3 +1,4 @@
 export * from './useApiFetch'
-export * from './useApiFetchAuthRetry'
+export * from './usePublicApi'
+export * from './useAuthedApi'
 export * from './useElfsightVoice'

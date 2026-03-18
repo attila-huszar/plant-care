@@ -16,6 +16,7 @@ import {
 import type {
   LoginRequest,
   LoginResponse,
+  LogoutResponse,
   MfaVerifyRequest,
   MfaVerifyResponse,
   PasswordResetRequest,
@@ -24,16 +25,17 @@ import type {
   PasswordResetSubmitResponse,
   PasswordResetToken,
   PasswordResetTokenResponse,
+  RefreshResponse,
   RegisterRequest,
   RegisterResponse,
   VerificationRequest,
   VerificationResponse,
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
-import { useApiFetch, withAuth } from '@/composables'
-import { toApiResult } from '@/utils'
+import { createAuthedApi, usePublicApi } from '@/composables'
 
 export const useAuthStore = defineStore('auth', () => {
+  const api = usePublicApi()
   const accessToken = ref<string | null>(null)
   const canRefresh = ref(true)
   const isLoading = ref(false)
@@ -50,11 +52,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (!canRefresh.value) return null
 
     try {
-      const res = await useApiFetch(API_PATHS.users.refresh)
-        .post()
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<RefreshResponse>(
+        API_PATHS.users.refresh,
+      )
 
       if (!result.ok) {
         if (result.status === 401 || result.status === 403) {
@@ -82,17 +82,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const authedApi = createAuthedApi(accessToken, refresh)
+
   const login = async (
     payload: LoginRequest,
   ): Promise<ApiResult<LoginResponse>> => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.login)
-        .post(payload, 'json')
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<LoginResponse>(
+        API_PATHS.users.login,
+        payload,
+      )
 
       if (!result.ok) {
         error.value = result.error
@@ -126,11 +127,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.mfaVerify)
-        .post(payload, 'json')
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<MfaVerifyResponse>(
+        API_PATHS.users.mfaVerify,
+        payload,
+      )
       if (!result.ok) {
         error.value = result.error
         return result
@@ -163,11 +163,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.register)
-        .post(formData)
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postForm<RegisterResponse>(
+        API_PATHS.users.register,
+        formData,
+      )
       if (!result.ok) {
         error.value = result.error
         return result
@@ -192,11 +191,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.verification)
-        .post(payload, 'json')
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<VerificationResponse>(
+        API_PATHS.users.verification,
+        payload,
+      )
       if (!result.ok) {
         error.value = result.error
         return result
@@ -221,11 +219,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.passwordResetRequest)
-        .post(payload, 'json')
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<PasswordResetRequestResponse>(
+        API_PATHS.users.passwordResetRequest,
+        payload,
+      )
       if (!result.ok) {
         error.value = result.error
         return result
@@ -250,11 +247,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.passwordResetToken)
-        .post(payload, 'json')
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<PasswordResetTokenResponse>(
+        API_PATHS.users.passwordResetToken,
+        payload,
+      )
       if (!result.ok) {
         error.value = result.error
         return result
@@ -279,11 +275,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await useApiFetch(API_PATHS.users.passwordResetSubmit)
-        .post(payload, 'json')
-        .json<unknown>()
-
-      const result = toApiResult<unknown>(res)
+      const result = await api.postJson<PasswordResetSubmitResponse>(
+        API_PATHS.users.passwordResetSubmit,
+        payload,
+      )
       if (!result.ok) {
         error.value = result.error
         return result
@@ -305,36 +300,9 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     error.value = null
 
-    if (!accessToken.value) {
-      await refresh()
-    }
-
-    if (!accessToken.value) {
-      error.value = 'Unable to refresh session for logout'
-      return
-    }
-
-    const tryLogout = async () => {
-      const res = await useApiFetch(
-        API_PATHS.users.logout,
-        withAuth(accessToken),
-      )
-        .post()
-        .json<unknown>()
-
-      return toApiResult<unknown>(res)
-    }
-
-    let result = await tryLogout()
-
-    if (!result.ok && result.status === 401) {
-      await refresh()
-      if (!accessToken.value) {
-        error.value = 'Unable to refresh session for logout'
-        return
-      }
-      result = await tryLogout()
-    }
+    const result = await authedApi.postJson<LogoutResponse>(
+      API_PATHS.users.logout,
+    )
 
     if (!result.ok) {
       error.value = result.error
