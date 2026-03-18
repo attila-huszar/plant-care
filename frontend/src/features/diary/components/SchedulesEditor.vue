@@ -5,14 +5,14 @@
     ListboxOption,
     ListboxOptions,
   } from '@headlessui/vue'
+  import type { ScheduleActionId } from '@plant-care/shared'
   import { ChevronIcon, TrashIcon } from '@/assets/svg'
   import ActionTypeListbox from './ActionTypeListbox.vue'
 
   type DraftScheduleRow = {
-    key: string
     id: string
     kind: 'recurring' | 'date'
-    type: string
+    actionId: ScheduleActionId
     days: string
     date: string
     notes: string
@@ -20,9 +20,9 @@
 
   type SchedulesEditorProps = {
     scheduleRows: DraftScheduleRow[]
-    typeOptions: { id: string; label: string }[]
+    actionOptions: { id: ScheduleActionId; label: string }[]
     addScheduleRow: () => void
-    removeScheduleRow(_key: string): void
+    removeScheduleRow(_id: string): void
     setRowKind(_row: DraftScheduleRow, _kind: DraftScheduleRow['kind']): void
   }
 
@@ -43,7 +43,7 @@
     <div v-else class="space-y-3">
       <div
         v-for="row in scheduleRows"
-        :key="row.key"
+        :key="row.id"
         class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
       >
         <div
@@ -119,7 +119,7 @@
           <button
             type="button"
             class="inline-flex size-9.5 shrink-0 items-center justify-center self-end rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:order-3 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-            @click="removeScheduleRow(row.key)"
+            @click="removeScheduleRow(row.id)"
             aria-label="Remove action"
             title="Remove"
           >
@@ -134,8 +134,8 @@
               :class="row.kind === 'date' ? 'flex-3' : 'flex-1'"
             >
               <ActionTypeListbox
-                v-model="row.type"
-                :options="typeOptions"
+                v-model="row.actionId"
+                :options="actionOptions"
                 label="Schedule"
               />
             </div>

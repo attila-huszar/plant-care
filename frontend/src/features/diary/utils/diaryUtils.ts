@@ -1,11 +1,8 @@
-import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
+import { DEFAULT_TASK_ICON, scheduleActionsMeta } from '@/constants'
+import { getBuiltinScheduleAction } from '@plant-care/shared'
 import type { CustomEvent, Event, Plant } from '@plant-care/shared'
 import type { UpcomingItem } from '@/types'
 import { MS_PER_DAY, startOfDayMs } from './dateFormat'
-
-const BUILTIN_ACTION_META_BY_ID = new Map(
-  PLANT_CARE_META.map((t) => [t.id, t] as const),
-)
 
 export const buildCustomEventsMap = (customEvents: readonly CustomEvent[]) => {
   const map = new Map<string, string>()
@@ -15,18 +12,21 @@ export const buildCustomEventsMap = (customEvents: readonly CustomEvent[]) => {
   return map
 }
 
-export const getEventIcon = (typeId: string) => {
-  return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
+export const getEventIcon = (actionId: string) => {
+  return (
+    scheduleActionsMeta.find((a) => a.id === actionId)?.icon ??
+    DEFAULT_TASK_ICON
+  )
 }
 
 export const getEventLabel = (
-  typeId: string,
+  actionId: string,
   customNameById?: ReadonlyMap<string, string>,
 ) => {
-  const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
+  const builtinLabel = getBuiltinScheduleAction(actionId)?.label
   if (builtinLabel) return builtinLabel
 
-  return customNameById?.get(typeId) ?? typeId
+  return customNameById?.get(actionId) ?? actionId
 }
 
 const buildLatestEventsMap = (events: readonly Event[]) => {

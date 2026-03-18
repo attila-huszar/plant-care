@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import { API_PATHS, PLANT_CARE_META } from '@/constants'
+import { API_PATHS, scheduleActionsMeta } from '@/constants'
 import { defineStore } from 'pinia'
 import type {
   CustomEvent,
@@ -115,8 +115,8 @@ export const useUserStore = defineStore('user', () => {
   ): Promise<ApiResult<UserProfileUpdateResponse>> =>
     updateProfile({ mfaEnabled: enable })
 
-  const reservedTypeIdsLower = new Set(
-    PLANT_CARE_META.map((t) => t.id.toLowerCase()),
+  const reservedActionIdsLower = new Set(
+    scheduleActionsMeta.map((t) => t.id.toLowerCase()),
   )
 
   const createCustomEvent = async (
@@ -127,7 +127,7 @@ export const useUserStore = defineStore('user', () => {
       return { ok: false, status: null, error: 'Name is required' }
     }
 
-    if (reservedTypeIdsLower.has(trimmed.toLowerCase())) {
+    if (reservedActionIdsLower.has(trimmed.toLowerCase())) {
       return { ok: false, status: null, error: 'Name is reserved' }
     }
 
@@ -173,7 +173,7 @@ export const useUserStore = defineStore('user', () => {
       return { ok: false, status: null, error: 'Name is required' }
     }
 
-    if (reservedTypeIdsLower.has(trimmed.toLowerCase())) {
+    if (reservedActionIdsLower.has(trimmed.toLowerCase())) {
       return { ok: false, status: null, error: 'Name is reserved' }
     }
 

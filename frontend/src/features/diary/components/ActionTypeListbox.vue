@@ -8,18 +8,19 @@
     ComboboxOption,
     ComboboxOptions,
   } from '@headlessui/vue'
+  import type { ScheduleActionId } from '@plant-care/shared'
   import { ChevronIcon } from '@/assets/svg'
 
   type Option = { id: string; label: string }
 
   const props = defineProps<{
-    modelValue: string
+    modelValue: ScheduleActionId
     options: { id: string; label: string }[]
     label?: string
   }>()
 
   const emit = defineEmits<{
-    'update:modelValue': [value: string]
+    'update:modelValue': [value: ScheduleActionId]
   }>()
 
   const query = ref('')
