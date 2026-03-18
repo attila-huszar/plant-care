@@ -14,8 +14,7 @@ import type {
   UpdatePlantRequest,
 } from '@plant-care/shared'
 import { useAuthStore } from '@/features/auth/stores'
-import { useApiFetch, withAuth } from '@/composables'
-import { toApiResult } from '@/utils'
+import { useApiFetch, useApiFetchAuthRetry, withAuth } from '@/composables'
 
 export const usePlantsStore = defineStore('plants', () => {
   const plants = ref<PlantDto[]>([])
@@ -26,19 +25,17 @@ export const usePlantsStore = defineStore('plants', () => {
   const eventsReq = reactive({ loading: false, error: null as string | null })
 
   const authStore = useAuthStore()
+  const { fetchWithAuthRetry } = useApiFetchAuthRetry()
 
   const getPlants = async () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const res = await useApiFetch(
-        API_PATHS.plants.root,
-        withAuth(authStore.accessToken),
+      const apiResult = await fetchWithAuthRetry<unknown>(() =>
+        useApiFetch(API_PATHS.plants.root, withAuth(authStore.accessToken))
+          .get()
+          .json<unknown>(),
       )
-        .get()
-        .json<unknown>()
-
-      const apiResult = toApiResult<unknown>(res)
       if (!apiResult.ok) {
         if (apiResult.status === 401 || apiResult.status === 403) {
           plants.value = []
@@ -61,14 +58,11 @@ export const usePlantsStore = defineStore('plants', () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const res = await useApiFetch(
-        API_PATHS.plants.root,
-        withAuth(authStore.accessToken),
+      const apiResult = await fetchWithAuthRetry<unknown>(() =>
+        useApiFetch(API_PATHS.plants.root, withAuth(authStore.accessToken))
+          .post(plant, 'json')
+          .json<unknown>(),
       )
-        .post(plant, 'json')
-        .json<unknown>()
-
-      const apiResult = toApiResult<unknown>(res)
       if (!apiResult.ok) {
         plantsReq.error = 'Failed to add plant'
         return null
@@ -92,14 +86,14 @@ export const usePlantsStore = defineStore('plants', () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const res = await useApiFetch(
-        API_PATHS.plants.byId(plantId),
-        withAuth(authStore.accessToken),
+      const apiResult = await fetchWithAuthRetry<unknown>(() =>
+        useApiFetch(
+          API_PATHS.plants.byId(plantId),
+          withAuth(authStore.accessToken),
+        )
+          .put(patch, 'json')
+          .json<unknown>(),
       )
-        .put(patch, 'json')
-        .json<unknown>()
-
-      const apiResult = toApiResult<unknown>(res)
       if (!apiResult.ok) {
         plantsReq.error = 'Failed to update plant'
         return null
@@ -121,14 +115,11 @@ export const usePlantsStore = defineStore('plants', () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const res = await useApiFetch(
-        API_PATHS.plants.byId(id),
-        withAuth(authStore.accessToken),
+      const apiResult = await fetchWithAuthRetry<unknown>(() =>
+        useApiFetch(API_PATHS.plants.byId(id), withAuth(authStore.accessToken))
+          .delete()
+          .text(),
       )
-        .delete()
-        .text()
-
-      const apiResult = toApiResult(res)
       if (!apiResult.ok) {
         plantsReq.error = 'Failed to remove plant'
         return null
@@ -152,14 +143,14 @@ export const usePlantsStore = defineStore('plants', () => {
     eventsReq.error = null
     try {
       const { plantId, ...body } = event
-      const res = await useApiFetch(
-        API_PATHS.plants.events(plantId),
-        withAuth(authStore.accessToken),
+      const apiResult = await fetchWithAuthRetry<unknown>(() =>
+        useApiFetch(
+          API_PATHS.plants.events(plantId),
+          withAuth(authStore.accessToken),
+        )
+          .post(body, 'json')
+          .json<unknown>(),
       )
-        .post(body, 'json')
-        .json<unknown>()
-
-      const apiResult = toApiResult<unknown>(res)
       if (!apiResult.ok) {
         eventsReq.error = 'Failed to add event'
         return null
@@ -181,14 +172,14 @@ export const usePlantsStore = defineStore('plants', () => {
     eventsReq.loading = true
     eventsReq.error = null
     try {
-      const res = await useApiFetch(
-        API_PATHS.plants.eventById(plantId, eventId),
-        withAuth(authStore.accessToken),
+      const apiResult = await fetchWithAuthRetry<unknown>(() =>
+        useApiFetch(
+          API_PATHS.plants.eventById(plantId, eventId),
+          withAuth(authStore.accessToken),
+        )
+          .delete()
+          .text(),
       )
-        .delete()
-        .text()
-
-      const apiResult = toApiResult(res)
       if (!apiResult.ok) {
         eventsReq.error = 'Failed to remove event'
         return null

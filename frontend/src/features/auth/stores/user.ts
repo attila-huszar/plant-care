@@ -10,8 +10,7 @@ import type {
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
 import { publicUserSchema, safeValidate } from '@plant-care/shared'
-import { useApiFetch, withAuth } from '@/composables'
-import { toApiResult } from '@/utils'
+import { useApiFetch, useApiFetchAuthRetry, withAuth } from '@/composables'
 import { useAuthStore } from './auth'
 
 export const useUserStore = defineStore('user', () => {
@@ -26,6 +25,7 @@ export const useUserStore = defineStore('user', () => {
   let bootstrapPromise: Promise<void> | null = null
 
   const authStore = useAuthStore()
+  const { fetchWithAuthRetry } = useApiFetchAuthRetry()
 
   const isReady = computed(() => profile.value !== null)
 
@@ -48,64 +48,20 @@ export const useUserStore = defineStore('user', () => {
   )
 
   const getWithAuthRetry = async <T>(path: string): Promise<ApiResult<T>> => {
-    try {
-      const res = await useApiFetch(path, withAuth(authStore.accessToken))
-        .get()
-        .json<T>()
-
-      let result = toApiResult<T>(res)
-
-      if (!result.ok && result.status === 401) {
-        const token = await authStore.refresh()
-        if (!token) return result
-
-        const retry = await useApiFetch(path, withAuth(authStore.accessToken))
-          .get()
-          .json<T>()
-
-        result = toApiResult<T>(retry)
-      }
-
-      return result
-    } catch (e) {
-      return {
-        ok: false,
-        status: null,
-        error: e instanceof Error ? e.message : 'Network error',
-      }
-    }
+    return fetchWithAuthRetry<T>(() =>
+      useApiFetch(path, withAuth(authStore.accessToken)).get().json<T>(),
+    )
   }
 
   const patchWithAuthRetry = async <T>(
     path: string,
     payload: unknown,
   ): Promise<ApiResult<T>> => {
-    try {
-      const res = await useApiFetch(path, withAuth(authStore.accessToken))
+    return fetchWithAuthRetry<T>(() =>
+      useApiFetch(path, withAuth(authStore.accessToken))
         .patch(payload, 'json')
-        .json<T>()
-
-      let result = toApiResult<T>(res)
-
-      if (!result.ok && result.status === 401) {
-        const token = await authStore.refresh()
-        if (!token) return result
-
-        const retry = await useApiFetch(path, withAuth(authStore.accessToken))
-          .patch(payload, 'json')
-          .json<T>()
-
-        result = toApiResult<T>(retry)
-      }
-
-      return result
-    } catch (e) {
-      return {
-        ok: false,
-        status: null,
-        error: e instanceof Error ? e.message : 'Network error',
-      }
-    }
+        .json<T>(),
+    )
   }
 
   const loadProfile = async (): Promise<ApiResult<UserProfileResponse>> => {
