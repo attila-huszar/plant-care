@@ -40,21 +40,25 @@ export const useAuthStore = defineStore('auth', () => {
   const canRefresh = ref(true)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const sessionVersion = ref(0)
 
   const isAuthenticated = computed(() => accessToken.value !== null)
 
   const clearAuth = () => {
+    sessionVersion.value += 1
     accessToken.value = null
-    error.value = null
   }
 
   const refresh = async (): Promise<string | null> => {
     if (!canRefresh.value) return null
 
     try {
+      const startVersion = sessionVersion.value
       const result = await api.postJson<RefreshResponse>(
         API_PATHS.users.refresh,
       )
+
+      if (sessionVersion.value !== startVersion) return null
 
       if (!result.ok) {
         if (result.status === 401 || result.status === 403) {
@@ -303,25 +307,28 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     error.value = null
+    try {
+      const result = await authedApi.postJson<LogoutResponse>(
+        API_PATHS.users.logout,
+        undefined,
+        { retryOnStatuses: [] },
+      )
 
-    const result = await authedApi.postJson<LogoutResponse>(
-      API_PATHS.users.logout,
-    )
+      if (!result.ok) {
+        error.value = result.error
+        return
+      }
 
-    if (!result.ok) {
-      error.value = result.error
-      return
+      const data = safeValidate(logoutResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return
+      }
+    } finally {
+      clearAuth()
+      canRefresh.value = false
     }
-
-    const data = safeValidate(logoutResponseSchema, result.data)
-    if (!data) {
-      const message = 'Invalid server response'
-      error.value = message
-      return
-    }
-
-    clearAuth()
-    canRefresh.value = false
   }
 
   return {

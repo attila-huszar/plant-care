@@ -11,11 +11,9 @@
   import type { ScheduleActionId } from '@plant-care/shared'
   import { ChevronIcon } from '@/assets/svg'
 
-  type Option = { id: string; label: string }
-
   const props = defineProps<{
     modelValue: ScheduleActionId
-    options: { id: string; label: string }[]
+    options: { id: ScheduleActionId; label: string }[]
     label?: string
   }>()
 
@@ -25,45 +23,35 @@
 
   const query = ref('')
 
-  const normalizedOptions = computed<Option[]>(() => {
-    return props.options.map((o) => ({ id: o.id, label: o.label }))
+  const selectedOption = computed(() => {
+    return props.options.find((o) => o.id === props.modelValue) ?? null
   })
 
-  const selectedOption = computed<Option | null>(() => {
-    const match = normalizedOptions.value.find((o) => o.id === props.modelValue)
-    if (match) return match
-    return {
-      id: props.modelValue,
-      label: String(props.modelValue),
-    }
+  const filteredOptions = computed(() => {
+    const q = query.value.trim().toLowerCase()
+    if (!q) return props.options
+    return props.options.filter((opt) => opt.label.toLowerCase().includes(q))
   })
 
-  const queryTrimmed = computed(() => query.value.trim())
-
-  const filteredOptions = computed<Option[]>(() => {
-    const q = queryTrimmed.value.toLowerCase()
-    if (!q) return normalizedOptions.value
-    return normalizedOptions.value.filter((opt) =>
-      opt.label.toLowerCase().includes(q),
-    )
-  })
-
-  const compareOptions = (a: Option, b: Option) => a.id === b.id
+  const compareOptions = (
+    a: { id: ScheduleActionId },
+    b: { id: ScheduleActionId },
+  ) => a.id === b.id
 
   const handleInput = (event: Event) => {
     const value = (event.target as HTMLInputElement).value
     query.value = value
   }
 
-  const handleSelect = (value: Option) => {
+  const handleSelect = (value: { id: ScheduleActionId } | null) => {
+    if (!value) return
     emit('update:modelValue', value.id)
     query.value = ''
   }
 
   const openOnInputClick = (isOpen: boolean, event: MouseEvent) => {
     if (isOpen) return
-    const input = event.currentTarget as HTMLInputElement | null
-    if (!input) return
+    const input = event.currentTarget as HTMLInputElement
     input.dispatchEvent(
       new KeyboardEvent('keydown', {
         key: 'ArrowDown',
@@ -92,7 +80,7 @@
     <div class="relative">
       <ComboboxInput
         as="template"
-        :display-value="(opt) => (opt as Option | null)?.label ?? ''"
+        :display-value="(opt) => (opt as { label: string } | null)?.label ?? ''"
       >
         <input
           class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
