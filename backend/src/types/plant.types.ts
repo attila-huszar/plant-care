@@ -5,6 +5,6 @@ import type {
   plantUpdateSchema,
 } from '@/schemas'
 
-export type Plant = z.infer<typeof plantSelectSchema>
-export type PlantInsert = z.infer<typeof plantInsertSchema>
-export type PlantUpdate = z.infer<typeof plantUpdateSchema>
+export type PlantRow = z.infer<typeof plantSelectSchema>
+export type PlantInsertRow = z.infer<typeof plantInsertSchema>
+export type PlantUpdateRow = z.infer<typeof plantUpdateSchema>

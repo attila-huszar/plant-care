@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, nextTick, ref, watch } from 'vue'
-  import { PLANT_CARE_META } from '@/constants'
+  import { scheduleActionsMeta } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -13,7 +13,8 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type { EventDto, EventType, Schedule } from '@plant-care/shared'
+  import { safeValidate, uuidSchema } from '@plant-care/shared'
+  import type { Event, Schedule, ScheduleActionId } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
   import {
     buildCustomEventsMap,
@@ -45,6 +46,7 @@
   const originalName = ref('')
   const plantNameInput = ref<HTMLInputElement | null>(null)
   const selectedTabIndex = ref(0)
+  const saveError = ref<string | null>(null)
 
   const plant = computed(() => {
     const plantId = stablePlantId.value
@@ -54,17 +56,17 @@
 
   const isAddMode = computed(() => stableIsAdd.value)
 
-  const builtinTypeIds = new Set(PLANT_CARE_META.map((t) => t.id))
+  const builtinActionIds = new Set<string>(scheduleActionsMeta.map((a) => a.id))
 
-  const typeOptions = computed(() => {
-    const options: { id: EventType; label: string }[] = []
+  const actionOptions = computed(() => {
+    const options: { id: string; label: string }[] = []
 
-    for (const t of PLANT_CARE_META) {
-      options.push({ id: t.id, label: t.label })
+    for (const a of scheduleActionsMeta) {
+      options.push({ id: a.id, label: a.label })
     }
 
-    for (const t of userStore.customEvents) {
-      options.push({ id: t.id, label: t.name })
+    for (const a of userStore.customEvents) {
+      options.push({ id: a.id, label: a.name })
     }
 
     if (plant.value) {
@@ -83,7 +85,7 @@
     return buildCustomEventsMap(userStore.customEvents)
   })
 
-  const sortedHistory = computed<EventDto[]>(() => {
+  const sortedHistory = computed<Event[]>(() => {
     if (!plant.value) return []
     return [...plant.value.history].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -91,7 +93,7 @@
   })
 
   const latestNotesByType = computed(() => {
-    const map = new Map<EventType, string>()
+    const map = new Map<string, string>()
 
     for (const event of sortedHistory.value) {
       const notes = event.notes?.trim()
@@ -103,10 +105,9 @@
   })
 
   type DraftScheduleRow = {
-    key: string
     id: string
     kind: 'recurring' | 'date'
-    type: EventType
+    actionId: ScheduleActionId
     days: string
     date: string
     notes: string
@@ -127,10 +128,9 @@
     }
 
     scheduleRows.value = plant.value.schedules.map((schedule) => ({
-      key: crypto.randomUUID(),
       id: schedule.id,
       kind: schedule.kind,
-      type: schedule.type,
+      actionId: schedule.type,
       days: schedule.kind === 'recurring' ? String(schedule.days) : '7',
       date:
         schedule.kind === 'date'
@@ -208,18 +208,17 @@
 
   const addScheduleRow = () => {
     scheduleRows.value.push({
-      key: crypto.randomUUID(),
       id: crypto.randomUUID(),
       kind: 'recurring',
-      type: 'water',
+      actionId: 'water',
       days: '7',
       date: '',
       notes: '',
     })
   }
 
-  const removeScheduleRow = (key: string) => {
-    scheduleRows.value = scheduleRows.value.filter((r) => r.key !== key)
+  const removeScheduleRow = (id: string) => {
+    scheduleRows.value = scheduleRows.value.filter((r) => r.id !== id)
   }
 
   const ensureDateDefault = (row: DraftScheduleRow) => {
@@ -237,64 +236,83 @@
   }
 
   const save = async () => {
+    saveError.value = null
+
     scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
-      type: row.type.trim(),
+      actionId: row.actionId.trim(),
     }))
 
-    const usedTypes = [
-      ...new Set(scheduleRows.value.map((row) => row.type).filter(Boolean)),
-    ]
-
     const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
-    const idByLabelLower = new Map<string, EventType>()
-    for (const opt of typeOptions.value) {
+    const idByLabelLower = new Map<string, string>()
+    for (const opt of actionOptions.value) {
       idByLabelLower.set(opt.label.toLowerCase(), opt.id)
     }
-    const resolvedTypeByInput = new Map<EventType, EventType>()
 
-    for (const inputType of usedTypes) {
-      const normalizedType =
-        idByLabelLower.get(inputType.toLowerCase()) ?? inputType
+    const resolvedActionIdByInput = new Map<string, string>()
 
-      if (
-        builtinTypeIds.has(normalizedType) ||
-        customTypeIds.has(normalizedType)
-      ) {
-        resolvedTypeByInput.set(inputType, normalizedType)
+    const resolvedRows: DraftScheduleRow[] = []
+    for (const row of scheduleRows.value) {
+      if (!row.actionId) {
+        resolvedRows.push(row)
         continue
       }
 
-      if (normalizedType.length > 60) return
+      const input = row.actionId
+      const cached = resolvedActionIdByInput.get(input)
+      if (cached) {
+        resolvedRows.push({ ...row, actionId: cached })
+        continue
+      }
 
-      const result = await userStore.createCustomEvent(normalizedType)
-      if (!result.ok) return
+      const normalized = idByLabelLower.get(input.toLowerCase()) ?? input
 
-      resolvedTypeByInput.set(inputType, result.data.id)
+      if (builtinActionIds.has(normalized) || customTypeIds.has(normalized)) {
+        resolvedActionIdByInput.set(input, normalized)
+        resolvedRows.push({ ...row, actionId: normalized })
+        continue
+      }
+
+      if (safeValidate(uuidSchema, normalized)) {
+        saveError.value =
+          'A schedule uses an unknown custom event type. Please pick an existing type or create a new one.'
+        return
+      }
+
+      if (normalized.length > 60) {
+        saveError.value = 'Schedule type must be 60 characters or less.'
+        return
+      }
+
+      const created = await userStore.createCustomEvent(normalized)
+      if (!created.ok) {
+        saveError.value = created.error
+        return
+      }
+
+      resolvedActionIdByInput.set(input, created.data.id)
+      resolvedRows.push({ ...row, actionId: created.data.id })
     }
 
-    scheduleRows.value = scheduleRows.value.map((row) => ({
-      ...row,
-      type: resolvedTypeByInput.get(row.type) ?? row.type,
-    }))
+    scheduleRows.value = resolvedRows
 
     const lastCadenceIndexByType = new Map<string, number>()
     for (let i = 0; i < scheduleRows.value.length; i += 1) {
       const row = scheduleRows.value[i]
       if (row.kind !== 'recurring') continue
-      if (!row.type) continue
-      lastCadenceIndexByType.set(row.type, i)
+      if (!row.actionId) continue
+      lastCadenceIndexByType.set(row.actionId, i)
     }
 
     const schedules: Schedule[] = []
 
     for (let i = 0; i < scheduleRows.value.length; i += 1) {
       const row = scheduleRows.value[i]
-      if (!row.type) continue
+      if (!row.actionId) continue
       const notes = row.notes.trim()
 
       if (row.kind === 'recurring') {
-        const lastIndex = lastCadenceIndexByType.get(row.type)
+        const lastIndex = lastCadenceIndexByType.get(row.actionId)
         if (lastIndex !== i) continue
 
         const days = toDays(row.days)
@@ -303,7 +321,7 @@
         schedules.push({
           kind: 'recurring',
           id: row.id,
-          type: row.type,
+          type: row.actionId,
           days,
           notes,
         })
@@ -316,7 +334,7 @@
       schedules.push({
         kind: 'date',
         id: row.id,
-        type: row.type,
+        type: row.actionId,
         date: iso,
         notes,
       })
@@ -487,7 +505,7 @@
 
                   <SchedulesEditor
                     :schedule-rows="scheduleRows"
-                    :type-options="typeOptions"
+                    :action-options="actionOptions"
                     :add-schedule-row="addScheduleRow"
                     :remove-schedule-row="removeScheduleRow"
                     :set-row-kind="setRowKind"
@@ -554,11 +572,18 @@
                       <form @submit.prevent="save" class="space-y-5">
                         <SchedulesEditor
                           :schedule-rows="scheduleRows"
-                          :type-options="typeOptions"
+                          :action-options="actionOptions"
                           :add-schedule-row="addScheduleRow"
                           :remove-schedule-row="removeScheduleRow"
                           :set-row-kind="setRowKind"
                         />
+
+                        <div
+                          v-if="saveError"
+                          class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                        >
+                          {{ saveError }}
+                        </div>
 
                         <div class="flex flex-col gap-3 pt-2 sm:flex-row">
                           <button

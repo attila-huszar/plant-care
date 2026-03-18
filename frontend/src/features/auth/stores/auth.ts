@@ -3,7 +3,6 @@ import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
 import {
   loginResponseSchema,
-  logoutResponseSchema,
   mfaVerifyResponseSchema,
   passwordResetRequestResponseSchema,
   passwordResetSubmitResponseSchema,
@@ -24,75 +23,97 @@ import type {
   PasswordResetSubmitResponse,
   PasswordResetToken,
   PasswordResetTokenResponse,
+  RefreshResponse,
   RegisterRequest,
   RegisterResponse,
   VerificationRequest,
   VerificationResponse,
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
-import { useApiFetch, withAuth } from '@/composables'
-import { toApiResult } from '@/utils'
+import { createAuthApi, usePublicApi } from '@/composables'
 
 export const useAuthStore = defineStore('auth', () => {
+  const api = usePublicApi()
+
   const accessToken = ref<string | null>(null)
   const canRefresh = ref(true)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const sessionVersion = ref(0)
+
+  let refreshPromise: Promise<string | null> | null = null
 
   const isAuthenticated = computed(() => accessToken.value !== null)
 
   const clearAuth = () => {
+    sessionVersion.value += 1
     accessToken.value = null
     error.value = null
+    isLoading.value = false
   }
 
   const refresh = async (): Promise<string | null> => {
     if (!canRefresh.value) return null
+    if (refreshPromise) return refreshPromise
 
-    try {
-      const res = await useApiFetch(API_PATHS.users.refresh)
-        .post()
-        .json<unknown>()
+    const startVersion = sessionVersion.value
 
-      const result = toApiResult<unknown>(res)
+    refreshPromise = (async () => {
+      try {
+        const result = await api.postJson<RefreshResponse>(
+          API_PATHS.users.refresh,
+        )
 
-      if (!result.ok) {
-        if (result.status === 401 || result.status === 403) {
+        if (sessionVersion.value !== startVersion) return null
+
+        if (!result.ok) {
+          if (result.status === 401 || result.status === 403) {
+            canRefresh.value = false
+            clearAuth()
+          }
+          return null
+        }
+
+        const data = safeValidate(refreshResponseSchema, result.data)
+        if (!data?.accessToken) {
           canRefresh.value = false
           clearAuth()
+          return null
         }
+
+        accessToken.value = data.accessToken
+        canRefresh.value = true
+
+        return accessToken.value
+      } catch {
         return null
+      } finally {
+        refreshPromise = null
       }
+    })()
 
-      const data = safeValidate(refreshResponseSchema, result.data)
-      if (!data) return null
-
-      if (!data.accessToken) {
-        canRefresh.value = false
-        clearAuth()
-        return null
-      }
-
-      canRefresh.value = true
-      accessToken.value = data.accessToken
-
-      return accessToken.value
-    } catch {
-      return null
-    }
+    return refreshPromise
   }
+
+  const authedApi = createAuthApi(accessToken, refresh)
 
   const login = async (
     payload: LoginRequest,
   ): Promise<ApiResult<LoginResponse>> => {
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.login)
-        .post(payload, 'json')
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    const startVersion = sessionVersion.value
+
+    try {
+      const result = await api.postJson<LoginResponse>(
+        API_PATHS.users.login,
+        payload,
+      )
+
+      if (sessionVersion.value !== startVersion) {
+        return { ok: false, status: null, error: 'Session outdated' }
+      }
 
       if (!result.ok) {
         error.value = result.error
@@ -116,7 +137,9 @@ export const useAuthStore = defineStore('auth', () => {
 
       return { ok: true, data }
     } finally {
-      isLoading.value = false
+      if (sessionVersion.value === startVersion) {
+        isLoading.value = false
+      }
     }
   }
 
@@ -125,12 +148,19 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<MfaVerifyResponse>> => {
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.mfaVerify)
-        .post(payload, 'json')
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    const startVersion = sessionVersion.value
+
+    try {
+      const result = await api.postJson<MfaVerifyResponse>(
+        API_PATHS.users.mfaVerify,
+        payload,
+      )
+
+      if (sessionVersion.value !== startVersion) {
+        return { ok: false, status: null, error: 'Session outdated' }
+      }
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -145,9 +175,12 @@ export const useAuthStore = defineStore('auth', () => {
 
       accessToken.value = data.accessToken
       canRefresh.value = true
+
       return { ok: true, data }
     } finally {
-      isLoading.value = false
+      if (sessionVersion.value === startVersion) {
+        isLoading.value = false
+      }
     }
   }
 
@@ -162,12 +195,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.register)
-        .post(formData)
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    try {
+      const result = await api.postFormData<RegisterResponse>(
+        API_PATHS.users.register,
+        formData,
+      )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -191,12 +225,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<VerificationResponse>> => {
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.verification)
-        .post(payload, 'json')
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    try {
+      const result = await api.postJson<VerificationResponse>(
+        API_PATHS.users.verification,
+        payload,
+      )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -220,12 +255,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<PasswordResetRequestResponse>> => {
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.passwordResetRequest)
-        .post(payload, 'json')
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    try {
+      const result = await api.postJson<PasswordResetRequestResponse>(
+        API_PATHS.users.passwordResetRequest,
+        payload,
+      )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -249,12 +285,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<PasswordResetTokenResponse>> => {
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.passwordResetToken)
-        .post(payload, 'json')
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    try {
+      const result = await api.postJson<PasswordResetTokenResponse>(
+        API_PATHS.users.passwordResetToken,
+        payload,
+      )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -278,12 +315,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<PasswordResetSubmitResponse>> => {
     isLoading.value = true
     error.value = null
-    try {
-      const res = await useApiFetch(API_PATHS.users.passwordResetSubmit)
-        .post(payload, 'json')
-        .json<unknown>()
 
-      const result = toApiResult<unknown>(res)
+    try {
+      const result = await api.postJson<PasswordResetSubmitResponse>(
+        API_PATHS.users.passwordResetSubmit,
+        payload,
+      )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -305,51 +343,14 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     error.value = null
 
-    if (!accessToken.value) {
-      await refresh()
+    try {
+      await authedApi.postJson(API_PATHS.users.logout, null, {
+        retryOnStatuses: [],
+      })
+    } finally {
+      clearAuth()
+      canRefresh.value = false
     }
-
-    if (!accessToken.value) {
-      error.value = 'Unable to refresh session for logout'
-      return
-    }
-
-    const tryLogout = async () => {
-      const res = await useApiFetch(
-        API_PATHS.users.logout,
-        withAuth(accessToken),
-      )
-        .post()
-        .json<unknown>()
-
-      return toApiResult<unknown>(res)
-    }
-
-    let result = await tryLogout()
-
-    if (!result.ok && result.status === 401) {
-      await refresh()
-      if (!accessToken.value) {
-        error.value = 'Unable to refresh session for logout'
-        return
-      }
-      result = await tryLogout()
-    }
-
-    if (!result.ok) {
-      error.value = result.error
-      return
-    }
-
-    const data = safeValidate(logoutResponseSchema, result.data)
-    if (!data) {
-      const message = 'Invalid server response'
-      error.value = message
-      return
-    }
-
-    clearAuth()
-    canRefresh.value = false
   }
 
   return {

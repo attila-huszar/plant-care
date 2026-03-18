@@ -4,37 +4,35 @@ import { defineStore } from 'pinia'
 import {
   createEventResponseSchema,
   listPlantsResponseSchema,
-  plantDtoSchema,
+  plantSchema,
   validate,
 } from '@plant-care/shared'
 import type {
   CreateEventRequest,
+  CreateEventResponse,
   CreatePlantRequest,
-  PlantDto,
+  ListPlantsResponse,
+  Plant,
   UpdatePlantRequest,
 } from '@plant-care/shared'
-import { useAuthStore } from '@/features/auth/stores'
-import { useApiFetch, useApiFetchAuthRetry, withAuth } from '@/composables'
+import { useAuthApi } from '@/composables'
 
 export const usePlantsStore = defineStore('plants', () => {
-  const plants = ref<PlantDto[]>([])
+  const plants = ref<Plant[]>([])
   const events = computed(() => {
     return plants.value.flatMap((p) => p.history)
   })
   const plantsReq = reactive({ loading: false, error: null as string | null })
   const eventsReq = reactive({ loading: false, error: null as string | null })
 
-  const authStore = useAuthStore()
-  const { fetchWithAuthRetry } = useApiFetchAuthRetry()
+  const api = useAuthApi()
 
   const getPlants = async () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const apiResult = await fetchWithAuthRetry<unknown>(() =>
-        useApiFetch(API_PATHS.plants.root, withAuth(authStore.accessToken))
-          .get()
-          .json<unknown>(),
+      const apiResult = await api.getJson<ListPlantsResponse>(
+        API_PATHS.plants.root,
       )
       if (!apiResult.ok) {
         if (apiResult.status === 401 || apiResult.status === 403) {
@@ -58,17 +56,13 @@ export const usePlantsStore = defineStore('plants', () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const apiResult = await fetchWithAuthRetry<unknown>(() =>
-        useApiFetch(API_PATHS.plants.root, withAuth(authStore.accessToken))
-          .post(plant, 'json')
-          .json<unknown>(),
-      )
+      const apiResult = await api.postJson<Plant>(API_PATHS.plants.root, plant)
       if (!apiResult.ok) {
         plantsReq.error = 'Failed to add plant'
         return null
       }
 
-      const data = validate(plantDtoSchema, apiResult.data)
+      const data = validate(plantSchema, apiResult.data)
       upsertPlant(data)
       return data
     } catch (e) {
@@ -86,20 +80,16 @@ export const usePlantsStore = defineStore('plants', () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const apiResult = await fetchWithAuthRetry<unknown>(() =>
-        useApiFetch(
-          API_PATHS.plants.byId(plantId),
-          withAuth(authStore.accessToken),
-        )
-          .put(patch, 'json')
-          .json<unknown>(),
+      const apiResult = await api.putJson<Plant>(
+        API_PATHS.plants.byId(plantId),
+        patch,
       )
       if (!apiResult.ok) {
         plantsReq.error = 'Failed to update plant'
         return null
       }
 
-      const data = validate(plantDtoSchema, apiResult.data)
+      const data = validate(plantSchema, apiResult.data)
       upsertPlant(data)
       return data
     } catch (e) {
@@ -115,11 +105,7 @@ export const usePlantsStore = defineStore('plants', () => {
     plantsReq.loading = true
     plantsReq.error = null
     try {
-      const apiResult = await fetchWithAuthRetry<unknown>(() =>
-        useApiFetch(API_PATHS.plants.byId(id), withAuth(authStore.accessToken))
-          .delete()
-          .text(),
-      )
+      const apiResult = await api.deleteText(API_PATHS.plants.byId(id))
       if (!apiResult.ok) {
         plantsReq.error = 'Failed to remove plant'
         return null
@@ -137,19 +123,15 @@ export const usePlantsStore = defineStore('plants', () => {
   }
 
   const addEvent = async (
-    event: CreateEventRequest & { plantId: PlantDto['id'] },
+    event: CreateEventRequest & { plantId: Plant['id'] },
   ) => {
     eventsReq.loading = true
     eventsReq.error = null
     try {
       const { plantId, ...body } = event
-      const apiResult = await fetchWithAuthRetry<unknown>(() =>
-        useApiFetch(
-          API_PATHS.plants.events(plantId),
-          withAuth(authStore.accessToken),
-        )
-          .post(body, 'json')
-          .json<unknown>(),
+      const apiResult = await api.postJson<CreateEventResponse>(
+        API_PATHS.plants.events(plantId),
+        body,
       )
       if (!apiResult.ok) {
         eventsReq.error = 'Failed to add event'
@@ -172,13 +154,8 @@ export const usePlantsStore = defineStore('plants', () => {
     eventsReq.loading = true
     eventsReq.error = null
     try {
-      const apiResult = await fetchWithAuthRetry<unknown>(() =>
-        useApiFetch(
-          API_PATHS.plants.eventById(plantId, eventId),
-          withAuth(authStore.accessToken),
-        )
-          .delete()
-          .text(),
+      const apiResult = await api.deleteText(
+        API_PATHS.plants.eventById(plantId, eventId),
       )
       if (!apiResult.ok) {
         eventsReq.error = 'Failed to remove event'
@@ -205,7 +182,7 @@ export const usePlantsStore = defineStore('plants', () => {
     }
   }
 
-  const upsertPlant = (plant: PlantDto) => {
+  const upsertPlant = (plant: Plant) => {
     const idx = plants.value.findIndex((p) => p.id === plant.id)
     const next = [...plants.value]
 

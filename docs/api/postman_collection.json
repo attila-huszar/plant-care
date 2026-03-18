@@ -206,6 +206,20 @@
         },
         {
           "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.unset('accessToken');"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",

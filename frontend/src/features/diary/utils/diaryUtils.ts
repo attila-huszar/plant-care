@@ -1,20 +1,10 @@
-import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
-import type {
-  CustomEventDto,
-  EventDto,
-  EventType,
-  PlantDto,
-} from '@plant-care/shared'
+import { DEFAULT_TASK_ICON, scheduleActionsMeta } from '@/constants'
+import { getBuiltinScheduleAction } from '@plant-care/shared'
+import type { CustomEvent, Event, Plant } from '@plant-care/shared'
 import type { UpcomingItem } from '@/types'
 import { MS_PER_DAY, startOfDayMs } from './dateFormat'
 
-const BUILTIN_ACTION_META_BY_ID = new Map(
-  PLANT_CARE_META.map((t) => [t.id, t] as const),
-)
-
-export const buildCustomEventsMap = (
-  customEvents: readonly CustomEventDto[],
-) => {
+export const buildCustomEventsMap = (customEvents: readonly CustomEvent[]) => {
   const map = new Map<string, string>()
   for (const t of customEvents) {
     map.set(t.id, t.name)
@@ -22,21 +12,24 @@ export const buildCustomEventsMap = (
   return map
 }
 
-export const getEventIcon = (typeId: EventType) => {
-  return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
+export const getEventIcon = (actionId: string) => {
+  return (
+    scheduleActionsMeta.find((a) => a.id === actionId)?.icon ??
+    DEFAULT_TASK_ICON
+  )
 }
 
 export const getEventLabel = (
-  typeId: EventType,
+  actionId: string,
   customNameById?: ReadonlyMap<string, string>,
 ) => {
-  const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
+  const builtinLabel = getBuiltinScheduleAction(actionId)?.label
   if (builtinLabel) return builtinLabel
 
-  return customNameById?.get(typeId) ?? typeId
+  return customNameById?.get(actionId) ?? actionId
 }
 
-const buildLatestEventsMap = (events: readonly EventDto[]) => {
+const buildLatestEventsMap = (events: readonly Event[]) => {
   const map = new Map<string, number>()
   for (const event of events) {
     const ms = new Date(event.date).getTime()
@@ -48,10 +41,10 @@ const buildLatestEventsMap = (events: readonly EventDto[]) => {
   return map
 }
 
-const buildLatestNotesMap = (events: readonly EventDto[]) => {
+const buildLatestNotesMap = (events: readonly Event[]) => {
   const map = new Map<string, string>()
 
-  const datedEvents: { event: EventDto; ms: number }[] = []
+  const datedEvents: { event: Event; ms: number }[] = []
   for (const event of events) {
     const ms = new Date(event.date).getTime()
     if (!Number.isFinite(ms)) continue
@@ -70,8 +63,8 @@ const buildLatestNotesMap = (events: readonly EventDto[]) => {
 }
 
 export const buildUpcomingCareItems = (
-  plants: readonly PlantDto[],
-  events: readonly EventDto[],
+  plants: readonly Plant[],
+  events: readonly Event[],
 ): UpcomingItem[] => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)

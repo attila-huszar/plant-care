@@ -262,7 +262,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LogoutResponse"
+                nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":
@@ -356,7 +356,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PlantDto"
+                $ref: "#/components/schemas/Plant"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -391,7 +391,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PlantDto"
+                $ref: "#/components/schemas/Plant"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -623,6 +623,8 @@ components:
         password:
           type: string
           minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*\\d).+$"
+          description: Must contain at least one letter and one number.
     LoginMfaPendingResponse:
       type: object
       additionalProperties: false
@@ -641,8 +643,11 @@ components:
       properties:
         accessToken:
           type: string
+          minLength: 1
         firstName:
           type: string
+          minLength: 1
+          maxLength: 100
     MfaVerifyRequest:
       type: object
       additionalProperties: false
@@ -655,6 +660,7 @@ components:
           type: string
           minLength: 6
           maxLength: 6
+          pattern: "^\\d{6}$"
 
     RegisterRequest:
       type: object
@@ -663,9 +669,11 @@ components:
       properties:
         firstName:
           type: string
+          minLength: 1
           maxLength: 100
         lastName:
           type: string
+          minLength: 1
           maxLength: 100
         email:
           type: string
@@ -673,6 +681,7 @@ components:
         password:
           type: string
           minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*\\d).+$"
           description: Must contain at least one letter and one number.
 
     RefreshResponse:
@@ -683,16 +692,9 @@ components:
         accessToken:
           type: string
           nullable: true
+          minLength: 1
 
-    LogoutResponse:
-      type: object
-      additionalProperties: false
-      required: [success]
-      properties:
-        success:
-          type: boolean
-
-    CustomEventDto:
+    CustomEvent:
       type: object
       additionalProperties: false
       required: [id, name]
@@ -725,7 +727,7 @@ components:
         customEvents:
           type: array
           items:
-            $ref: "#/components/schemas/CustomEventDto"
+            $ref: "#/components/schemas/CustomEvent"
 
     UserProfileUpdateRequest:
       type: object
@@ -733,9 +735,11 @@ components:
       properties:
         firstName:
           type: string
+          minLength: 1
           maxLength: 100
         lastName:
           type: string
+          minLength: 1
           maxLength: 100
         email:
           type: string
@@ -743,13 +747,14 @@ components:
         password:
           type: string
           minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*\\d).+$"
           description: Must contain at least one letter and one number.
         mfaEnabled:
           type: boolean
         customEvents:
           type: array
           items:
-            $ref: "#/components/schemas/CustomEventDto"
+            $ref: "#/components/schemas/CustomEvent"
 
     PasswordResetSubmitRequest:
       type: object
@@ -762,6 +767,7 @@ components:
         password:
           type: string
           minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*\\d).+$"
           description: Must contain at least one letter and one number.
 
     Schedule:
@@ -817,7 +823,7 @@ components:
           type: string
           maxLength: 1000
 
-    EventDto:
+    Event:
       type: object
       additionalProperties: false
       required: [id, plantId, type, date, notes]
@@ -839,7 +845,7 @@ components:
           type: string
           nullable: true
 
-    PlantDto:
+    Plant:
       type: object
       additionalProperties: false
       required: [id, name, schedules, history]
@@ -862,7 +868,7 @@ components:
         history:
           type: array
           items:
-            $ref: "#/components/schemas/EventDto"
+            $ref: "#/components/schemas/Event"
 
     ListPlantsResponse:
       type: object
@@ -872,7 +878,7 @@ components:
         plants:
           type: array
           items:
-            $ref: "#/components/schemas/PlantDto"
+            $ref: "#/components/schemas/Plant"
 
     CreatePlantRequest:
       type: object
@@ -932,6 +938,6 @@ components:
       required: [event, plant]
       properties:
         event:
-          $ref: "#/components/schemas/EventDto"
+          $ref: "#/components/schemas/Event"
         plant:
-          $ref: "#/components/schemas/PlantDto"
+          $ref: "#/components/schemas/Plant"

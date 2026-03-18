@@ -22,4 +22,5 @@
 
 - Do not write overly defensive code; handle realistic scenarios, not every hypothetical edge case.
 - Run linting and type checks after **meaningful/bigger changes**, not after every small edit.
+- DO NOT EVER UNDER ANY CIRCUMSTANCES STAGE CHANGES WITHOUT PERMISSION
   </INSTRUCTIONS>

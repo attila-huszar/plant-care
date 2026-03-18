@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
-  import { PLANT_CARE_META } from '@/constants'
+  import { scheduleActionsMeta } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -66,14 +66,14 @@
   const editingCustomEventId = ref<string | null>(null)
   const editingCustomEventName = ref('')
 
-  const reservedTypeIdsLower = new Set(
-    PLANT_CARE_META.map((t) => t.id.toLowerCase()),
+  const reservedActionIdsLower = new Set(
+    scheduleActionsMeta.map((a) => a.id.toLowerCase()),
   )
 
   const createReserved = computed(() => {
     const nextName = newCustomEventName.value.trim().toLowerCase()
     if (!nextName) return false
-    return reservedTypeIdsLower.has(nextName)
+    return reservedActionIdsLower.has(nextName)
   })
 
   const createDuplicate = computed(() => {
@@ -106,7 +106,7 @@
 
     const nextName = editingCustomEventName.value.trim().toLowerCase()
     if (!nextName) return false
-    return reservedTypeIdsLower.has(nextName)
+    return reservedActionIdsLower.has(nextName)
   })
 
   const renameInvalid = computed(

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { customEventDtoSchema } from './diarySchemas'
+import { customEventSchema } from './diarySchemas'
 
 const firstNameSchema = z
   .string('First name is required')
@@ -66,7 +66,7 @@ export const userProfileUpdateSchema = z
     email: emailSchema.shape.email.optional(),
     password: passwordSchema.shape.password.optional(),
     mfaEnabled: z.boolean().optional(),
-    customEvents: z.array(customEventDtoSchema).optional(),
+    customEvents: z.array(customEventSchema).optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, {
     message: 'At least one field is required',
@@ -128,10 +128,6 @@ export const refreshResponseSchema = z.strictObject({
   accessToken: z.string().min(1).nullable(),
 })
 
-export const logoutResponseSchema = z.strictObject({
-  success: z.literal(true),
-})
-
 export const registerResponseSchema = z.strictObject({
   email: emailSchema.shape.email,
 })
@@ -164,5 +160,5 @@ export const publicUserSchema = z.strictObject({
   lastName: z.string(),
   email: z.email(),
   mfaEnabled: z.boolean(),
-  customEvents: z.array(customEventDtoSchema),
+  customEvents: z.array(customEventSchema),
 })

@@ -5,6 +5,6 @@ import type {
   eventUpdateSchema,
 } from '@/schemas'
 
-export type Event = z.infer<typeof eventSelectSchema>
-export type EventInsert = z.infer<typeof eventInsertSchema>
-export type EventUpdate = z.infer<typeof eventUpdateSchema>
+export type EventRow = z.infer<typeof eventSelectSchema>
+export type EventInsertRow = z.infer<typeof eventInsertSchema>
+export type EventUpdateRow = z.infer<typeof eventUpdateSchema>

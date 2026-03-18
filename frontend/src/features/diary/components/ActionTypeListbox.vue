@@ -8,56 +8,48 @@
     ComboboxOption,
     ComboboxOptions,
   } from '@headlessui/vue'
-  import type { EventType } from '@plant-care/shared'
+  import type { ScheduleActionId } from '@plant-care/shared'
   import { ChevronIcon } from '@/assets/svg'
 
-  type Option = { id: EventType; label: string }
+  type ActionTypeOption = {
+    id: ScheduleActionId
+    label: string
+  }
 
   const props = defineProps<{
-    modelValue: EventType
-    options: { id: EventType; label: string }[]
+    modelValue: ScheduleActionId
+    options: ActionTypeOption[]
     label?: string
   }>()
 
   const emit = defineEmits<{
-    'update:modelValue': [value: EventType]
+    'update:modelValue': [ScheduleActionId]
   }>()
 
   const query = ref('')
 
-  const normalizedOptions = computed<Option[]>(() => {
-    return props.options.map((o) => ({ id: o.id, label: o.label }))
+  const selected = computed<ActionTypeOption | null>(
+    () => props.options.find((o) => o.id === props.modelValue) ?? null,
+  )
+
+  const filtered = computed<ActionTypeOption[]>(() => {
+    const q = query.value.trim().toLowerCase()
+    return q
+      ? props.options.filter((o) => o.label.toLowerCase().includes(q))
+      : props.options
   })
 
-  const selectedOption = computed<Option | null>(() => {
-    const match = normalizedOptions.value.find((o) => o.id === props.modelValue)
-    if (match) return match
-    return {
-      id: props.modelValue,
-      label: String(props.modelValue),
-    }
-  })
-
-  const queryTrimmed = computed(() => query.value.trim())
-
-  const filteredOptions = computed<Option[]>(() => {
-    const q = queryTrimmed.value.toLowerCase()
-    if (!q) return normalizedOptions.value
-    return normalizedOptions.value.filter((opt) =>
-      opt.label.toLowerCase().includes(q),
-    )
-  })
-
-  const compareOptions = (a: Option, b: Option) => a.id === b.id
-
-  const handleInput = (event: Event) => {
-    const value = (event.target as HTMLInputElement).value
-    query.value = value
-    emit('update:modelValue', value)
+  const update = (opt: ActionTypeOption | null) => {
+    if (!opt) return
+    emit('update:modelValue', opt.id)
+    query.value = ''
   }
 
-  const handleSelect = (value: Option) => {
-    emit('update:modelValue', value.id)
+  const onInput = (event: Event) => {
+    query.value = (event.target as HTMLInputElement | null)?.value ?? ''
+  }
+
+  const onBlur = () => {
     query.value = ''
   }
 
@@ -65,6 +57,7 @@
     if (isOpen) return
     const input = event.currentTarget as HTMLInputElement | null
     if (!input) return
+
     input.dispatchEvent(
       new KeyboardEvent('keydown', {
         key: 'ArrowDown',
@@ -72,80 +65,72 @@
       }),
     )
   }
+
+  const displayValue = (o: unknown): string =>
+    (o as ActionTypeOption | null)?.label ?? ''
 </script>
 
 <template>
   <Combobox
-    as="div"
-    class="relative"
-    :by="compareOptions"
-    :model-value="selectedOption"
-    @update:model-value="handleSelect"
+    :model-value="selected"
+    @update:model-value="update"
     v-slot="{ open }"
   >
-    <ComboboxLabel
-      v-if="label"
-      class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-    >
-      {{ label }}
-    </ComboboxLabel>
-
     <div class="relative">
-      <ComboboxInput
-        as="template"
-        :display-value="(opt) => (opt as Option | null)?.label ?? ''"
+      <ComboboxLabel
+        v-if="label"
+        class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
       >
-        <input
-          class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
-          placeholder="Type to search…"
-          @input="handleInput"
-          @click="openOnInputClick(open, $event)"
-        />
-      </ComboboxInput>
+        {{ label }}
+      </ComboboxLabel>
 
-      <ComboboxButton as="template">
-        <button
-          type="button"
+      <div class="relative">
+        <ComboboxInput as="template" :display-value="displayValue">
+          <input
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-sm text-slate-800 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+            @input="onInput"
+            @click="openOnInputClick(open, $event)"
+            @blur="onBlur"
+          />
+        </ComboboxInput>
+
+        <ComboboxButton
           class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
-          tabindex="-1"
         >
-          <ChevronIcon class="size-4" aria-hidden="true" />
-        </button>
-      </ComboboxButton>
-    </div>
+          <ChevronIcon class="size-4" />
+        </ComboboxButton>
+      </div>
 
-    <ComboboxOptions
-      v-if="filteredOptions.length > 0"
-      as="ul"
-      class="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg focus:outline-none dark:border-slate-800 dark:bg-slate-900"
-    >
-      <ComboboxOption
-        v-for="opt in filteredOptions"
-        :key="String(opt.id)"
-        :value="opt"
-        as="template"
-        v-slot="{ active, selected }"
+      <ComboboxOptions
+        v-if="filtered.length"
+        class="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg dark:border-slate-800 dark:bg-slate-900"
       >
-        <li
-          class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2"
-          :class="
-            active
-              ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
-              : 'text-slate-700 dark:text-slate-200'
-          "
+        <ComboboxOption
+          as="template"
+          v-for="opt in filtered"
+          :key="opt.id"
+          :value="opt"
+          v-slot="{ active, selected }"
         >
-          <div class="min-w-0">
+          <li
+            class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2"
+            :class="
+              active
+                ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                : 'text-slate-700 dark:text-slate-200'
+            "
+          >
             <span
               class="truncate"
               :class="selected ? 'font-semibold' : 'font-medium'"
             >
               {{ opt.label }}
             </span>
-          </div>
 
-          <span v-if="selected" class="text-emerald-600">✓</span>
-        </li>
-      </ComboboxOption>
-    </ComboboxOptions>
+            <span v-if="selected" class="text-emerald-600">✓</span>
+          </li>
+        </ComboboxOption>
+      </ComboboxOptions>
+    </div>
   </Combobox>
 </template>

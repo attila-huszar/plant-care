@@ -27,7 +27,7 @@ import {
   NotFound,
   Unauthorized,
 } from '@/errors'
-import type { UserInsert, UserUpdate } from '@/types'
+import type { UserInsertRow, UserUpdateRow } from '@/types'
 
 export async function loginUser(loginRequest: LoginRequest) {
   const { email, password } = loginRequest
@@ -150,7 +150,7 @@ export async function registerUser(registerRequest: RegisterRequest) {
   const verificationExpires = new Date(Date.now() + 86400000)
   const tokenLink = `${env.clientBaseUrl}/verification?token=${verificationToken}`
 
-  const newUser: UserInsert = {
+  const newUser: UserInsertRow = {
     uuid: crypto.randomUUID(),
     firstName,
     lastName,
@@ -335,7 +335,7 @@ export async function updateUserProfile(
     throw new NotFound(userMessage.notFound)
   }
 
-  const updateFields: UserUpdate = { ...updatePayload }
+  const updateFields: UserUpdateRow = { ...updatePayload }
 
   if (updateFields.password) {
     updateFields.password = await Bun.password.hash(updateFields.password)
