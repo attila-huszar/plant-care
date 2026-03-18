@@ -6,7 +6,6 @@ import type {
   loginResponseSchema,
   loginSchema,
   loginSuccessResponseSchema,
-  logoutResponseSchema,
   mfaCodeSchema,
   mfaVerifyResponseSchema,
   passwordResetFormSchema,
@@ -50,7 +49,6 @@ export type LoginSuccessResponse = z.infer<typeof loginSuccessResponseSchema>
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type MfaVerifyResponse = z.infer<typeof mfaVerifyResponseSchema>
 export type RefreshResponse = z.infer<typeof refreshResponseSchema>
-export type LogoutResponse = z.infer<typeof logoutResponseSchema>
 export type RegisterResponse = z.infer<typeof registerResponseSchema>
 export type VerificationResponse = z.infer<typeof verificationResponseSchema>
 export type PasswordResetRequestResponse = z.infer<
