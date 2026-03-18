@@ -20,10 +20,10 @@
   }
 
   type SchedulesEditorProps = {
-    ruleRows: DraftScheduleRow[]
+    scheduleRows: DraftScheduleRow[]
     typeOptions: { id: EventType; label: string }[]
-    addRuleRow: () => void
-    removeRuleRow(_key: string): void
+    addScheduleRow: () => void
+    removeScheduleRow(_key: string): void
     setRowKind(_row: DraftScheduleRow, _kind: DraftScheduleRow['kind']): void
   }
 
@@ -33,7 +33,7 @@
 <template>
   <div class="space-y-3">
     <div
-      v-if="ruleRows.length === 0"
+      v-if="scheduleRows.length === 0"
       class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
     >
       <p class="text-sm text-slate-600 dark:text-slate-300">
@@ -43,7 +43,7 @@
 
     <div v-else class="space-y-3">
       <div
-        v-for="row in ruleRows"
+        v-for="row in scheduleRows"
         :key="row.key"
         class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
       >
@@ -120,7 +120,7 @@
           <button
             type="button"
             class="inline-flex size-9.5 shrink-0 items-center justify-center self-end rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:order-3 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
-            @click="removeRuleRow(row.key)"
+            @click="removeScheduleRow(row.key)"
             aria-label="Remove action"
             title="Remove"
           >
@@ -193,7 +193,7 @@
 
     <button
       type="button"
-      @click="addRuleRow"
+      @click="addScheduleRow"
       class="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
     >
       <span aria-hidden="true">+</span>

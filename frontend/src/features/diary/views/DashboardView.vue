@@ -90,7 +90,7 @@
     class="flex min-h-screen flex-1 flex-col bg-slate-50/50 dark:bg-slate-950"
   >
     <DashboardHeader
-      v-model:isDark="isDark"
+      v-model:is-dark="isDark"
       :user-label="userLabel"
       @settings="openSettings"
       @logout="handleLogout"
@@ -103,7 +103,7 @@
         <PlantList
           :plants="plantsStore.plants"
           :events="plantsStore.events"
-          :customEvents="userStore.customEvents"
+          :custom-events="userStore.customEvents"
           @add-plant="openAddPlantModal"
           @edit-plant="openEditPlantModal"
           @remove-plant="removePlant"
@@ -113,7 +113,7 @@
         <EventTimeline
           :plants="plantsStore.plants"
           :events="plantsStore.events"
-          :customEvents="userStore.customEvents"
+          :custom-events="userStore.customEvents"
           :show-history-card="showHistoryCard"
           @care="handleCare"
         />

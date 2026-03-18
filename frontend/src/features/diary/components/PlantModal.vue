@@ -112,7 +112,7 @@
     notes: string
   }
 
-  const ruleRows = ref<DraftScheduleRow[]>([])
+  const scheduleRows = ref<DraftScheduleRow[]>([])
 
   const toDays = (value: string) => {
     const parsed = Number.parseInt(value, 10)
@@ -122,18 +122,21 @@
 
   const initializeRows = () => {
     if (!plant.value) {
-      ruleRows.value = []
+      scheduleRows.value = []
       return
     }
 
-    ruleRows.value = plant.value.schedules.map((t) => ({
+    scheduleRows.value = plant.value.schedules.map((schedule) => ({
       key: crypto.randomUUID(),
-      id: t.id,
-      kind: t.kind,
-      type: t.type,
-      days: t.kind === 'recurring' ? String(t.days) : '7',
-      date: t.kind === 'date' ? toDateInputValue(new Date(t.date)) : '',
-      notes: t.notes ?? latestNotesByType.value.get(t.type) ?? '',
+      id: schedule.id,
+      kind: schedule.kind,
+      type: schedule.type,
+      days: schedule.kind === 'recurring' ? String(schedule.days) : '7',
+      date:
+        schedule.kind === 'date'
+          ? toDateInputValue(new Date(schedule.date))
+          : '',
+      notes: schedule.notes ?? latestNotesByType.value.get(schedule.type) ?? '',
     }))
   }
 
@@ -203,8 +206,8 @@
     plantNameInput.value?.select()
   }
 
-  const addRuleRow = () => {
-    ruleRows.value.push({
+  const addScheduleRow = () => {
+    scheduleRows.value.push({
       key: crypto.randomUUID(),
       id: crypto.randomUUID(),
       kind: 'recurring',
@@ -215,8 +218,8 @@
     })
   }
 
-  const removeRuleRow = (key: string) => {
-    ruleRows.value = ruleRows.value.filter((r) => r.key !== key)
+  const removeScheduleRow = (key: string) => {
+    scheduleRows.value = scheduleRows.value.filter((r) => r.key !== key)
   }
 
   const ensureDateDefault = (row: DraftScheduleRow) => {
@@ -234,13 +237,13 @@
   }
 
   const save = async () => {
-    ruleRows.value = ruleRows.value.map((row) => ({
+    scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       type: row.type.trim(),
     }))
 
     const usedTypes = [
-      ...new Set(ruleRows.value.map((row) => row.type).filter(Boolean)),
+      ...new Set(scheduleRows.value.map((row) => row.type).filter(Boolean)),
     ]
 
     const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
@@ -270,14 +273,14 @@
       resolvedTypeByInput.set(inputType, result.data.id)
     }
 
-    ruleRows.value = ruleRows.value.map((row) => ({
+    scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       type: resolvedTypeByInput.get(row.type) ?? row.type,
     }))
 
     const lastCadenceIndexByType = new Map<string, number>()
-    for (let i = 0; i < ruleRows.value.length; i += 1) {
-      const row = ruleRows.value[i]
+    for (let i = 0; i < scheduleRows.value.length; i += 1) {
+      const row = scheduleRows.value[i]
       if (row.kind !== 'recurring') continue
       if (!row.type) continue
       lastCadenceIndexByType.set(row.type, i)
@@ -285,8 +288,8 @@
 
     const schedules: Schedule[] = []
 
-    for (let i = 0; i < ruleRows.value.length; i += 1) {
-      const row = ruleRows.value[i]
+    for (let i = 0; i < scheduleRows.value.length; i += 1) {
+      const row = scheduleRows.value[i]
       if (!row.type) continue
       const notes = row.notes.trim()
 
@@ -483,10 +486,10 @@
                   </div>
 
                   <SchedulesEditor
-                    :rule-rows="ruleRows"
+                    :schedule-rows="scheduleRows"
                     :type-options="typeOptions"
-                    :add-rule-row="addRuleRow"
-                    :remove-rule-row="removeRuleRow"
+                    :add-schedule-row="addScheduleRow"
+                    :remove-schedule-row="removeScheduleRow"
                     :set-row-kind="setRowKind"
                   />
 
@@ -527,7 +530,7 @@
                             : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                         "
                       >
-                        Care rules
+                        Schedules
                       </button>
                     </Tab>
 
@@ -550,10 +553,10 @@
                     <TabPanel class="focus:outline-none">
                       <form @submit.prevent="save" class="space-y-5">
                         <SchedulesEditor
-                          :rule-rows="ruleRows"
+                          :schedule-rows="scheduleRows"
                           :type-options="typeOptions"
-                          :add-rule-row="addRuleRow"
-                          :remove-rule-row="removeRuleRow"
+                          :add-schedule-row="addScheduleRow"
+                          :remove-schedule-row="removeScheduleRow"
                           :set-row-kind="setRowKind"
                         />
 
