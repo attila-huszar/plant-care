@@ -66,7 +66,7 @@
   }
 
   onMounted(() => {
-    void Promise.all([plantsStore.loadPlants(), userStore.bootstrap()])
+    void Promise.all([plantsStore.getPlants(), userStore.bootstrap()])
   })
 
   const handleCare = async (payload: CareTimelinePayload) => {
@@ -80,7 +80,7 @@
     if (!event) return
 
     if (payload.kind === 'date') {
-      await plantsStore.removeCareRuleItem(payload.plantId, payload.careRuleId)
+      await plantsStore.removeSchedule(payload.plantId, payload.scheduleId)
     }
   }
 </script>
@@ -90,7 +90,7 @@
     class="flex min-h-screen flex-1 flex-col bg-slate-50/50 dark:bg-slate-950"
   >
     <DashboardHeader
-      v-model:isDark="isDark"
+      v-model:is-dark="isDark"
       :user-label="userLabel"
       @settings="openSettings"
       @logout="handleLogout"
@@ -103,7 +103,7 @@
         <PlantList
           :plants="plantsStore.plants"
           :events="plantsStore.events"
-          :customEvents="userStore.customEvents"
+          :custom-events="userStore.customEvents"
           @add-plant="openAddPlantModal"
           @edit-plant="openEditPlantModal"
           @remove-plant="removePlant"
@@ -113,7 +113,7 @@
         <EventTimeline
           :plants="plantsStore.plants"
           :events="plantsStore.events"
-          :customEvents="userStore.customEvents"
+          :custom-events="userStore.customEvents"
           :show-history-card="showHistoryCard"
           @care="handleCare"
         />

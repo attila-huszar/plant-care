@@ -1,266 +1,363 @@
 import { computed, ref } from 'vue'
 import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
+import {
+  loginResponseSchema,
+  logoutResponseSchema,
+  mfaVerifyResponseSchema,
+  passwordResetRequestResponseSchema,
+  passwordResetSubmitResponseSchema,
+  passwordResetTokenResponseSchema,
+  refreshResponseSchema,
+  registerResponseSchema,
+  safeValidate,
+  verificationResponseSchema,
+} from '@plant-care/shared'
 import type {
   LoginRequest,
+  LoginResponse,
   MfaVerifyRequest,
+  MfaVerifyResponse,
   PasswordResetRequest,
+  PasswordResetRequestResponse,
   PasswordResetSubmit,
+  PasswordResetSubmitResponse,
   PasswordResetToken,
+  PasswordResetTokenResponse,
   RegisterRequest,
+  RegisterResponse,
   VerificationRequest,
+  VerificationResponse,
 } from '@plant-care/shared'
+import type { ApiResult } from '@plant-care/shared'
 import { useApiFetch, withAuth } from '@/composables'
-import { type ApiResult, toResult } from '@/utils'
+import { toApiResult } from '@/utils'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
-  const bootstrapped = ref(false)
+  const canRefresh = ref(true)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => accessToken.value !== null)
-
-  let bootstrapPromise: Promise<void> | null = null
 
   const clearAuth = () => {
     accessToken.value = null
     error.value = null
   }
 
-  // Uses shared result helpers from `@/lib/apiResult`.
-
   const refresh = async (): Promise<string | null> => {
-    const res = await useApiFetch(API_PATHS.users.refresh)
-      .post()
-      .json<{ accessToken: string | null }>()
+    if (!canRefresh.value) return null
 
-    const result = toResult<{ accessToken: string | null }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
+    try {
+      const res = await useApiFetch(API_PATHS.users.refresh)
+        .post()
+        .json<unknown>()
 
-    if (!result.ok) {
-      clearAuth()
+      const result = toApiResult<unknown>(res)
+
+      if (!result.ok) {
+        if (result.status === 401 || result.status === 403) {
+          canRefresh.value = false
+          clearAuth()
+        }
+        return null
+      }
+
+      const data = safeValidate(refreshResponseSchema, result.data)
+      if (!data) return null
+
+      if (!data.accessToken) {
+        canRefresh.value = false
+        clearAuth()
+        return null
+      }
+
+      canRefresh.value = true
+      accessToken.value = data.accessToken
+
+      return accessToken.value
+    } catch {
       return null
     }
-
-    accessToken.value = result.data.accessToken
-
-    return accessToken.value
-  }
-
-  const bootstrap = async () => {
-    if (bootstrapped.value) return
-    if (bootstrapPromise) return bootstrapPromise
-
-    bootstrapPromise = (async () => {
-      const token = await refresh()
-      if (!token) {
-        bootstrapped.value = true
-        return
-      }
-      bootstrapped.value = true
-    })().finally(() => {
-      bootstrapPromise = null
-    })
-
-    return bootstrapPromise
   }
 
   const login = async (
     payload: LoginRequest,
-  ): Promise<
-    ApiResult<
-      | { mfaPending: true; email: string }
-      | { accessToken: string; firstName: string }
-    >
-  > => {
+  ): Promise<ApiResult<LoginResponse>> => {
     isLoading.value = true
     error.value = null
-    const res = await useApiFetch(API_PATHS.users.login)
-      .post(payload, 'json')
-      .json<
-        | { mfaPending: true; email: string }
-        | { accessToken: string; firstName: string }
-      >()
+    try {
+      const res = await useApiFetch(API_PATHS.users.login)
+        .post(payload, 'json')
+        .json<unknown>()
 
-    const result = toResult<
-      | { mfaPending: true; email: string }
-      | { accessToken: string; firstName: string }
-    >({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
+      const result = toApiResult<unknown>(res)
 
-    if (!result.ok) {
-      error.value = result.error
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(loginResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      if ('accessToken' in data) {
+        accessToken.value = data.accessToken
+        canRefresh.value = true
+      } else {
+        accessToken.value = null
+        canRefresh.value = false
+      }
+
+      return { ok: true, data }
+    } finally {
       isLoading.value = false
-      return result
     }
-
-    if ('accessToken' in result.data) {
-      accessToken.value = result.data.accessToken
-    }
-    isLoading.value = false
-    return result
   }
 
   const mfaVerify = async (
     payload: MfaVerifyRequest,
-  ): Promise<ApiResult<{ accessToken: string; firstName: string }>> => {
+  ): Promise<ApiResult<MfaVerifyResponse>> => {
     isLoading.value = true
     error.value = null
+    try {
+      const res = await useApiFetch(API_PATHS.users.mfaVerify)
+        .post(payload, 'json')
+        .json<unknown>()
 
-    const res = await useApiFetch(API_PATHS.users.mfaVerify)
-      .post(payload, 'json')
-      .json<{ accessToken: string; firstName: string }>()
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
 
-    const result = toResult<{ accessToken: string; firstName: string }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
+      const data = safeValidate(mfaVerifyResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
 
-    if (!result.ok) {
-      error.value = result.error
+      accessToken.value = data.accessToken
+      canRefresh.value = true
+      return { ok: true, data }
+    } finally {
       isLoading.value = false
-      return result
     }
-
-    accessToken.value = result.data.accessToken
-    isLoading.value = false
-    return result
   }
 
   const register = async (
     payload: RegisterRequest,
-  ): Promise<ApiResult<{ email: string }>> => {
-    isLoading.value = true
-    error.value = null
+  ): Promise<ApiResult<RegisterResponse>> => {
     const formData = new FormData()
     formData.set('firstName', payload.firstName)
     formData.set('lastName', payload.lastName)
     formData.set('email', payload.email)
     formData.set('password', payload.password)
 
-    const res = await useApiFetch(API_PATHS.users.register)
-      .post(formData)
-      .json<{
-        email: string
-      }>()
+    isLoading.value = true
+    error.value = null
+    try {
+      const res = await useApiFetch(API_PATHS.users.register)
+        .post(formData)
+        .json<unknown>()
 
-    const result = toResult<{ email: string }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-    if (!result.ok) error.value = result.error
-    isLoading.value = false
-    return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(registerResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const verifyEmail = async (
     payload: VerificationRequest,
-  ): Promise<ApiResult<{ email: string }>> => {
+  ): Promise<ApiResult<VerificationResponse>> => {
     isLoading.value = true
     error.value = null
-    const res = await useApiFetch(API_PATHS.users.verification)
-      .post(payload, 'json')
-      .json<{ email: string }>()
+    try {
+      const res = await useApiFetch(API_PATHS.users.verification)
+        .post(payload, 'json')
+        .json<unknown>()
 
-    const result = toResult<{ email: string }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-    if (!result.ok) error.value = result.error
-    isLoading.value = false
-    return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(verificationResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const requestPasswordReset = async (
     payload: PasswordResetRequest,
-  ): Promise<ApiResult<{ message: string }>> => {
+  ): Promise<ApiResult<PasswordResetRequestResponse>> => {
     isLoading.value = true
     error.value = null
-    const res = await useApiFetch(API_PATHS.users.passwordResetRequest)
-      .post(payload, 'json')
-      .json<{ message: string }>()
+    try {
+      const res = await useApiFetch(API_PATHS.users.passwordResetRequest)
+        .post(payload, 'json')
+        .json<unknown>()
 
-    const result = toResult<{ message: string }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-    if (!result.ok) error.value = result.error
-    isLoading.value = false
-    return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(passwordResetRequestResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const validatePasswordResetToken = async (
     payload: PasswordResetToken,
-  ): Promise<ApiResult<{ token: string }>> => {
+  ): Promise<ApiResult<PasswordResetTokenResponse>> => {
     isLoading.value = true
     error.value = null
-    const res = await useApiFetch(API_PATHS.users.passwordResetToken)
-      .post(payload, 'json')
-      .json<{ token: string }>()
+    try {
+      const res = await useApiFetch(API_PATHS.users.passwordResetToken)
+        .post(payload, 'json')
+        .json<unknown>()
 
-    const result = toResult<{ token: string }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-    if (!result.ok) error.value = result.error
-    isLoading.value = false
-    return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(passwordResetTokenResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const submitPasswordReset = async (
     payload: PasswordResetSubmit,
-  ): Promise<ApiResult<{ message: string }>> => {
+  ): Promise<ApiResult<PasswordResetSubmitResponse>> => {
     isLoading.value = true
     error.value = null
-    const res = await useApiFetch(API_PATHS.users.passwordResetSubmit)
-      .post(payload, 'json')
-      .json<{ message: string }>()
+    try {
+      const res = await useApiFetch(API_PATHS.users.passwordResetSubmit)
+        .post(payload, 'json')
+        .json<unknown>()
 
-    const result = toResult<{ message: string }>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-    if (!result.ok) error.value = result.error
-    isLoading.value = false
-    return result
+      const result = toApiResult<unknown>(res)
+      if (!result.ok) {
+        error.value = result.error
+        return result
+      }
+
+      const data = safeValidate(passwordResetSubmitResponseSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: null, error: message }
+      }
+
+      return { ok: true, data }
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const logout = async () => {
+    error.value = null
+
     if (!accessToken.value) {
       await refresh()
     }
 
-    if (accessToken.value) {
-      await useApiFetch(API_PATHS.users.logout, withAuth(accessToken))
+    if (!accessToken.value) {
+      error.value = 'Unable to refresh session for logout'
+      return
+    }
+
+    const tryLogout = async () => {
+      const res = await useApiFetch(
+        API_PATHS.users.logout,
+        withAuth(accessToken),
+      )
         .post()
-        .json()
+        .json<unknown>()
+
+      return toApiResult<unknown>(res)
+    }
+
+    let result = await tryLogout()
+
+    if (!result.ok && result.status === 401) {
+      await refresh()
+      if (!accessToken.value) {
+        error.value = 'Unable to refresh session for logout'
+        return
+      }
+      result = await tryLogout()
+    }
+
+    if (!result.ok) {
+      error.value = result.error
+      return
+    }
+
+    const data = safeValidate(logoutResponseSchema, result.data)
+    if (!data) {
+      const message = 'Invalid server response'
+      error.value = message
+      return
     }
 
     clearAuth()
-    bootstrapped.value = true
+    canRefresh.value = false
   }
 
   return {
     accessToken,
-    bootstrapped,
     isAuthenticated,
     isLoading,
     error,
     refresh,
-    bootstrap,
     login,
     mfaVerify,
     register,

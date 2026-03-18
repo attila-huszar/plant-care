@@ -263,7 +263,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Monstera\",\n  \"careRules\": [\n    {\n      \"kind\": \"recurring\",\n      \"id\": \"00000000-0000-0000-0000-000000000000\",\n      \"type\": \"Water\",\n      \"days\": 7,\n      \"notes\": \"Weekly\"\n    }\n  ],\n  \"imageUrl\": null\n}"
+              "raw": "{\n  \"name\": \"Monstera\",\n  \"schedules\": [\n    {\n      \"kind\": \"recurring\",\n      \"id\": \"00000000-0000-0000-0000-000000000000\",\n      \"type\": \"Water\",\n      \"days\": 7,\n      \"notes\": \"Weekly\"\n    }\n  ],\n  \"imageUrl\": null\n}"
             },
             "url": "{{baseUrl}}/api/plants"
           }

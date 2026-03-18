@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 type SplitFullNameResult = {
   firstName: string | null
   lastName: string | null
@@ -18,4 +20,8 @@ export const splitFullName = (fullName: string): SplitFullNameResult => {
   const lastName = parts.length > 1 ? parts.slice(1).join(' ') : null
 
   return { firstName, lastName }
+}
+
+export const shortHash = (value: string) => {
+  return createHash('sha256').update(value).digest('hex').slice(0, 12)
 }

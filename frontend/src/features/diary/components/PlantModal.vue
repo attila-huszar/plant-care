@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, nextTick, ref, watch } from 'vue'
-  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
+  import { PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -13,12 +13,18 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type { CareRule, EventDto, EventType } from '@plant-care/shared'
+  import type { EventDto, EventType, Schedule } from '@plant-care/shared'
   import { useUserStore } from '@/features/auth/stores'
+  import {
+    buildCustomEventsMap,
+    formatRelativeDay,
+    getEventIcon,
+    getEventLabel,
+  } from '@/features/diary/utils'
   import { toDateInputValue, toIsoFromDateInput } from '@/utils'
   import { EditIcon } from '@/assets/svg'
   import { usePlantsStore } from '../stores'
-  import CareRulesEditor from './CareRulesEditor.vue'
+  import SchedulesEditor from './SchedulesEditor.vue'
 
   const props = defineProps<{
     isOpen: boolean
@@ -50,10 +56,6 @@
 
   const builtinTypeIds = new Set(PLANT_CARE_META.map((t) => t.id))
 
-  const BUILTIN_ACTION_META_BY_ID = new Map(
-    PLANT_CARE_META.map((t) => [t.id, t]),
-  )
-
   const typeOptions = computed(() => {
     const options: { id: EventType; label: string }[] = []
 
@@ -65,10 +67,12 @@
       options.push({ id: t.id, label: t.name })
     }
 
-    for (const rule of plant.value?.careRules ?? []) {
-      const exists = options.some((o) => o.id === rule.type)
-      if (!exists) {
-        options.push({ id: rule.type, label: rule.type })
+    if (plant.value) {
+      for (const schedule of plant.value.schedules) {
+        const exists = options.some((o) => o.id === schedule.type)
+        if (!exists) {
+          options.push({ id: schedule.type, label: schedule.type })
+        }
       }
     }
 
@@ -76,26 +80,12 @@
   })
 
   const customTypeNameById = computed(() => {
-    const map = new Map<string, string>()
-    for (const t of userStore.customEvents) {
-      map.set(t.id, t.name)
-    }
-    return map
+    return buildCustomEventsMap(userStore.customEvents)
   })
-
-  const getTypeIcon = (typeId: EventType) => {
-    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
-  }
-
-  const getTypeLabel = (typeId: EventType) => {
-    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
-    if (builtinLabel) return builtinLabel
-    return customTypeNameById.value.get(typeId) ?? typeId
-  }
 
   const sortedHistory = computed<EventDto[]>(() => {
     if (!plant.value) return []
-    return [...(plant.value.history ?? [])].sort(
+    return [...plant.value.history].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     )
   })
@@ -112,17 +102,7 @@
     return map
   })
 
-  const DAY_MS = 1000 * 60 * 60 * 24
-  const formatRelativeDay = (isoString: string) => {
-    const date = new Date(isoString)
-    if (!Number.isFinite(date.getTime())) return ''
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.round((date.getTime() - Date.now()) / DAY_MS),
-      'day',
-    )
-  }
-
-  type DraftCareRuleRow = {
+  type DraftScheduleRow = {
     key: string
     id: string
     kind: 'recurring' | 'date'
@@ -132,7 +112,7 @@
     notes: string
   }
 
-  const ruleRows = ref<DraftCareRuleRow[]>([])
+  const scheduleRows = ref<DraftScheduleRow[]>([])
 
   const toDays = (value: string) => {
     const parsed = Number.parseInt(value, 10)
@@ -142,18 +122,21 @@
 
   const initializeRows = () => {
     if (!plant.value) {
-      ruleRows.value = []
+      scheduleRows.value = []
       return
     }
 
-    ruleRows.value = (plant.value.careRules ?? []).map((r) => ({
+    scheduleRows.value = plant.value.schedules.map((schedule) => ({
       key: crypto.randomUUID(),
-      id: r.id,
-      kind: r.kind,
-      type: r.type,
-      days: r.kind === 'recurring' ? String(r.days) : '7',
-      date: r.kind === 'date' ? toDateInputValue(new Date(r.date)) : '',
-      notes: r.notes ?? latestNotesByType.value.get(r.type) ?? '',
+      id: schedule.id,
+      kind: schedule.kind,
+      type: schedule.type,
+      days: schedule.kind === 'recurring' ? String(schedule.days) : '7',
+      date:
+        schedule.kind === 'date'
+          ? toDateInputValue(new Date(schedule.date))
+          : '',
+      notes: schedule.notes ?? latestNotesByType.value.get(schedule.type) ?? '',
     }))
   }
 
@@ -223,8 +206,8 @@
     plantNameInput.value?.select()
   }
 
-  const addRuleRow = () => {
-    ruleRows.value.push({
+  const addScheduleRow = () => {
+    scheduleRows.value.push({
       key: crypto.randomUUID(),
       id: crypto.randomUUID(),
       kind: 'recurring',
@@ -235,32 +218,32 @@
     })
   }
 
-  const removeRuleRow = (key: string) => {
-    ruleRows.value = ruleRows.value.filter((r) => r.key !== key)
+  const removeScheduleRow = (key: string) => {
+    scheduleRows.value = scheduleRows.value.filter((r) => r.key !== key)
   }
 
-  const ensureDateDefault = (row: DraftCareRuleRow) => {
+  const ensureDateDefault = (row: DraftScheduleRow) => {
     if (row.kind !== 'date') return
     if (row.date) return
     row.date = toDateInputValue(new Date())
   }
 
   const setRowKind = (
-    row: DraftCareRuleRow,
-    kind: DraftCareRuleRow['kind'],
+    row: DraftScheduleRow,
+    kind: DraftScheduleRow['kind'],
   ) => {
     row.kind = kind
     ensureDateDefault(row)
   }
 
   const save = async () => {
-    ruleRows.value = ruleRows.value.map((row) => ({
+    scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       type: row.type.trim(),
     }))
 
     const usedTypes = [
-      ...new Set(ruleRows.value.map((row) => row.type).filter(Boolean)),
+      ...new Set(scheduleRows.value.map((row) => row.type).filter(Boolean)),
     ]
 
     const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
@@ -290,23 +273,23 @@
       resolvedTypeByInput.set(inputType, result.data.id)
     }
 
-    ruleRows.value = ruleRows.value.map((row) => ({
+    scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       type: resolvedTypeByInput.get(row.type) ?? row.type,
     }))
 
     const lastCadenceIndexByType = new Map<string, number>()
-    for (let i = 0; i < ruleRows.value.length; i += 1) {
-      const row = ruleRows.value[i]
+    for (let i = 0; i < scheduleRows.value.length; i += 1) {
+      const row = scheduleRows.value[i]
       if (row.kind !== 'recurring') continue
       if (!row.type) continue
       lastCadenceIndexByType.set(row.type, i)
     }
 
-    const careRules: CareRule[] = []
+    const schedules: Schedule[] = []
 
-    for (let i = 0; i < ruleRows.value.length; i += 1) {
-      const row = ruleRows.value[i]
+    for (let i = 0; i < scheduleRows.value.length; i += 1) {
+      const row = scheduleRows.value[i]
       if (!row.type) continue
       const notes = row.notes.trim()
 
@@ -317,7 +300,7 @@
         const days = toDays(row.days)
         if (!days) continue
 
-        careRules.push({
+        schedules.push({
           kind: 'recurring',
           id: row.id,
           type: row.type,
@@ -330,7 +313,7 @@
       const iso = toIsoFromDateInput(row.date)
       if (!iso) continue
 
-      careRules.push({
+      schedules.push({
         kind: 'date',
         id: row.id,
         type: row.type,
@@ -345,7 +328,7 @@
 
       const result = await plantsStore.addPlant({
         name,
-        careRules,
+        schedules,
       })
       if (result) emit('close')
       return
@@ -356,7 +339,7 @@
     const nextName = draftName.value.trim()
     const result = await plantsStore.updatePlant(plant.value.id, {
       ...(nextName && nextName !== plant.value.name ? { name: nextName } : {}),
-      careRules,
+      schedules,
     })
     if (result) emit('close')
   }
@@ -502,11 +485,11 @@
                     </div>
                   </div>
 
-                  <CareRulesEditor
-                    :rule-rows="ruleRows"
+                  <SchedulesEditor
+                    :schedule-rows="scheduleRows"
                     :type-options="typeOptions"
-                    :add-rule-row="addRuleRow"
-                    :remove-rule-row="removeRuleRow"
+                    :add-schedule-row="addScheduleRow"
+                    :remove-schedule-row="removeScheduleRow"
                     :set-row-kind="setRowKind"
                   />
 
@@ -547,7 +530,7 @@
                             : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                         "
                       >
-                        Care rules
+                        Schedules
                       </button>
                     </Tab>
 
@@ -569,11 +552,11 @@
                   <TabPanels>
                     <TabPanel class="focus:outline-none">
                       <form @submit.prevent="save" class="space-y-5">
-                        <CareRulesEditor
-                          :rule-rows="ruleRows"
+                        <SchedulesEditor
+                          :schedule-rows="scheduleRows"
                           :type-options="typeOptions"
-                          :add-rule-row="addRuleRow"
-                          :remove-rule-row="removeRuleRow"
+                          :add-schedule-row="addScheduleRow"
+                          :remove-schedule-row="removeScheduleRow"
                           :set-row-kind="setRowKind"
                         />
 
@@ -616,7 +599,7 @@
                             <div
                               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                             >
-                              {{ getTypeIcon(event.type) }}
+                              {{ getEventIcon(event.type) }}
                             </div>
 
                             <div class="min-w-0 flex-1">
@@ -626,7 +609,12 @@
                                 <p
                                   class="text-sm font-semibold text-slate-900 dark:text-slate-100"
                                 >
-                                  {{ getTypeLabel(event.type) }}
+                                  {{
+                                    getEventLabel(
+                                      event.type,
+                                      customTypeNameById,
+                                    )
+                                  }}
                                 </p>
                                 <p
                                   class="shrink-0 text-xs text-slate-400 dark:text-slate-500"

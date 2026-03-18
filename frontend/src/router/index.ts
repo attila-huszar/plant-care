@@ -10,7 +10,7 @@ import {
 } from '@/features/auth/views'
 import { DashboardView } from '@/features/diary/views'
 
-let bootstrapPromise: Promise<void> | null = null
+let authInitPromise: Promise<void> | null = null
 
 const router = createRouter({
   history: createWebHistory(),
@@ -67,11 +67,14 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore()
   const userStore = useUserStore()
 
-  bootstrapPromise ??= authStore.bootstrap().catch((err) => {
-    bootstrapPromise = null
-    throw err
-  })
-  await bootstrapPromise
+  authInitPromise ??= authStore
+    .refresh()
+    .then(() => void 0)
+    .catch((err) => {
+      authInitPromise = null
+      throw err
+    })
+  await authInitPromise
 
   if (authStore.isAuthenticated) {
     await userStore.bootstrap()

@@ -4,10 +4,13 @@ import { defineStore } from 'pinia'
 import type {
   CustomEventDto,
   PublicUser,
+  UserProfileResponse,
   UserProfileUpdateRequest,
+  UserProfileUpdateResponse,
 } from '@plant-care/shared'
-import { useApiFetch, withAuth } from '@/composables'
-import { type ApiResult, toResult } from '@/utils'
+import type { ApiResult } from '@plant-care/shared'
+import { publicUserSchema, safeValidate } from '@plant-care/shared'
+import { useApiFetch, useApiFetchAuthRetry, withAuth } from '@/composables'
 import { useAuthStore } from './auth'
 
 export const useUserStore = defineStore('user', () => {
@@ -22,6 +25,7 @@ export const useUserStore = defineStore('user', () => {
   let bootstrapPromise: Promise<void> | null = null
 
   const authStore = useAuthStore()
+  const { fetchWithAuthRetry } = useApiFetchAuthRetry()
 
   const isReady = computed(() => profile.value !== null)
 
@@ -43,83 +47,50 @@ export const useUserStore = defineStore('user', () => {
     },
   )
 
-  // Uses shared result helpers from `@/lib/apiResult`.
-
   const getWithAuthRetry = async <T>(path: string): Promise<ApiResult<T>> => {
-    const res = await useApiFetch(path, withAuth(authStore.accessToken))
-      .get()
-      .json<T>()
-
-    let result = toResult<T>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-
-    if (!result.ok && result.status === 401) {
-      const token = await authStore.refresh()
-      if (!token) return result
-
-      const retry = await useApiFetch(path, withAuth(authStore.accessToken))
-        .get()
-        .json<T>()
-
-      result = toResult<T>({
-        response: retry.response.value,
-        body: retry.data.value,
-        fetchError: retry.error.value,
-      })
-    }
-
-    return result
+    return fetchWithAuthRetry<T>(() =>
+      useApiFetch(path, withAuth(authStore.accessToken)).get().json<T>(),
+    )
   }
 
   const patchWithAuthRetry = async <T>(
     path: string,
     payload: unknown,
   ): Promise<ApiResult<T>> => {
-    const res = await useApiFetch(path, withAuth(authStore.accessToken))
-      .patch(payload, 'json')
-      .json<T>()
-
-    let result = toResult<T>({
-      response: res.response.value,
-      body: res.data.value,
-      fetchError: res.error.value,
-    })
-
-    if (!result.ok && result.status === 401) {
-      const token = await authStore.refresh()
-      if (!token) return result
-
-      const retry = await useApiFetch(path, withAuth(authStore.accessToken))
+    return fetchWithAuthRetry<T>(() =>
+      useApiFetch(path, withAuth(authStore.accessToken))
         .patch(payload, 'json')
-        .json<T>()
-
-      result = toResult<T>({
-        response: retry.response.value,
-        body: retry.data.value,
-        fetchError: retry.error.value,
-      })
-    }
-
-    return result
+        .json<T>(),
+    )
   }
 
-  const loadProfile = async (): Promise<ApiResult<PublicUser>> => {
+  const loadProfile = async (): Promise<ApiResult<UserProfileResponse>> => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await getWithAuthRetry<PublicUser>(API_PATHS.users.profile)
-      if (result.ok) {
-        profile.value = result.data
-        customEvents.value = result.data.customEvents ?? []
-      } else {
+      const result = await getWithAuthRetry<UserProfileResponse>(
+        API_PATHS.users.profile,
+      )
+
+      if (!result.ok) {
         profile.value = null
         customEvents.value = []
         error.value = result.error
+        return result
       }
-      return result
+
+      const data = safeValidate(publicUserSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        profile.value = null
+        customEvents.value = []
+        error.value = message
+        return { ok: false, status: 400, error: message }
+      }
+
+      profile.value = data
+      customEvents.value = data.customEvents
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
@@ -127,29 +98,38 @@ export const useUserStore = defineStore('user', () => {
 
   const updateProfile = async (
     payload: UserProfileUpdateRequest,
-  ): Promise<ApiResult<PublicUser>> => {
+  ): Promise<ApiResult<UserProfileUpdateResponse>> => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await patchWithAuthRetry<PublicUser>(
+      const result = await patchWithAuthRetry<UserProfileUpdateResponse>(
         API_PATHS.users.profile,
         payload,
       )
 
-      if (result.ok) {
-        profile.value = result.data
-        customEvents.value = result.data.customEvents ?? []
-      } else {
+      if (!result.ok) {
         error.value = result.error
+        return result
       }
 
-      return result
+      const data = safeValidate(publicUserSchema, result.data)
+      if (!data) {
+        const message = 'Invalid server response'
+        error.value = message
+        return { ok: false, status: 400, error: message }
+      }
+
+      profile.value = data
+      customEvents.value = data.customEvents
+      return { ok: true, data }
     } finally {
       isLoading.value = false
     }
   }
 
-  const toggleMfa = async (enable: boolean): Promise<ApiResult<PublicUser>> =>
+  const toggleMfa = async (
+    enable: boolean,
+  ): Promise<ApiResult<UserProfileUpdateResponse>> =>
     updateProfile({ mfaEnabled: enable })
 
   const reservedTypeIdsLower = new Set(
@@ -250,13 +230,11 @@ export const useUserStore = defineStore('user', () => {
         }
       }
 
-      const renamed = (updated.data.customEvents ?? []).find((t) => t.id === id)
+      const renamed = updated.data.customEvents.find((t) => t.id === id)
       if (!renamed) {
-        return {
-          ok: false,
-          status: null,
-          error: 'Failed to rename custom event',
-        }
+        const message = 'Failed to rename custom event'
+        customEventsError.value = message
+        return { ok: false, status: null, error: message }
       }
 
       return { ok: true, data: renamed }

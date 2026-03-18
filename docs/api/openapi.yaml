@@ -764,16 +764,16 @@ components:
           minLength: 6
           description: Must contain at least one letter and one number.
 
-    CareRule:
+    Schedule:
       oneOf:
-        - $ref: "#/components/schemas/RecurringCareRule"
-        - $ref: "#/components/schemas/DateCareRule"
+        - $ref: "#/components/schemas/RecurringSchedule"
+        - $ref: "#/components/schemas/DateSchedule"
       discriminator:
         propertyName: kind
         mapping:
-          recurring: "#/components/schemas/RecurringCareRule"
-          date: "#/components/schemas/DateCareRule"
-    RecurringCareRule:
+          recurring: "#/components/schemas/RecurringSchedule"
+          date: "#/components/schemas/DateSchedule"
+    RecurringSchedule:
       type: object
       additionalProperties: false
       required: [kind, id, type, days]
@@ -795,7 +795,7 @@ components:
         notes:
           type: string
           maxLength: 1000
-    DateCareRule:
+    DateSchedule:
       type: object
       additionalProperties: false
       required: [kind, id, type, date]
@@ -842,7 +842,7 @@ components:
     PlantDto:
       type: object
       additionalProperties: false
-      required: [id, name, careRules, history]
+      required: [id, name, schedules, history]
       properties:
         id:
           type: integer
@@ -851,10 +851,10 @@ components:
           type: string
           minLength: 1
           maxLength: 60
-        careRules:
+        schedules:
           type: array
           items:
-            $ref: "#/components/schemas/CareRule"
+            $ref: "#/components/schemas/Schedule"
         imageUrl:
           type: string
           maxLength: 2048
@@ -883,11 +883,11 @@ components:
           type: string
           minLength: 1
           maxLength: 60
-        careRules:
+        schedules:
           type: array
           default: []
           items:
-            $ref: "#/components/schemas/CareRule"
+            $ref: "#/components/schemas/Schedule"
         imageUrl:
           type: string
           maxLength: 2048
@@ -901,10 +901,10 @@ components:
           type: string
           minLength: 1
           maxLength: 60
-        careRules:
+        schedules:
           type: array
           items:
-            $ref: "#/components/schemas/CareRule"
+            $ref: "#/components/schemas/Schedule"
         imageUrl:
           type: string
           maxLength: 2048

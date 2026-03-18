@@ -92,18 +92,25 @@
 
     <div class="relative">
       <ComboboxInput
-        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+        as="template"
         :display-value="(opt) => (opt as Option | null)?.label ?? ''"
-        placeholder="Type to search…"
-        @input="handleInput"
-        @click="openOnInputClick(open, $event)"
-      />
-
-      <ComboboxButton
-        class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
-        tabindex="-1"
       >
-        <ChevronIcon class="size-4" aria-hidden="true" />
+        <input
+          class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
+          placeholder="Type to search…"
+          @input="handleInput"
+          @click="openOnInputClick(open, $event)"
+        />
+      </ComboboxInput>
+
+      <ComboboxButton as="template">
+        <button
+          type="button"
+          class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"
+          tabindex="-1"
+        >
+          <ChevronIcon class="size-4" aria-hidden="true" />
+        </button>
       </ComboboxButton>
     </div>
 

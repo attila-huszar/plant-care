@@ -1,6 +1,5 @@
 import type z from 'zod'
 import type {
-  careRuleSchema,
   createCustomEventRequestSchema,
   createEventRequestSchema,
   createEventResponseSchema,
@@ -9,10 +8,11 @@ import type {
   eventDtoSchema,
   listPlantsResponseSchema,
   plantDtoSchema,
+  scheduleSchema,
   updatePlantRequestSchema,
 } from '../validation'
 
-export type CareRule = z.infer<typeof careRuleSchema>
+export type Schedule = z.infer<typeof scheduleSchema>
 export type PlantDto = z.infer<typeof plantDtoSchema>
 export type EventDto = z.infer<typeof eventDtoSchema>
 export type ListPlantsResponse = z.infer<typeof listPlantsResponseSchema>

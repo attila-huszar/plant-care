@@ -38,6 +38,14 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/consistent-type-definitions': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': [
+        'error',
+        {
+          ignorePrimitives: {
+            string: true,
+          },
+        },
+      ],
     },
   },
   {
@@ -56,12 +64,21 @@ export default defineConfig([
       },
     },
     rules: {
+      'vue/no-undef-components': 'error',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/prefer-nullish-coalescing': [
+        'error',
+        {
+          ignorePrimitives: {
+            string: true,
+          },
         },
       ],
     },

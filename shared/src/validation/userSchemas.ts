@@ -1,22 +1,26 @@
 import { z } from 'zod'
 import { customEventDtoSchema } from './diarySchemas'
 
-export const emailSchema = z.object({
+const firstNameSchema = z
+  .string('First name is required')
+  .trim()
+  .min(1, 'First name is required')
+  .max(100, 'First name must be less than 100 characters')
+
+const lastNameSchema = z
+  .string('Last name is required')
+  .trim()
+  .min(1, 'Last name is required')
+  .max(100, 'Last name must be less than 100 characters')
+
+export const emailSchema = z.strictObject({
   email: z
     .email('Invalid email')
     .trim()
     .transform((email) => email.toLowerCase()),
 })
 
-const firstNameSchema = z
-  .string('First name is required')
-  .max(100, 'First name must be less than 100 characters')
-
-const lastNameSchema = z
-  .string('Last name is required')
-  .max(100, 'Last name must be less than 100 characters')
-
-export const passwordSchema = z.object({
+export const passwordSchema = z.strictObject({
   password: z
     .string('Password is required')
     .min(6, 'Password must be at least 6 characters')
@@ -26,7 +30,7 @@ export const passwordSchema = z.object({
     ),
 })
 
-export const tokenSchema = z.object({
+export const tokenSchema = z.strictObject({
   token: z.uuid('Invalid verification token'),
 })
 
@@ -35,12 +39,38 @@ export const loginSchema = z.strictObject({
   ...passwordSchema.shape,
 })
 
-export const registerSchema = z.object({
+export const registerSchema = z.strictObject({
   firstName: firstNameSchema,
   lastName: lastNameSchema,
   ...emailSchema.shape,
   ...passwordSchema.shape,
 })
+
+export const mfaCodeSchema = z.strictObject({
+  ...emailSchema.shape,
+  code: z
+    .string('Code is required')
+    .length(6, 'Code must be 6 digits')
+    .regex(/^\d+$/, 'Code must be numeric'),
+})
+
+export const passwordResetSchema = z.strictObject({
+  ...tokenSchema.shape,
+  ...passwordSchema.shape,
+})
+
+export const userProfileUpdateSchema = z
+  .strictObject({
+    firstName: firstNameSchema.optional(),
+    lastName: lastNameSchema.optional(),
+    email: emailSchema.shape.email.optional(),
+    password: passwordSchema.shape.password.optional(),
+    mfaEnabled: z.boolean().optional(),
+    customEvents: z.array(customEventDtoSchema).optional(),
+  })
+  .refine((payload) => Object.keys(payload).length > 0, {
+    message: 'At least one field is required',
+  })
 
 export const registerFormSchema = registerSchema
   .extend({
@@ -58,32 +88,6 @@ export const registerFormSchema = registerSchema
     }
   })
 
-export const userProfileUpdateSchema = z
-  .strictObject({
-    firstName: firstNameSchema.optional(),
-    lastName: lastNameSchema.optional(),
-    email: emailSchema.shape.email.optional(),
-    password: passwordSchema.shape.password.optional(),
-    mfaEnabled: z.boolean().optional(),
-    customEvents: z.array(customEventDtoSchema).optional(),
-  })
-  .refine((payload) => Object.keys(payload).length > 0, {
-    message: 'At least one field is required',
-  })
-
-export const mfaCodeSchema = z.strictObject({
-  ...emailSchema.shape,
-  code: z
-    .string('Code is required')
-    .length(6, 'Code must be 6 digits')
-    .regex(/^\d+$/, 'Code must be numeric'),
-})
-
-export const passwordResetSchema = z.strictObject({
-  ...tokenSchema.shape,
-  ...passwordSchema.shape,
-})
-
 export const passwordResetFormSchema = passwordResetSchema
   .extend({
     confirmPassword: z
@@ -99,6 +103,54 @@ export const passwordResetFormSchema = passwordResetSchema
       })
     }
   })
+
+export const loginMfaPendingResponseSchema = z.strictObject({
+  mfaPending: z.literal(true),
+  email: emailSchema.shape.email,
+})
+
+export const loginSuccessResponseSchema = z.strictObject({
+  accessToken: z.string().min(1),
+  firstName: firstNameSchema,
+})
+
+export const loginResponseSchema = z.union([
+  loginMfaPendingResponseSchema,
+  loginSuccessResponseSchema,
+])
+
+export const mfaVerifyResponseSchema = z.strictObject({
+  accessToken: z.string().min(1),
+  firstName: firstNameSchema,
+})
+
+export const refreshResponseSchema = z.strictObject({
+  accessToken: z.string().min(1).nullable(),
+})
+
+export const logoutResponseSchema = z.strictObject({
+  success: z.literal(true),
+})
+
+export const registerResponseSchema = z.strictObject({
+  email: emailSchema.shape.email,
+})
+
+export const verificationResponseSchema = z.strictObject({
+  email: emailSchema.shape.email,
+})
+
+export const passwordResetRequestResponseSchema = z.strictObject({
+  message: z.string(),
+})
+
+export const passwordResetTokenResponseSchema = z.strictObject({
+  token: tokenSchema.shape.token,
+})
+
+export const passwordResetSubmitResponseSchema = z.strictObject({
+  message: z.string(),
+})
 
 export const authJWTPayloadSchema = z.looseObject({
   uuid: z.uuid('Invalid auth token uuid'),

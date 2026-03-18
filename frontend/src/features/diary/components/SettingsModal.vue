@@ -45,14 +45,12 @@
   const customEventUsageById = computed(() => {
     const counts = new Map<string, number>()
 
-    for (const plant of plantsStore.plants ?? []) {
-      for (const rule of plant.careRules ?? []) {
-        if (!rule?.type) continue
-        counts.set(rule.type, (counts.get(rule.type) ?? 0) + 1)
+    for (const plant of plantsStore.plants) {
+      for (const schedule of plant.schedules) {
+        counts.set(schedule.type, (counts.get(schedule.type) ?? 0) + 1)
       }
 
-      for (const event of plant.history ?? []) {
-        if (!event?.type) continue
+      for (const event of plant.history) {
         counts.set(event.type, (counts.get(event.type) ?? 0) + 1)
       }
     }
@@ -538,20 +536,28 @@
                         </button>
                         <Popover v-slot="{ open, close }" class="relative">
                           <PopoverButton
-                            type="button"
-                            class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                            as="template"
                             :disabled="
                               userStore.customEventsLoading ||
                               !canRemoveCustomEvent(evt.id)
                             "
-                            :title="
-                              canRemoveCustomEvent(evt.id)
-                                ? 'Remove'
-                                : 'Remove is disabled while this event is used by plants or history'
-                            "
-                            aria-label="Remove"
                           >
-                            <TrashIcon class="size-4" aria-hidden="true" />
+                            <button
+                              type="button"
+                              class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
+                              :disabled="
+                                userStore.customEventsLoading ||
+                                !canRemoveCustomEvent(evt.id)
+                              "
+                              :title="
+                                canRemoveCustomEvent(evt.id)
+                                  ? 'Remove'
+                                  : 'Remove is disabled while this event is used by plants or history'
+                              "
+                              aria-label="Remove"
+                            >
+                              <TrashIcon class="size-4" aria-hidden="true" />
+                            </button>
                           </PopoverButton>
 
                           <TransitionRoot as="template" :show="open">
@@ -593,7 +599,10 @@
                                   <button
                                     type="button"
                                     class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-500 disabled:opacity-60"
-                                    :disabled="userStore.customEventsLoading"
+                                    :disabled="
+                                      userStore.customEventsLoading ||
+                                      !canRemoveCustomEvent(evt.id)
+                                    "
                                     @click="
                                       async () => {
                                         await removeCustomEvent(evt.id)

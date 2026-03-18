@@ -1,15 +1,26 @@
 import {
   type AuthJWTPayload,
   emailSchema,
+  type LoginResponse,
   loginSchema,
+  type LogoutResponse,
   mfaCodeSchema,
+  type MfaVerifyResponse,
+  type PasswordResetRequestResponse,
   passwordResetSchema,
+  type PasswordResetSubmitResponse,
+  type PasswordResetTokenResponse,
   type PublicUser,
+  type RefreshResponse,
+  type RegisterResponse,
   registerSchema,
   tokenSchema,
+  type UserProfileResponse,
+  type UserProfileUpdateResponse,
   userProfileUpdateSchema,
   uuidSchema,
   validate,
+  type VerificationResponse,
 } from '@plant-care/shared'
 import { Hono } from 'hono'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
@@ -33,8 +44,11 @@ users.post(API_PATHS.users.login, async (c) => {
     const loginRequest = validate(loginSchema, body)
     const result = await UsersService.loginUser(loginRequest)
 
-    if ('mfaPending' in result) {
-      return c.json(result)
+    if (result.mfaPending) {
+      return c.json<LoginResponse>({
+        mfaPending: true,
+        email: result.email,
+      })
     }
 
     await setSignedCookie(
@@ -45,7 +59,7 @@ users.post(API_PATHS.users.login, async (c) => {
       cookieOptions,
     )
 
-    return c.json({
+    return c.json<LoginResponse>({
       accessToken: result.accessToken,
       firstName: result.firstName,
     })
@@ -70,7 +84,7 @@ users.post(API_PATHS.users.mfaVerify, async (c) => {
       cookieOptions,
     )
 
-    return c.json({ accessToken, firstName })
+    return c.json<MfaVerifyResponse>({ accessToken, firstName })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -87,7 +101,7 @@ users.post(API_PATHS.users.register, async (c) => {
     })
     const { email } = await UsersService.registerUser(registerRequest)
 
-    return c.json({ email })
+    return c.json<RegisterResponse>({ email })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -99,7 +113,7 @@ users.post(API_PATHS.users.verification, async (c) => {
     const verificationRequest = validate(tokenSchema, body)
     const { email } = await UsersService.verifyUser(verificationRequest)
 
-    return c.json({ email })
+    return c.json<VerificationResponse>({ email })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -111,7 +125,7 @@ users.post(API_PATHS.users.passwordResetRequest, async (c) => {
     const request = validate(emailSchema, body)
     const { message } = await UsersService.passwordResetRequest(request)
 
-    return c.json({ message })
+    return c.json<PasswordResetRequestResponse>({ message })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -123,7 +137,7 @@ users.post(API_PATHS.users.passwordResetToken, async (c) => {
     const request = validate(tokenSchema, body)
     const { token } = await UsersService.passwordResetToken(request)
 
-    return c.json({ token })
+    return c.json<PasswordResetTokenResponse>({ token })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -136,7 +150,7 @@ users.post(API_PATHS.users.passwordResetSubmit, async (c) => {
     const { message } = await UsersService.passwordResetSubmit(request)
 
     deleteCookie(c, REFRESH_TOKEN, cookieOptions)
-    return c.json({ message })
+    return c.json<PasswordResetSubmitResponse>({ message })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -147,7 +161,7 @@ users.get(API_PATHS.users.profile, async (c) => {
     const userUuid = validate(uuidSchema, c.get('jwtPayload')?.uuid)
     const user: PublicUser = await UsersService.getUserProfile(userUuid)
 
-    return c.json(user)
+    return c.json<UserProfileResponse>(user)
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -163,7 +177,7 @@ users.patch(API_PATHS.users.profile, async (c) => {
       updateFields,
     )
 
-    return c.json(user)
+    return c.json<UserProfileUpdateResponse>(user)
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -173,7 +187,7 @@ users.post(API_PATHS.users.logout, (c) => {
   try {
     deleteCookie(c, REFRESH_TOKEN, cookieOptions)
 
-    return c.json({ success: true })
+    return c.json<LogoutResponse>({ success: true })
   } catch (error) {
     return errorHandler(c, error)
   }
@@ -188,7 +202,7 @@ users.post(API_PATHS.users.refresh, async (c) => {
     )
 
     if (!refreshTokenCookie) {
-      return c.json({ accessToken: null }, 200)
+      return c.json<RefreshResponse>({ accessToken: null }, 200)
     }
 
     let jwtPayload: AuthJWTPayload
@@ -197,7 +211,7 @@ users.post(API_PATHS.users.refresh, async (c) => {
       jwtPayload = await verifyJWTRefresh(refreshTokenCookie)
     } catch {
       deleteCookie(c, REFRESH_TOKEN, cookieOptions)
-      return c.json({ accessToken: null }, 200)
+      return c.json<RefreshResponse>({ accessToken: null }, 200)
     }
 
     const expTimestamp = jwtPayload.exp ?? 0
@@ -216,7 +230,7 @@ users.post(API_PATHS.users.refresh, async (c) => {
 
     const accessToken = await signAccessToken(jwtPayload.uuid, timestamp)
 
-    return c.json({ accessToken })
+    return c.json<RefreshResponse>({ accessToken })
   } catch (error) {
     return errorHandler(c, error)
   }

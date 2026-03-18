@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
-  import { DEFAULT_TASK_ICON, PLANT_CARE_META } from '@/constants'
   import {
     Dialog,
     DialogPanel,
@@ -8,18 +7,17 @@
     TransitionChild,
     TransitionRoot,
   } from '@headlessui/vue'
-  import type {
-    CustomEventDto,
-    EventDto,
-    EventType,
-    PlantDto,
-  } from '@plant-care/shared'
-  import type { CareTimelinePayload, UpcomingItem } from '@/types'
+  import type { CustomEventDto, EventDto, PlantDto } from '@plant-care/shared'
+  import {
+    buildCustomEventsMap,
+    buildUpcomingCareItems,
+    formatDueLabel,
+    formatRelativeDay,
+    getEventIcon,
+    getEventLabel,
+  } from '@/features/diary/utils'
+  import type { CareTimelinePayload } from '@/types'
   import { CalendarIcon, CheckIcon } from '@/assets/svg'
-
-  const BUILTIN_ACTION_META_BY_ID = new Map(
-    PLANT_CARE_META.map((t) => [t.id, t]),
-  )
 
   const props = withDefaults(
     defineProps<{
@@ -29,6 +27,7 @@
       showHistoryCard?: boolean
     }>(),
     {
+      customEvents: () => [],
       showHistoryCard: true,
     },
   )
@@ -37,125 +36,12 @@
     care: [payload: CareTimelinePayload]
   }>()
 
-  const DAY_MS = 1000 * 60 * 60 * 24
-  const startOfDayMs = (ms: number) => {
-    const date = new Date(ms)
-    date.setHours(0, 0, 0, 0)
-    return date.getTime()
-  }
-
   const customTypeNameById = computed(() => {
-    const map = new Map<string, string>()
-    for (const t of props.customEvents ?? []) {
-      map.set(t.id, t.name)
-    }
-    return map
+    return buildCustomEventsMap(props.customEvents)
   })
-
-  const latestEventMsByPlantAndType = computed(() => {
-    const map = new Map<string, number>()
-    for (const event of props.events) {
-      const ms = new Date(event.date).getTime()
-      if (!Number.isFinite(ms)) continue
-      const key = `${event.plantId}:${event.type}`
-      const prev = map.get(key)
-      if (prev === undefined || ms > prev) map.set(key, ms)
-    }
-    return map
-  })
-
-  const latestNotesByPlantAndType = computed(() => {
-    const map = new Map<string, string>()
-
-    const sorted = [...props.events].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    )
-
-    for (const event of sorted) {
-      const notes = event.notes?.trim()
-      if (!notes) continue
-      const key = `${event.plantId}:${event.type}`
-      if (!map.has(key)) map.set(key, notes)
-    }
-
-    return map
-  })
-
-  const getTypeIcon = (typeId: EventType) => {
-    return BUILTIN_ACTION_META_BY_ID.get(typeId)?.icon ?? DEFAULT_TASK_ICON
-  }
-
-  const getTypeLabel = (typeId: EventType) => {
-    const builtinLabel = BUILTIN_ACTION_META_BY_ID.get(typeId)?.label
-    if (builtinLabel) return builtinLabel
-    return customTypeNameById.value.get(typeId) ?? typeId
-  }
 
   const upcomingCareAll = computed(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayMs = today.getTime()
-
-    const items: UpcomingItem[] = []
-
-    for (const plant of props.plants) {
-      for (const rule of plant.careRules ?? []) {
-        if (!rule) continue
-
-        if (rule.kind === 'recurring') {
-          if (rule.days <= 0) continue
-
-          const key = `${plant.id}:${rule.id}`
-          const lastEventKey = `${plant.id}:${rule.type}`
-          const lastEventMs =
-            latestEventMsByPlantAndType.value.get(lastEventKey)
-          const baseMs = startOfDayMs(lastEventMs ?? todayMs)
-
-          const dueDayMs = baseMs + rule.days * DAY_MS
-          const dueDate = new Date(dueDayMs)
-          const diffDays = Math.round((dueDayMs - todayMs) / DAY_MS)
-
-          items.push({
-            key: String(key),
-            plantId: plant.id,
-            plantName: plant.name,
-            careRuleId: rule.id,
-            type: rule.type,
-            notes:
-              rule.notes?.trim() ||
-              latestNotesByPlantAndType.value.get(lastEventKey),
-            dueDate,
-            diffDays,
-            kind: 'recurring',
-            days: rule.days,
-          })
-          continue
-        }
-
-        const dueMs = new Date(rule.date).getTime()
-        if (!Number.isFinite(dueMs)) continue
-
-        const dueDayMs = startOfDayMs(dueMs)
-        const dueDate = new Date(dueDayMs)
-        const diffDays = Math.round((dueDayMs - todayMs) / DAY_MS)
-
-        items.push({
-          key: String(`${plant.id}:${rule.id}`),
-          plantId: plant.id,
-          plantName: plant.name,
-          careRuleId: rule.id,
-          type: rule.type,
-          notes:
-            rule.notes?.trim() ||
-            latestNotesByPlantAndType.value.get(`${plant.id}:${rule.type}`),
-          dueDate,
-          diffDays,
-          kind: 'date',
-        })
-      }
-    }
-
-    return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+    return buildUpcomingCareItems(props.plants, props.events)
   })
 
   const upcomingCare = computed(() => {
@@ -174,22 +60,6 @@
     }
 
     return 'border border-transparent'
-  }
-
-  const formatDueLabel = (diffDays: number) => {
-    if (diffDays === 0) return 'Today'
-    const abs = Math.abs(diffDays)
-    const unit = abs === 1 ? 'day' : 'days'
-    if (diffDays > 0) return `In ${abs} ${unit}`
-    return `Overdue by ${abs} ${unit}`
-  }
-
-  const formatEventDate = (isoString: string) => {
-    const date = new Date(isoString)
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.round((date.getTime() - Date.now()) / DAY_MS),
-      'day',
-    )
   }
 
   const enrichedEvents = computed(() => {
@@ -302,7 +172,7 @@
       plantId: item.plantId,
       type: item.type,
       kind: item.kind,
-      careRuleId: item.careRuleId,
+      scheduleId: item.scheduleId,
       ...(notes ? { notes } : {}),
     })
 
@@ -324,7 +194,7 @@
       plantId: item.plantId,
       type: item.type,
       kind: item.kind,
-      careRuleId: item.careRuleId,
+      scheduleId: item.scheduleId,
       ...(notes ? { notes } : {}),
     })
 
@@ -375,7 +245,7 @@
                   </DialogTitle>
 
                   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Add optional notes for this task.
+                    Add optional notes for this schedule.
                   </p>
 
                   <div class="mt-4">
@@ -458,13 +328,15 @@
                 <div
                   class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                 >
-                  {{ getTypeIcon(item.type) }}
+                  {{ getEventIcon(item.type) }}
                 </div>
                 <div class="min-w-0 flex-1">
                   <p
                     class="text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
-                    <span>{{ getTypeLabel(item.type) }}</span>
+                    <span>{{
+                      getEventLabel(item.type, customTypeNameById)
+                    }}</span>
                     for
                     <span class="font-bold text-emerald-700">{{
                       item.plantName
@@ -593,20 +465,22 @@
               <div
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
-                {{ getTypeIcon(event.type) }}
+                {{ getEventIcon(event.type) }}
               </div>
               <div class="min-w-0 flex-1">
                 <p
                   class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
-                  <span>{{ getTypeLabel(event.type) }}</span>
+                  <span>{{
+                    getEventLabel(event.type, customTypeNameById)
+                  }}</span>
                   for
                   <span class="font-bold text-emerald-700">{{
                     event.plantName
                   }}</span>
                 </p>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  {{ formatEventDate(event.date) }}
+                  {{ formatRelativeDay(event.date) }}
                 </p>
                 <div v-if="event.notes" class="mt-1">
                   <p

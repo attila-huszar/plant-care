@@ -10,7 +10,7 @@ import { API_PATHS } from './constants'
 import { plants, users } from './controllers'
 import { initMailer } from './libs'
 import { authMiddleware, payloadLimiter } from './middleware'
-import { ngrokForward } from './utils'
+import { ngrokForward, shortHash } from './utils'
 
 const app = new Hono()
 const api = new Hono()
@@ -21,8 +21,20 @@ const limiter = rateLimiter({
   message: { error: 'Too many requests' },
   statusCode: 429,
   standardHeaders: 'draft-6',
-  keyGenerator: (c) =>
-    c.req.header('X-Forwarded-For') ?? c.req.header('X-Real-Ip') ?? 'unknown',
+  keyGenerator: (c) => {
+    const forwarded =
+      c.req.header('CF-Connecting-IP') ??
+      c.req.header('X-Forwarded-For') ??
+      c.req.header('X-Real-Ip')
+
+    const forwardedIp = forwarded ? forwarded.split(',')[0]!.trim() : 'unknown'
+
+    const userAgent = c.req.header('User-Agent') ?? ''
+    const acceptLanguage = c.req.header('Accept-Language') ?? ''
+    const fingerprint = shortHash(`${userAgent}|${acceptLanguage}`)
+
+    return `${forwardedIp}:${fingerprint}`
+  },
 })
 
 const corsMiddleware = cors({
