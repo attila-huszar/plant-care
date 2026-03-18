@@ -109,6 +109,9 @@ export const useAuthStore = defineStore('auth', () => {
       if ('accessToken' in data) {
         accessToken.value = data.accessToken
         canRefresh.value = true
+      } else {
+        accessToken.value = null
+        canRefresh.value = false
       }
 
       return { ok: true, data }

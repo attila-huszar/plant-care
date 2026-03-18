@@ -121,7 +121,6 @@ export const buildUpcomingCareItems = (
       const dueDayMs = startOfDayMs(dueMs)
       const dueDate = new Date(dueDayMs)
       const diffDays = Math.round((dueDayMs - todayMs) / MS_PER_DAY)
-      const scheduleNotes = schedule.notes?.trim()
 
       items.push({
         key: String(`${plant.id}:${schedule.id}`),
@@ -130,7 +129,7 @@ export const buildUpcomingCareItems = (
         scheduleId: schedule.id,
         type: schedule.type,
         notes:
-          scheduleNotes ??
+          schedule.notes?.trim() ||
           latestNotesByPlantAndType.get(`${plant.id}:${schedule.type}`),
         dueDate,
         diffDays,

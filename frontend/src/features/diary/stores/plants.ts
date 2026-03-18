@@ -40,6 +40,9 @@ export const usePlantsStore = defineStore('plants', () => {
 
       const apiResult = toApiResult<unknown>(res)
       if (!apiResult.ok) {
+        if (apiResult.status === 401 || apiResult.status === 403) {
+          plants.value = []
+        }
         plantsReq.error = 'Failed to load plants'
         return
       }
