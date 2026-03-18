@@ -60,17 +60,11 @@ export const createAuthApi = (
     )
   }
 
-  function postJson<T>(
+  const postJson = async <T>(
     path: string,
     payload?: unknown,
     options?: AuthRetryOptions,
-  ): Promise<ApiResult<T>>
-
-  async function postJson<T>(
-    path: string,
-    payload?: unknown,
-    options?: AuthRetryOptions,
-  ): Promise<ApiResult<T>> {
+  ): Promise<ApiResult<T>> => {
     return fetchWithAuthRetry<T>(() => {
       const req = useApiFetch(path, withAuth(accessToken))
 
