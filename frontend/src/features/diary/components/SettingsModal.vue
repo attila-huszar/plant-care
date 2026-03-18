@@ -535,7 +535,13 @@
                           <EditIcon class="size-4" aria-hidden="true" />
                         </button>
                         <Popover v-slot="{ open, close }" class="relative">
-                          <PopoverButton as="template">
+                          <PopoverButton
+                            as="template"
+                            :disabled="
+                              userStore.customEventsLoading ||
+                              !canRemoveCustomEvent(evt.id)
+                            "
+                          >
                             <button
                               type="button"
                               class="inline-flex size-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
@@ -593,7 +599,10 @@
                                   <button
                                     type="button"
                                     class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-500 disabled:opacity-60"
-                                    :disabled="userStore.customEventsLoading"
+                                    :disabled="
+                                      userStore.customEventsLoading ||
+                                      !canRemoveCustomEvent(evt.id)
+                                    "
                                     @click="
                                       async () => {
                                         await removeCustomEvent(evt.id)
