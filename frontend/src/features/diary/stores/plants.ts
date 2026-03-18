@@ -15,7 +15,7 @@ import type {
   Plant,
   UpdatePlantRequest,
 } from '@plant-care/shared'
-import { useAuthedApi } from '@/composables'
+import { useAuthApi } from '@/composables'
 
 export const usePlantsStore = defineStore('plants', () => {
   const plants = ref<Plant[]>([])
@@ -25,7 +25,7 @@ export const usePlantsStore = defineStore('plants', () => {
   const plantsReq = reactive({ loading: false, error: null as string | null })
   const eventsReq = reactive({ loading: false, error: null as string | null })
 
-  const api = useAuthedApi()
+  const api = useAuthApi()
 
   const getPlants = async () => {
     plantsReq.loading = true

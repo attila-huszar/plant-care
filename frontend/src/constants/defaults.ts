@@ -1,7 +1,7 @@
 import { SCHEDULE_BUILTIN_ACTIONS } from '@plant-care/shared'
-import type { ScheduleBuiltinActionId } from '@plant-care/shared'
+import type { ScheduleBuiltinAction } from '@plant-care/shared'
 
-const ICON_BY_ID: Record<ScheduleBuiltinActionId, string> = {
+const ICON_BY_ID: Record<ScheduleBuiltinAction['id'], string> = {
   water: '💧',
   fertilize: '🧪',
   repot: '🪴',

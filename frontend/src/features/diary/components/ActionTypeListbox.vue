@@ -53,7 +53,6 @@
   const handleInput = (event: Event) => {
     const value = (event.target as HTMLInputElement).value
     query.value = value
-    emit('update:modelValue', value)
   }
 
   const handleSelect = (value: Option) => {

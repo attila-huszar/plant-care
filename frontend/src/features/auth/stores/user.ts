@@ -10,7 +10,7 @@ import type {
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
 import { publicUserSchema, safeValidate } from '@plant-care/shared'
-import { useAuthedApi } from '@/composables'
+import { useAuthApi } from '@/composables'
 import { useAuthStore } from './auth'
 
 export const useUserStore = defineStore('user', () => {
@@ -25,7 +25,7 @@ export const useUserStore = defineStore('user', () => {
   let bootstrapPromise: Promise<void> | null = null
 
   const authStore = useAuthStore()
-  const api = useAuthedApi()
+  const api = useAuthApi()
 
   const isReady = computed(() => profile.value !== null)
 

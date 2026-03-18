@@ -6,20 +6,10 @@ export const SCHEDULE_BUILTIN_ACTIONS = [
 
 export type ScheduleBuiltinAction = (typeof SCHEDULE_BUILTIN_ACTIONS)[number]
 
-export type ScheduleBuiltinActionId =
-  (typeof SCHEDULE_BUILTIN_ACTIONS)[number]['id']
-
-export const SCHEDULE_ACTION_MAP = Object.fromEntries(
-  SCHEDULE_BUILTIN_ACTIONS.map((action) => [action.id, action]),
-) as Record<ScheduleBuiltinActionId, ScheduleBuiltinAction>
-
 export const getBuiltinScheduleAction = (
   id: string,
 ): ScheduleBuiltinAction | null => {
-  const action = (
-    SCHEDULE_ACTION_MAP as Partial<Record<string, ScheduleBuiltinAction>>
-  )[id]
-  return action ?? null
+  return SCHEDULE_BUILTIN_ACTIONS.find((action) => action.id === id) ?? null
 }
 
-export type ScheduleActionId = ScheduleBuiltinActionId | (string & {})
+export type ScheduleActionId = ScheduleBuiltinAction['id'] | (string & {})

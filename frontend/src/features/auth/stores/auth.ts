@@ -32,7 +32,7 @@ import type {
   VerificationResponse,
 } from '@plant-care/shared'
 import type { ApiResult } from '@plant-care/shared'
-import { createAuthedApi, usePublicApi } from '@/composables'
+import { createAuthApi, usePublicApi } from '@/composables'
 
 export const useAuthStore = defineStore('auth', () => {
   const api = usePublicApi()
@@ -65,7 +65,11 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const data = safeValidate(refreshResponseSchema, result.data)
-      if (!data) return null
+      if (!data) {
+        canRefresh.value = false
+        clearAuth()
+        return null
+      }
 
       if (!data.accessToken) {
         canRefresh.value = false
@@ -82,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const authedApi = createAuthedApi(accessToken, refresh)
+  const authedApi = createAuthApi(accessToken, refresh)
 
   const login = async (
     payload: LoginRequest,
@@ -163,7 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const result = await api.postForm<RegisterResponse>(
+      const result = await api.postJson<RegisterResponse>(
         API_PATHS.users.register,
         formData,
       )

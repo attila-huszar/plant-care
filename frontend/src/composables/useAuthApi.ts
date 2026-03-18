@@ -8,7 +8,7 @@ type AuthRetryOptions = { retryOnStatuses?: readonly number[] }
 
 let refreshInFlight: Promise<string | null> | null = null
 
-export const createAuthedApi = (
+export const createAuthApi = (
   accessToken: MaybeRefOrGetter<string | null>,
   refresh: () => Promise<string | null>,
 ) => {
@@ -60,31 +60,26 @@ export const createAuthedApi = (
     )
   }
 
-  function postJson<T>(path: string): Promise<ApiResult<T>>
   function postJson<T>(
     path: string,
-    payload: unknown,
+    payload?: unknown,
     options?: AuthRetryOptions,
   ): Promise<ApiResult<T>>
+
   async function postJson<T>(
     path: string,
     payload?: unknown,
     options?: AuthRetryOptions,
   ): Promise<ApiResult<T>> {
-    if (payload === undefined) {
-      return fetchWithAuthRetry<T>(
-        () => useApiFetch(path, withAuth(accessToken)).post().json<T>(),
-        options,
-      )
-    }
+    return fetchWithAuthRetry<T>(() => {
+      const req = useApiFetch(path, withAuth(accessToken))
 
-    return fetchWithAuthRetry<T>(
-      () =>
-        useApiFetch(path, withAuth(accessToken))
-          .post(payload, 'json')
-          .json<T>(),
-      options,
-    )
+      if (payload instanceof FormData) {
+        return req.post(payload).json<T>()
+      }
+
+      return req.post(payload ?? {}, 'json').json<T>()
+    }, options)
   }
 
   const putJson = async <T>(
@@ -133,7 +128,11 @@ export const createAuthedApi = (
   }
 }
 
-export const useAuthedApi = () => {
+export const useAuthApi = () => {
   const authStore = useAuthStore()
-  return createAuthedApi(() => authStore.accessToken, authStore.refresh)
+  return createAuthApi(() => authStore.accessToken, authStore.refresh)
+}
+
+export const resetRefreshInFlight = () => {
+  refreshInFlight = null
 }
