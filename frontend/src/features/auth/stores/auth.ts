@@ -15,7 +15,6 @@ import {
 import type {
   LoginRequest,
   LoginResponse,
-  LogoutResponse,
   MfaVerifyRequest,
   MfaVerifyResponse,
   PasswordResetRequest,
@@ -345,7 +344,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      await authedApi.postJson<LogoutResponse>(API_PATHS.users.logout, null, {
+      await authedApi.postJson(API_PATHS.users.logout, null, {
         retryOnStatuses: [],
       })
     } finally {

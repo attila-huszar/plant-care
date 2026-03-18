@@ -65,15 +65,13 @@ export const createAuthApi = (
     payload?: unknown,
     options?: AuthRetryOptions,
   ): Promise<ApiResult<T>> => {
-    return fetchWithAuthRetry<T>(() => {
-      const req = useApiFetch(path, withAuth(accessToken))
-
-      if (payload instanceof FormData) {
-        return req.post(payload).json<T>()
-      }
-
-      return req.post(payload ?? {}, 'json').json<T>()
-    }, options)
+    return fetchWithAuthRetry<T>(
+      () =>
+        useApiFetch(path, withAuth(accessToken))
+          .post(payload ?? {}, 'json')
+          .json<T>(),
+      options,
+    )
   }
 
   const putJson = async <T>(

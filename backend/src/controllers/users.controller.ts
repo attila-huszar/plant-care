@@ -3,7 +3,6 @@ import {
   emailSchema,
   type LoginResponse,
   loginSchema,
-  type LogoutResponse,
   mfaCodeSchema,
   type MfaVerifyResponse,
   type PasswordResetRequestResponse,
@@ -187,7 +186,7 @@ users.post(API_PATHS.users.logout, (c) => {
   try {
     deleteCookie(c, REFRESH_TOKEN, cookieOptions)
 
-    return c.json<LogoutResponse>({ success: true })
+    return c.json<null>(null)
   } catch (error) {
     return errorHandler(c, error)
   }
