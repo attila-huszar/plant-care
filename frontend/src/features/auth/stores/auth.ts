@@ -3,7 +3,6 @@ import { API_PATHS } from '@/constants'
 import { defineStore } from 'pinia'
 import {
   loginResponseSchema,
-  logoutResponseSchema,
   mfaVerifyResponseSchema,
   passwordResetRequestResponseSchema,
   passwordResetSubmitResponseSchema,
@@ -36,58 +35,65 @@ import { createAuthApi, usePublicApi } from '@/composables'
 
 export const useAuthStore = defineStore('auth', () => {
   const api = usePublicApi()
+
   const accessToken = ref<string | null>(null)
   const canRefresh = ref(true)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const sessionVersion = ref(0)
 
+  let refreshPromise: Promise<string | null> | null = null
+
   const isAuthenticated = computed(() => accessToken.value !== null)
 
   const clearAuth = () => {
     sessionVersion.value += 1
     accessToken.value = null
+    error.value = null
+    isLoading.value = false
   }
 
   const refresh = async (): Promise<string | null> => {
     if (!canRefresh.value) return null
+    if (refreshPromise) return refreshPromise
 
-    try {
-      const startVersion = sessionVersion.value
-      const result = await api.postJson<RefreshResponse>(
-        API_PATHS.users.refresh,
-      )
+    const startVersion = sessionVersion.value
 
-      if (sessionVersion.value !== startVersion) return null
+    refreshPromise = (async () => {
+      try {
+        const result = await api.postJson<RefreshResponse>(
+          API_PATHS.users.refresh,
+        )
 
-      if (!result.ok) {
-        if (result.status === 401 || result.status === 403) {
+        if (sessionVersion.value !== startVersion) return null
+
+        if (!result.ok) {
+          if (result.status === 401 || result.status === 403) {
+            canRefresh.value = false
+            clearAuth()
+          }
+          return null
+        }
+
+        const data = safeValidate(refreshResponseSchema, result.data)
+        if (!data?.accessToken) {
           canRefresh.value = false
           clearAuth()
+          return null
         }
+
+        accessToken.value = data.accessToken
+        canRefresh.value = true
+
+        return accessToken.value
+      } catch {
         return null
+      } finally {
+        refreshPromise = null
       }
+    })()
 
-      const data = safeValidate(refreshResponseSchema, result.data)
-      if (!data) {
-        canRefresh.value = false
-        clearAuth()
-        return null
-      }
-
-      if (!data.accessToken) {
-        canRefresh.value = false
-        clearAuth()
-        return null
-      }
-
-      canRefresh.value = true
-      accessToken.value = data.accessToken
-
-      return accessToken.value
-    } catch {
-      return null
-    }
+    return refreshPromise
   }
 
   const authedApi = createAuthApi(accessToken, refresh)
@@ -97,11 +103,18 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<LoginResponse>> => {
     isLoading.value = true
     error.value = null
+
+    const startVersion = sessionVersion.value
+
     try {
       const result = await api.postJson<LoginResponse>(
         API_PATHS.users.login,
         payload,
       )
+
+      if (sessionVersion.value !== startVersion) {
+        return { ok: false, status: null, error: 'Session outdated' }
+      }
 
       if (!result.ok) {
         error.value = result.error
@@ -125,7 +138,9 @@ export const useAuthStore = defineStore('auth', () => {
 
       return { ok: true, data }
     } finally {
-      isLoading.value = false
+      if (sessionVersion.value === startVersion) {
+        isLoading.value = false
+      }
     }
   }
 
@@ -134,11 +149,19 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<MfaVerifyResponse>> => {
     isLoading.value = true
     error.value = null
+
+    const startVersion = sessionVersion.value
+
     try {
       const result = await api.postJson<MfaVerifyResponse>(
         API_PATHS.users.mfaVerify,
         payload,
       )
+
+      if (sessionVersion.value !== startVersion) {
+        return { ok: false, status: null, error: 'Session outdated' }
+      }
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -153,9 +176,12 @@ export const useAuthStore = defineStore('auth', () => {
 
       accessToken.value = data.accessToken
       canRefresh.value = true
+
       return { ok: true, data }
     } finally {
-      isLoading.value = false
+      if (sessionVersion.value === startVersion) {
+        isLoading.value = false
+      }
     }
   }
 
@@ -170,11 +196,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     isLoading.value = true
     error.value = null
+
     try {
-      const result = await api.postJson<RegisterResponse>(
+      const result = await api.postFormData<RegisterResponse>(
         API_PATHS.users.register,
         formData,
       )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -198,11 +226,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<VerificationResponse>> => {
     isLoading.value = true
     error.value = null
+
     try {
       const result = await api.postJson<VerificationResponse>(
         API_PATHS.users.verification,
         payload,
       )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -226,11 +256,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<PasswordResetRequestResponse>> => {
     isLoading.value = true
     error.value = null
+
     try {
       const result = await api.postJson<PasswordResetRequestResponse>(
         API_PATHS.users.passwordResetRequest,
         payload,
       )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -254,11 +286,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<PasswordResetTokenResponse>> => {
     isLoading.value = true
     error.value = null
+
     try {
       const result = await api.postJson<PasswordResetTokenResponse>(
         API_PATHS.users.passwordResetToken,
         payload,
       )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -282,11 +316,13 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<ApiResult<PasswordResetSubmitResponse>> => {
     isLoading.value = true
     error.value = null
+
     try {
       const result = await api.postJson<PasswordResetSubmitResponse>(
         API_PATHS.users.passwordResetSubmit,
         payload,
       )
+
       if (!result.ok) {
         error.value = result.error
         return result
@@ -307,24 +343,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     error.value = null
+
     try {
-      const result = await authedApi.postJson<LogoutResponse>(
-        API_PATHS.users.logout,
-        undefined,
-        { retryOnStatuses: [] },
-      )
-
-      if (!result.ok) {
-        error.value = result.error
-        return
-      }
-
-      const data = safeValidate(logoutResponseSchema, result.data)
-      if (!data) {
-        const message = 'Invalid server response'
-        error.value = message
-        return
-      }
+      await authedApi.postJson<LogoutResponse>(API_PATHS.users.logout, null, {
+        retryOnStatuses: [],
+      })
     } finally {
       clearAuth()
       canRefresh.value = false

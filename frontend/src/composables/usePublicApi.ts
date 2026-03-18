@@ -22,23 +22,23 @@ export const usePublicApi = () => {
     return request<T>(() => useApiFetch(path).get().json<T>())
   }
 
-  function postJson<T>(path: string, payload: FormData): Promise<ApiResult<T>>
-  function postJson<T>(path: string, payload?: unknown): Promise<ApiResult<T>>
-
   async function postJson<T>(
     path: string,
     payload?: unknown,
   ): Promise<ApiResult<T>> {
-    return request<T>(() => {
-      const req = useApiFetch(path)
-
-      if (payload instanceof FormData) {
-        return req.post(payload).json<T>()
-      }
-
-      return req.post(payload ?? {}, 'json').json<T>()
-    })
+    return request<T>(() =>
+      useApiFetch(path)
+        .post(payload ?? {}, 'json')
+        .json<T>(),
+    )
   }
 
-  return { getJson, postJson, request }
+  async function postFormData<T>(
+    path: string,
+    payload: FormData,
+  ): Promise<ApiResult<T>> {
+    return request<T>(() => useApiFetch(path).post(payload).json<T>())
+  }
+
+  return { getJson, postJson, postFormData, request }
 }

@@ -128,10 +128,6 @@ export const refreshResponseSchema = z.strictObject({
   accessToken: z.string().min(1).nullable(),
 })
 
-export const logoutResponseSchema = z.strictObject({
-  success: z.literal(true),
-})
-
 export const registerResponseSchema = z.strictObject({
   email: emailSchema.shape.email,
 })
