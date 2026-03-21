@@ -241,6 +241,12 @@
   const save = async () => {
     saveError.value = null
 
+    const trimmedDraftName = draftName.value.trim()
+    if (isAddMode.value && !trimmedDraftName) {
+      saveError.value = 'Plant name is required.'
+      return
+    }
+
     scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       actionId: row.actionId.trim(),
@@ -262,7 +268,8 @@
       }
 
       const input = row.actionId
-      const cached = resolvedActionIdByInput.get(input)
+      const inputKey = input.toLowerCase()
+      const cached = resolvedActionIdByInput.get(inputKey)
       if (cached) {
         resolvedRows.push({ ...row, actionId: cached })
         continue
@@ -271,7 +278,7 @@
       const normalized = idByLabelLower.get(input.toLowerCase()) ?? input
 
       if (builtinActionIds.has(normalized) || customActionIds.has(normalized)) {
-        resolvedActionIdByInput.set(input, normalized)
+        resolvedActionIdByInput.set(inputKey, normalized)
         resolvedRows.push({ ...row, actionId: normalized })
         continue
       }
@@ -293,7 +300,7 @@
         return
       }
 
-      resolvedActionIdByInput.set(input, created.data.id)
+      resolvedActionIdByInput.set(inputKey, created.data.id)
       resolvedRows.push({ ...row, actionId: created.data.id })
     }
 
@@ -344,11 +351,8 @@
     }
 
     if (isAddMode.value) {
-      const name = draftName.value.trim()
-      if (!name) return
-
       const result = await plantsStore.addPlant({
-        name,
+        name: trimmedDraftName,
         schedules,
       })
       if (result) emit('close')
@@ -488,6 +492,13 @@
                   @submit.prevent="save"
                   class="space-y-5"
                 >
+                  <div
+                    v-if="saveError"
+                    class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                  >
+                    {{ saveError }}
+                  </div>
+
                   <div class="space-y-4">
                     <div>
                       <label
