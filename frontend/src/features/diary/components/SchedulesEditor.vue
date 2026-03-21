@@ -7,7 +7,7 @@
   } from '@headlessui/vue'
   import type { ScheduleActionId } from '@plant-care/shared'
   import { ChevronIcon, TrashIcon } from '@/assets/svg'
-  import ActionTypeListbox from './ActionTypeListbox.vue'
+  import ScheduleActionListbox from './ScheduleActionListbox.vue'
 
   type DraftScheduleRow = {
     id: string
@@ -36,7 +36,7 @@
       class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/30"
     >
       <p class="text-sm text-slate-600 dark:text-slate-300">
-        No schedules yet. Add a schedule to start.
+        No care reminders yet. Add one to get started.
       </p>
     </div>
 
@@ -53,7 +53,7 @@
             <label
               class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
             >
-              Type
+              Reminder
             </label>
             <Listbox
               v-model="row.type"
@@ -65,7 +65,7 @@
                 class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
               >
                 <span class="truncate">
-                  {{ row.type === 'recurring' ? 'Recurring' : 'One-off' }}
+                  {{ row.type === 'recurring' ? 'Repeats' : 'One-time' }}
                 </span>
                 <ChevronIcon class="size-4 text-slate-400" aria-hidden="true" />
               </ListboxButton>
@@ -87,7 +87,7 @@
                     "
                   >
                     <span :class="selected ? 'font-semibold' : 'font-medium'">
-                      Recurring
+                      Repeats
                     </span>
                     <span v-if="selected" class="text-emerald-600"> ✓ </span>
                   </li>
@@ -107,7 +107,7 @@
                     "
                   >
                     <span :class="selected ? 'font-semibold' : 'font-medium'">
-                      One-off
+                      One-time
                     </span>
                     <span v-if="selected" class="text-emerald-600"> ✓ </span>
                   </li>
@@ -120,7 +120,7 @@
             type="button"
             class="inline-flex size-9.5 shrink-0 items-center justify-center self-end rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:order-3 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-rose-950/20 dark:hover:text-rose-200"
             @click="removeScheduleRow(row.id)"
-            aria-label="Remove action"
+            aria-label="Remove reminder"
             title="Remove"
           >
             <TrashIcon class="size-4" aria-hidden="true" />
@@ -133,10 +133,10 @@
               class="min-w-0"
               :class="row.type === 'date' ? 'flex-3' : 'flex-1'"
             >
-              <ActionTypeListbox
+              <ScheduleActionListbox
                 v-model="row.actionId"
                 :options="actionOptions"
-                label="Schedule"
+                label="Care action"
               />
             </div>
 
@@ -147,7 +147,7 @@
               <label
                 class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
               >
-                Days
+                Every (days)
               </label>
               <input
                 v-model="row.days"
@@ -162,7 +162,7 @@
               <label
                 class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
               >
-                Date
+                Due date
               </label>
               <input
                 v-model="row.date"
@@ -183,7 +183,7 @@
             v-model="row.notes"
             rows="2"
             maxlength="1000"
-            placeholder="Helpful notes for this schedule"
+            placeholder="Optional note for this reminder"
             class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100 dark:placeholder-slate-500"
           />
         </div>
@@ -196,7 +196,7 @@
       class="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
     >
       <span aria-hidden="true">+</span>
-      Add new schedule
+      Add care reminder
     </button>
   </div>
 </template>

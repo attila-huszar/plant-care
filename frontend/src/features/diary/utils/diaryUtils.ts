@@ -62,7 +62,7 @@ const buildLatestNotesMap = (events: readonly Event[]) => {
   return map
 }
 
-export const buildSchedule = (
+export const buildUpcomingSchedules = (
   plants: readonly Plant[],
   events: readonly Event[],
 ): ScheduleItem[] => {
@@ -70,8 +70,8 @@ export const buildSchedule = (
   today.setHours(0, 0, 0, 0)
   const todayMs = today.getTime()
 
-  const latestEventMsByPlantAndType = buildLatestEventsMap(events)
-  const latestNotesByPlantAndType = buildLatestNotesMap(events)
+  const latestEventMsByPlantAndActionId = buildLatestEventsMap(events)
+  const latestNotesByPlantAndActionId = buildLatestNotesMap(events)
 
   const items: ScheduleItem[] = []
 
@@ -82,7 +82,7 @@ export const buildSchedule = (
 
         const key = `${plant.id}:${schedule.id}`
         const lastEventKey = `${plant.id}:${schedule.actionId}`
-        const lastEventMs = latestEventMsByPlantAndType.get(lastEventKey)
+        const lastEventMs = latestEventMsByPlantAndActionId.get(lastEventKey)
         const baseMs = startOfDayMs(lastEventMs ?? todayMs)
 
         const dueBase = new Date(baseMs)
@@ -99,7 +99,7 @@ export const buildSchedule = (
           actionId: schedule.actionId,
           notes:
             schedule.notes?.trim() ||
-            latestNotesByPlantAndType.get(lastEventKey),
+            latestNotesByPlantAndActionId.get(lastEventKey),
           dueDate,
           diffDays,
           type: 'recurring',
@@ -123,7 +123,7 @@ export const buildSchedule = (
         actionId: schedule.actionId,
         notes:
           schedule.notes?.trim() ||
-          latestNotesByPlantAndType.get(`${plant.id}:${schedule.actionId}`),
+          latestNotesByPlantAndActionId.get(`${plant.id}:${schedule.actionId}`),
         dueDate,
         diffDays,
         type: 'date',

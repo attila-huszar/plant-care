@@ -29,7 +29,7 @@
     'remove-plant': [payload: { plantId: number }]
   }>()
 
-  const customTypeNameById = computed(() => {
+  const customActionNameById = computed(() => {
     return buildCustomEventsMap(props.customEvents)
   })
 
@@ -186,7 +186,7 @@
             v-if="card.lastEvent"
             class="mt-2 flex flex-wrap justify-center gap-2"
           >
-            <span class="sr-only">Last event</span>
+            <span class="sr-only">Last care entry</span>
             <span
               class="self-center text-sm font-semibold text-slate-600 dark:text-slate-300"
             >
@@ -195,14 +195,14 @@
             <span
               class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-200"
               :title="
-                getEventLabel(card.lastEvent.actionId, customTypeNameById)
+                getEventLabel(card.lastEvent.actionId, customActionNameById)
               "
             >
               <span aria-hidden="true">{{
                 getEventIcon(card.lastEvent.actionId)
               }}</span>
               <span class="truncate">{{
-                getEventLabel(card.lastEvent.actionId, customTypeNameById)
+                getEventLabel(card.lastEvent.actionId, customActionNameById)
               }}</span>
             </span>
             <span
@@ -214,7 +214,7 @@
           </div>
 
           <p v-else class="mt-1 text-xs text-slate-400 dark:text-slate-500">
-            No events yet
+            No care entries yet
           </p>
         </div>
       </div>

@@ -10,13 +10,13 @@
   import type { CustomEvent, Event, Plant } from '@plant-care/shared'
   import {
     buildCustomEventsMap,
-    buildSchedule,
+    buildUpcomingSchedules,
     formatDueLabel,
     formatRelativeDay,
     getEventIcon,
     getEventLabel,
   } from '@/features/diary/utils'
-  import type { ScheduleItem, SchedulePayload } from '@/types'
+  import type { ScheduleCompletionPayload, ScheduleItem } from '@/types'
   import { CalendarIcon, CheckIcon } from '@/assets/svg'
 
   const props = withDefaults(
@@ -33,22 +33,22 @@
   )
 
   const emit = defineEmits<{
-    event: [payload: SchedulePayload]
+    'complete-schedule': [payload: ScheduleCompletionPayload]
   }>()
 
-  const customEventNameById = computed(() => {
+  const customActionNameById = computed(() => {
     return buildCustomEventsMap(props.customEvents)
   })
 
-  const scheduleAll = computed(() => {
-    return buildSchedule(props.plants, props.events)
+  const upcomingSchedulesAll = computed(() => {
+    return buildUpcomingSchedules(props.plants, props.events)
   })
 
-  const schedule = computed(() => {
-    return scheduleAll.value.slice(0, 6)
+  const upcomingSchedules = computed(() => {
+    return upcomingSchedulesAll.value.slice(0, 6)
   })
 
-  const getScheduleItemClasses = (item: ScheduleItem) => {
+  const getUpcomingItemClasses = (item: ScheduleItem) => {
     if (item.diffDays < 0) {
       return 'border border-amber-200/80 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-950/20'
     }
@@ -155,8 +155,8 @@
     isCompleteDialogOpen.value = true
   }
 
-  const emitEvent = (item: ScheduleItem, notes?: string) => {
-    emit('event', {
+  const emitScheduleCompletion = (item: ScheduleItem, notes?: string) => {
+    emit('complete-schedule', {
       plantId: item.plantId,
       actionId: item.actionId,
       type: item.type,
@@ -180,7 +180,7 @@
     const notes = pendingNotes.value.trim()
     markCompleting(item.key)
 
-    emitEvent(item, notes || undefined)
+    emitScheduleCompletion(item, notes || undefined)
 
     closeCompleteDialog()
 
@@ -194,7 +194,7 @@
     const notes = item.notes?.trim()
     markCompleting(item.key)
 
-    emitEvent(item, notes || undefined)
+    emitScheduleCompletion(item, notes || undefined)
 
     clearCompletingLater(item.key)
   }
@@ -237,11 +237,11 @@
                   <DialogTitle
                     class="text-lg font-bold text-slate-900 dark:text-slate-100"
                   >
-                    Mark as done
+                    Record Care
                   </DialogTitle>
 
                   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Add optional notes for this schedule.
+                    Add an optional note about what you did.
                   </p>
 
                   <div class="mt-4">
@@ -272,7 +272,7 @@
                       class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
                       @click="confirmComplete"
                     >
-                      Mark as done
+                      Record Care
                     </button>
                   </div>
                 </div>
@@ -302,23 +302,23 @@
       >
         <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Upcoming care
+            Coming Up
           </h3>
         </div>
 
-        <div v-if="scheduleAll.length === 0" class="px-4 py-4">
+        <div v-if="upcomingSchedulesAll.length === 0" class="px-4 py-4">
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            No upcoming care items. Add a schedule when creating a plant.
+            No care reminders yet. Add one when creating or editing a plant.
           </p>
         </div>
 
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
           <div class="space-y-2">
             <div
-              v-for="item in schedule"
+              v-for="item in upcomingSchedules"
               :key="item.key"
               class="flex items-start gap-3 rounded-xl px-3 py-3"
-              :class="getScheduleItemClasses(item)"
+              :class="getUpcomingItemClasses(item)"
             >
               <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
                 <div
@@ -331,7 +331,7 @@
                     class="text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
                     <span>{{
-                      getEventLabel(item.actionId, customEventNameById)
+                      getEventLabel(item.actionId, customActionNameById)
                     }}</span>
                     for
                     <span class="font-bold text-emerald-700">{{
@@ -352,7 +352,7 @@
                     <span v-if="item.type === 'recurring'">
                       every {{ item.days }} days
                     </span>
-                    <span v-else>one-off</span>
+                    <span v-else>one-time</span>
                   </p>
                   <div v-if="item.notes" class="mt-1">
                     <p
@@ -373,8 +373,8 @@
                 class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 @click.stop="openCompleteDialog(item)"
                 :disabled="isCompleting(item.key)"
-                aria-label="Add notes"
-                title="Add notes"
+                aria-label="Add note"
+                title="Add note"
               >
                 <span aria-hidden="true">⋯</span>
               </button>
@@ -448,7 +448,7 @@
           class="flex min-h-60 flex-1 flex-col items-center justify-center gap-4 px-4 pb-6 text-center opacity-60"
         >
           <CalendarIcon class="size-12 text-slate-400" aria-hidden="true" />
-          <p class="text-sm">No events recorded yet.</p>
+          <p class="text-sm">No care entries yet.</p>
         </div>
 
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
@@ -468,7 +468,7 @@
                   class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
                   <span>{{
-                    getEventLabel(event.actionId, customEventNameById)
+                    getEventLabel(event.actionId, customActionNameById)
                   }}</span>
                   for
                   <span class="font-bold text-emerald-700">{{

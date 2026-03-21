@@ -81,7 +81,7 @@
     return options
   })
 
-  const customTypeNameById = computed(() => {
+  const customActionNameById = computed(() => {
     return buildCustomEventsMap(userStore.customEvents)
   })
 
@@ -92,7 +92,7 @@
     )
   })
 
-  const latestNotesByType = computed(() => {
+  const latestNotesByActionId = computed(() => {
     const map = new Map<string, string>()
 
     for (const event of sortedHistory.value) {
@@ -137,7 +137,9 @@
           ? toDateInputValue(new Date(schedule.date))
           : '',
       notes:
-        schedule.notes ?? latestNotesByType.value.get(schedule.actionId) ?? '',
+        schedule.notes ??
+        latestNotesByActionId.value.get(schedule.actionId) ??
+        '',
     }))
   }
 
@@ -244,7 +246,7 @@
       actionId: row.actionId.trim(),
     }))
 
-    const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
+    const customActionIds = new Set(userStore.customEvents.map((t) => t.id))
     const idByLabelLower = new Map<string, string>()
     for (const opt of actionOptions.value) {
       idByLabelLower.set(opt.label.toLowerCase(), opt.id)
@@ -268,7 +270,7 @@
 
       const normalized = idByLabelLower.get(input.toLowerCase()) ?? input
 
-      if (builtinActionIds.has(normalized) || customTypeIds.has(normalized)) {
+      if (builtinActionIds.has(normalized) || customActionIds.has(normalized)) {
         resolvedActionIdByInput.set(input, normalized)
         resolvedRows.push({ ...row, actionId: normalized })
         continue
@@ -276,12 +278,12 @@
 
       if (safeValidate(uuidSchema, normalized)) {
         saveError.value =
-          'A schedule uses an unknown custom action. Please pick an existing action or create a new one.'
+          'One reminder uses a custom care action that no longer exists. Please pick an existing one or create a new one.'
         return
       }
 
       if (normalized.length > 60) {
-        saveError.value = 'Schedule action ID must be 60 characters or less.'
+        saveError.value = 'Care action names must be 60 characters or less.'
         return
       }
 
@@ -297,12 +299,12 @@
 
     scheduleRows.value = resolvedRows
 
-    const lastCadenceIndexByType = new Map<string, number>()
+    const lastCadenceIndexByActionId = new Map<string, number>()
     for (let i = 0; i < scheduleRows.value.length; i += 1) {
       const row = scheduleRows.value[i]
       if (row.type !== 'recurring') continue
       if (!row.actionId) continue
-      lastCadenceIndexByType.set(row.actionId, i)
+      lastCadenceIndexByActionId.set(row.actionId, i)
     }
 
     const schedules: Schedule[] = []
@@ -313,7 +315,7 @@
       const notes = row.notes.trim()
 
       if (row.type === 'recurring') {
-        const lastIndex = lastCadenceIndexByType.get(row.actionId)
+        const lastIndex = lastCadenceIndexByActionId.get(row.actionId)
         if (lastIndex !== i) continue
 
         const days = toDays(row.days)
@@ -458,7 +460,7 @@
                       v-if="isAddMode"
                       class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                     >
-                      Set up your plant and optionally add care reminders.
+                      Set up your plant and add care reminders if you want.
                     </p>
                   </div>
                   <button
@@ -549,7 +551,7 @@
                             : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                         "
                       >
-                        Schedules
+                        Care plan
                       </button>
                     </Tab>
 
@@ -610,7 +612,7 @@
                           v-if="sortedHistory.length === 0"
                           class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950/30 dark:text-slate-300"
                         >
-                          No events recorded yet.
+                          No care entries yet.
                         </div>
 
                         <div
@@ -638,7 +640,7 @@
                                   {{
                                     getEventLabel(
                                       event.actionId,
-                                      customTypeNameById,
+                                      customActionNameById,
                                     )
                                   }}
                                 </p>

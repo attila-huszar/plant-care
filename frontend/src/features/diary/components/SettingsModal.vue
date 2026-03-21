@@ -159,12 +159,12 @@
     apiSuccess.value = null
 
     if (createReserved.value) {
-      apiError.value = 'Name is reserved'
+      apiError.value = 'That name is reserved for built-in care actions'
       return
     }
 
     if (createDuplicate.value) {
-      apiError.value = 'Name already exists'
+      apiError.value = 'You already have a care action with that name'
       return
     }
 
@@ -175,7 +175,7 @@
     }
 
     newCustomEventName.value = ''
-    apiSuccess.value = 'Custom event added'
+    apiSuccess.value = 'Custom care action added'
   }
 
   const startRename = (id: string, currentName: string) => {
@@ -201,11 +201,11 @@
     const nextName = editingCustomEventName.value.trim()
     if (!nextName) return
     if (renameReserved.value) {
-      apiError.value = 'Name is reserved'
+      apiError.value = 'That name is reserved for built-in care actions'
       return
     }
     if (renameConflict.value) {
-      apiError.value = 'Custom event name already exists'
+      apiError.value = 'That care action name already exists'
       return
     }
 
@@ -219,7 +219,7 @@
       return
     }
 
-    apiSuccess.value = 'Custom event updated'
+    apiSuccess.value = 'Custom care action updated'
     cancelRename()
   }
 
@@ -238,7 +238,7 @@
     }
 
     if (editingCustomEventId.value === id) cancelRename()
-    apiSuccess.value = 'Custom event removed'
+    apiSuccess.value = 'Custom care action removed'
   }
 
   const removeCustomEventAndClose = async (id: string, close: () => void) => {
@@ -293,7 +293,7 @@
                     Settings
                   </DialogTitle>
                   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Manage account security options.
+                    Manage account security and diary preferences.
                   </p>
                 </div>
                 <button
@@ -367,7 +367,7 @@
                       Show history card
                     </p>
                     <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                      Toggle the History card in the Activity section.
+                      Show or hide the History card in Activity.
                     </p>
                   </div>
 
@@ -402,10 +402,10 @@
                     <p
                       class="text-sm font-semibold text-slate-900 dark:text-slate-100"
                     >
-                      Custom events
+                      Custom care actions
                     </p>
                     <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                      Add, rename, or remove your custom care event types.
+                      Add, rename, or remove your personal care actions.
                     </p>
                   </div>
                 </div>
@@ -416,7 +416,7 @@
                       v-model="newCustomEventName"
                       type="text"
                       autocomplete="off"
-                      placeholder="New event name"
+                      placeholder="New care action name"
                       class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ring-emerald-500/30 outline-none focus:ring-4 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
                       :class="
                         createInvalid ? 'border-rose-300 ring-rose-500/30' : ''
@@ -438,7 +438,7 @@
                       @click="addCustomEvent"
                       :title="
                         createReserved
-                          ? 'Name is reserved'
+                          ? 'That name is reserved'
                           : createDuplicate
                             ? 'Name already exists'
                             : 'Add'
@@ -452,7 +452,7 @@
                     v-if="customEvents.length === 0"
                     class="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400"
                   >
-                    No custom events yet.
+                    No custom care actions yet.
                   </div>
 
                   <ul v-else class="space-y-2">
@@ -491,7 +491,7 @@
                             @click="saveRename"
                             :title="
                               renameReserved
-                                ? 'Name is reserved'
+                                ? 'That name is reserved'
                                 : renameConflict
                                   ? 'Name already exists'
                                   : 'Save'
@@ -557,7 +557,7 @@
                               :title="
                                 canRemoveCustomEvent(evt.id)
                                   ? 'Remove'
-                                  : 'Remove is disabled while this event is used by plants or history'
+                                  : 'Cannot remove while used in reminders or history'
                               "
                               aria-label="Remove"
                             >
@@ -581,7 +581,7 @@
                                 <p
                                   class="font-semibold text-slate-900 dark:text-slate-100"
                                 >
-                                  Remove custom event?
+                                  Remove custom care action?
                                 </p>
                                 <p
                                   class="mt-1 text-slate-600 dark:text-slate-300"

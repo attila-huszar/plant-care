@@ -11,7 +11,7 @@ export type ScheduleItem = {
   diffDays: number
 } & ({ type: 'recurring'; days: number } | { type: 'date' })
 
-export type SchedulePayload = Pick<
+export type ScheduleCompletionPayload = Pick<
   ScheduleItem,
   'plantId' | 'actionId' | 'type' | 'scheduleId' | 'notes'
 >
