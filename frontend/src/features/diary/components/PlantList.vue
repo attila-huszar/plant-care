@@ -34,14 +34,18 @@
   })
 
   const lastEventByPlantId = computed(() => {
-    const map = new Map<number, { iso: string; ms: number; type: string }>()
+    const map = new Map<number, { iso: string; ms: number; actionId: string }>()
 
     for (const event of props.events) {
       const ms = new Date(event.date).getTime()
       if (!Number.isFinite(ms)) continue
       const current = map.get(event.plantId)
       if (!current || ms > current.ms) {
-        map.set(event.plantId, { iso: event.date, ms, type: event.type })
+        map.set(event.plantId, {
+          iso: event.date,
+          ms,
+          actionId: event.actionId,
+        })
       }
     }
 
@@ -190,13 +194,15 @@
             </span>
             <span
               class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-sm dark:bg-emerald-950/30 dark:text-emerald-200"
-              :title="getEventLabel(card.lastEvent.type, customTypeNameById)"
+              :title="
+                getEventLabel(card.lastEvent.actionId, customTypeNameById)
+              "
             >
               <span aria-hidden="true">{{
-                getEventIcon(card.lastEvent.type)
+                getEventIcon(card.lastEvent.actionId)
               }}</span>
               <span class="truncate">{{
-                getEventLabel(card.lastEvent.type, customTypeNameById)
+                getEventLabel(card.lastEvent.actionId, customTypeNameById)
               }}</span>
             </span>
             <span

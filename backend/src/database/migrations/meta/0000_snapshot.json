@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1f45e597-b936-4217-80ef-8dd7b5c1c281",
+  "id": "4f851c76-09f2-4e43-95da-fda6adb8b0f2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "events": {
@@ -28,8 +28,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "type": {
-          "name": "type",
+        "action_id": {
+          "name": "action_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -179,6 +179,28 @@
           "notNull": false,
           "autoincrement": false
         },
+        "mfa_enabled": {
+          "name": "mfa_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "mfa_token": {
+          "name": "mfa_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "mfa_expires": {
+          "name": "mfa_expires",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "custom_events": {
           "name": "custom_events",
           "type": "text",
@@ -248,8 +270,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "care_rules": {
-          "name": "care_rules",
+        "schedules": {
+          "name": "schedules",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

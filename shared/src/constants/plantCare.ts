@@ -7,9 +7,11 @@ export const SCHEDULE_BUILTIN_ACTIONS = [
 export type ScheduleBuiltinAction = (typeof SCHEDULE_BUILTIN_ACTIONS)[number]
 
 export const getBuiltinScheduleAction = (
-  id: string,
+  actionId: string,
 ): ScheduleBuiltinAction | null => {
-  return SCHEDULE_BUILTIN_ACTIONS.find((action) => action.id === id) ?? null
+  return (
+    SCHEDULE_BUILTIN_ACTIONS.find((action) => action.id === actionId) ?? null
+  )
 }
 
 export type ScheduleActionId = ScheduleBuiltinAction['id'] | (string & {})

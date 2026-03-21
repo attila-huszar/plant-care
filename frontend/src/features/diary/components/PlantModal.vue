@@ -71,9 +71,9 @@
 
     if (plant.value) {
       for (const schedule of plant.value.schedules) {
-        const exists = options.some((o) => o.id === schedule.type)
+        const exists = options.some((o) => o.id === schedule.actionId)
         if (!exists) {
-          options.push({ id: schedule.type, label: schedule.type })
+          options.push({ id: schedule.actionId, label: schedule.actionId })
         }
       }
     }
@@ -98,7 +98,7 @@
     for (const event of sortedHistory.value) {
       const notes = event.notes?.trim()
       if (!notes) continue
-      if (!map.has(event.type)) map.set(event.type, notes)
+      if (!map.has(event.actionId)) map.set(event.actionId, notes)
     }
 
     return map
@@ -106,7 +106,7 @@
 
   type DraftScheduleRow = {
     id: string
-    kind: 'recurring' | 'date'
+    type: 'recurring' | 'date'
     actionId: ScheduleActionId
     days: string
     date: string
@@ -129,14 +129,15 @@
 
     scheduleRows.value = plant.value.schedules.map((schedule) => ({
       id: schedule.id,
-      kind: schedule.kind,
-      actionId: schedule.type,
-      days: schedule.kind === 'recurring' ? String(schedule.days) : '7',
+      type: schedule.type,
+      actionId: schedule.actionId,
+      days: schedule.type === 'recurring' ? String(schedule.days) : '7',
       date:
-        schedule.kind === 'date'
+        schedule.type === 'date'
           ? toDateInputValue(new Date(schedule.date))
           : '',
-      notes: schedule.notes ?? latestNotesByType.value.get(schedule.type) ?? '',
+      notes:
+        schedule.notes ?? latestNotesByType.value.get(schedule.actionId) ?? '',
     }))
   }
 
@@ -209,7 +210,7 @@
   const addScheduleRow = () => {
     scheduleRows.value.push({
       id: crypto.randomUUID(),
-      kind: 'recurring',
+      type: 'recurring',
       actionId: 'water',
       days: '7',
       date: '',
@@ -222,16 +223,16 @@
   }
 
   const ensureDateDefault = (row: DraftScheduleRow) => {
-    if (row.kind !== 'date') return
+    if (row.type !== 'date') return
     if (row.date) return
     row.date = toDateInputValue(new Date())
   }
 
-  const setRowKind = (
+  const setRowType = (
     row: DraftScheduleRow,
-    kind: DraftScheduleRow['kind'],
+    type: DraftScheduleRow['type'],
   ) => {
-    row.kind = kind
+    row.type = type
     ensureDateDefault(row)
   }
 
@@ -275,12 +276,12 @@
 
       if (safeValidate(uuidSchema, normalized)) {
         saveError.value =
-          'A schedule uses an unknown custom event type. Please pick an existing type or create a new one.'
+          'A schedule uses an unknown custom action. Please pick an existing action or create a new one.'
         return
       }
 
       if (normalized.length > 60) {
-        saveError.value = 'Schedule type must be 60 characters or less.'
+        saveError.value = 'Schedule action ID must be 60 characters or less.'
         return
       }
 
@@ -299,7 +300,7 @@
     const lastCadenceIndexByType = new Map<string, number>()
     for (let i = 0; i < scheduleRows.value.length; i += 1) {
       const row = scheduleRows.value[i]
-      if (row.kind !== 'recurring') continue
+      if (row.type !== 'recurring') continue
       if (!row.actionId) continue
       lastCadenceIndexByType.set(row.actionId, i)
     }
@@ -311,7 +312,7 @@
       if (!row.actionId) continue
       const notes = row.notes.trim()
 
-      if (row.kind === 'recurring') {
+      if (row.type === 'recurring') {
         const lastIndex = lastCadenceIndexByType.get(row.actionId)
         if (lastIndex !== i) continue
 
@@ -319,9 +320,9 @@
         if (!days) continue
 
         schedules.push({
-          kind: 'recurring',
+          type: 'recurring',
           id: row.id,
-          type: row.actionId,
+          actionId: row.actionId,
           days,
           notes,
         })
@@ -332,9 +333,9 @@
       if (!iso) continue
 
       schedules.push({
-        kind: 'date',
+        type: 'date',
         id: row.id,
-        type: row.actionId,
+        actionId: row.actionId,
         date: iso,
         notes,
       })
@@ -508,7 +509,7 @@
                     :action-options="actionOptions"
                     :add-schedule-row="addScheduleRow"
                     :remove-schedule-row="removeScheduleRow"
-                    :set-row-kind="setRowKind"
+                    :set-row-type="setRowType"
                   />
 
                   <div class="flex flex-col gap-3 pt-2 sm:flex-row">
@@ -575,7 +576,7 @@
                           :action-options="actionOptions"
                           :add-schedule-row="addScheduleRow"
                           :remove-schedule-row="removeScheduleRow"
-                          :set-row-kind="setRowKind"
+                          :set-row-type="setRowType"
                         />
 
                         <div
@@ -624,7 +625,7 @@
                             <div
                               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                             >
-                              {{ getEventIcon(event.type) }}
+                              {{ getEventIcon(event.actionId) }}
                             </div>
 
                             <div class="min-w-0 flex-1">
@@ -636,7 +637,7 @@
                                 >
                                   {{
                                     getEventLabel(
-                                      event.type,
+                                      event.actionId,
                                       customTypeNameById,
                                     )
                                   }}

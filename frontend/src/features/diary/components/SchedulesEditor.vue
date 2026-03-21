@@ -11,7 +11,7 @@
 
   type DraftScheduleRow = {
     id: string
-    kind: 'recurring' | 'date'
+    type: 'recurring' | 'date'
     actionId: ScheduleActionId
     days: string
     date: string
@@ -23,7 +23,7 @@
     actionOptions: { id: ScheduleActionId; label: string }[]
     addScheduleRow: () => void
     removeScheduleRow(_id: string): void
-    setRowKind(_row: DraftScheduleRow, _kind: DraftScheduleRow['kind']): void
+    setRowType(_row: DraftScheduleRow, _type: DraftScheduleRow['type']): void
   }
 
   defineProps<SchedulesEditorProps>()
@@ -53,19 +53,19 @@
             <label
               class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
             >
-              Kind
+              Type
             </label>
             <Listbox
-              v-model="row.kind"
+              v-model="row.type"
               as="div"
               class="relative"
-              @update:model-value="setRowKind(row, $event)"
+              @update:model-value="setRowType(row, $event)"
             >
               <ListboxButton
                 class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100"
               >
                 <span class="truncate">
-                  {{ row.kind === 'recurring' ? 'Recurring' : 'One-off' }}
+                  {{ row.type === 'recurring' ? 'Recurring' : 'One-off' }}
                 </span>
                 <ChevronIcon class="size-4 text-slate-400" aria-hidden="true" />
               </ListboxButton>
@@ -131,7 +131,7 @@
           >
             <div
               class="min-w-0"
-              :class="row.kind === 'date' ? 'flex-3' : 'flex-1'"
+              :class="row.type === 'date' ? 'flex-3' : 'flex-1'"
             >
               <ActionTypeListbox
                 v-model="row.actionId"
@@ -141,7 +141,7 @@
             </div>
 
             <div
-              v-if="row.kind === 'recurring'"
+              v-if="row.type === 'recurring'"
               class="w-full shrink-0 sm:w-24"
             >
               <label

@@ -47,11 +47,11 @@
 
     for (const plant of plantsStore.plants) {
       for (const schedule of plant.schedules) {
-        counts.set(schedule.type, (counts.get(schedule.type) ?? 0) + 1)
+        counts.set(schedule.actionId, (counts.get(schedule.actionId) ?? 0) + 1)
       }
 
       for (const event of plant.history) {
-        counts.set(event.type, (counts.get(event.type) ?? 0) + 1)
+        counts.set(event.actionId, (counts.get(event.actionId) ?? 0) + 1)
       }
     }
 
@@ -239,6 +239,11 @@
 
     if (editingCustomEventId.value === id) cancelRename()
     apiSuccess.value = 'Custom event removed'
+  }
+
+  const removeCustomEventAndClose = async (id: string, close: () => void) => {
+    await removeCustomEvent(id)
+    close()
   }
 
   const handleClose = () => emit('close')
@@ -604,10 +609,7 @@
                                       !canRemoveCustomEvent(evt.id)
                                     "
                                     @click="
-                                      async () => {
-                                        await removeCustomEvent(evt.id)
-                                        close()
-                                      }
+                                      removeCustomEventAndClose(evt.id, close)
                                     "
                                   >
                                     Remove

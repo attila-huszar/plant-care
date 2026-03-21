@@ -10,13 +10,13 @@
   import type { CustomEvent, Event, Plant } from '@plant-care/shared'
   import {
     buildCustomEventsMap,
-    buildUpcomingCareItems,
+    buildSchedule,
     formatDueLabel,
     formatRelativeDay,
     getEventIcon,
     getEventLabel,
   } from '@/features/diary/utils'
-  import type { CareTimelinePayload } from '@/types'
+  import type { ScheduleItem, SchedulePayload } from '@/types'
   import { CalendarIcon, CheckIcon } from '@/assets/svg'
 
   const props = withDefaults(
@@ -33,24 +33,22 @@
   )
 
   const emit = defineEmits<{
-    care: [payload: CareTimelinePayload]
+    event: [payload: SchedulePayload]
   }>()
 
-  const customTypeNameById = computed(() => {
+  const customEventNameById = computed(() => {
     return buildCustomEventsMap(props.customEvents)
   })
 
-  const upcomingCareAll = computed(() => {
-    return buildUpcomingCareItems(props.plants, props.events)
+  const scheduleAll = computed(() => {
+    return buildSchedule(props.plants, props.events)
   })
 
-  const upcomingCare = computed(() => {
-    return upcomingCareAll.value.slice(0, 6)
+  const schedule = computed(() => {
+    return scheduleAll.value.slice(0, 6)
   })
 
-  const getUpcomingItemClasses = (
-    item: (typeof upcomingCare.value)[number],
-  ) => {
+  const getScheduleItemClasses = (item: ScheduleItem) => {
     if (item.diffDays < 0) {
       return 'border border-amber-200/80 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-950/20'
     }
@@ -122,9 +120,7 @@
 
   const completingKeys = ref<Set<string>>(new Set())
   const isCompleteDialogOpen = ref(false)
-  const pendingCompleteItem = ref<(typeof upcomingCare.value)[number] | null>(
-    null,
-  )
+  const pendingCompleteItem = ref<ScheduleItem | null>(null)
   const pendingNotes = ref('')
 
   const isCompleting = (key: string) => {
@@ -143,7 +139,7 @@
     completingKeys.value = next
   }
 
-  const canCompleteItem = (item: (typeof upcomingCare.value)[number]) => {
+  const canCompleteItem = (item: ScheduleItem) => {
     return item.diffDays <= 0
   }
 
@@ -153,10 +149,26 @@
     pendingNotes.value = ''
   }
 
-  const openCompleteDialog = (item: (typeof upcomingCare.value)[number]) => {
+  const openCompleteDialog = (item: ScheduleItem) => {
     pendingCompleteItem.value = item
     pendingNotes.value = item.notes?.trim() ?? ''
     isCompleteDialogOpen.value = true
+  }
+
+  const emitEvent = (item: ScheduleItem, notes?: string) => {
+    emit('event', {
+      plantId: item.plantId,
+      actionId: item.actionId,
+      type: item.type,
+      scheduleId: item.scheduleId,
+      ...(notes ? { notes } : {}),
+    })
+  }
+
+  const clearCompletingLater = (key: string) => {
+    window.setTimeout(() => {
+      unmarkCompleting(key)
+    }, 700)
   }
 
   const confirmComplete = () => {
@@ -168,39 +180,23 @@
     const notes = pendingNotes.value.trim()
     markCompleting(item.key)
 
-    emit('care', {
-      plantId: item.plantId,
-      type: item.type,
-      kind: item.kind,
-      scheduleId: item.scheduleId,
-      ...(notes ? { notes } : {}),
-    })
+    emitEvent(item, notes || undefined)
 
     closeCompleteDialog()
 
-    window.setTimeout(() => {
-      unmarkCompleting(item.key)
-    }, 700)
+    clearCompletingLater(item.key)
   }
 
-  const completeItemQuick = (item: (typeof upcomingCare.value)[number]) => {
+  const completeItemQuick = (item: ScheduleItem) => {
     if (!canCompleteItem(item)) return
     if (isCompleting(item.key)) return
 
-    const notes = item.notes?.trim() || undefined
+    const notes = item.notes?.trim()
     markCompleting(item.key)
 
-    emit('care', {
-      plantId: item.plantId,
-      type: item.type,
-      kind: item.kind,
-      scheduleId: item.scheduleId,
-      ...(notes ? { notes } : {}),
-    })
+    emitEvent(item, notes || undefined)
 
-    window.setTimeout(() => {
-      unmarkCompleting(item.key)
-    }, 700)
+    clearCompletingLater(item.key)
   }
 </script>
 
@@ -310,7 +306,7 @@
           </h3>
         </div>
 
-        <div v-if="upcomingCareAll.length === 0" class="px-4 py-4">
+        <div v-if="scheduleAll.length === 0" class="px-4 py-4">
           <p class="text-sm text-slate-500 dark:text-slate-400">
             No upcoming care items. Add a schedule when creating a plant.
           </p>
@@ -319,23 +315,23 @@
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
           <div class="space-y-2">
             <div
-              v-for="item in upcomingCare"
+              v-for="item in schedule"
               :key="item.key"
               class="flex items-start gap-3 rounded-xl px-3 py-3"
-              :class="getUpcomingItemClasses(item)"
+              :class="getScheduleItemClasses(item)"
             >
               <div class="flex min-w-0 flex-1 items-start gap-3 text-left">
                 <div
                   class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                 >
-                  {{ getEventIcon(item.type) }}
+                  {{ getEventIcon(item.actionId) }}
                 </div>
                 <div class="min-w-0 flex-1">
                   <p
                     class="text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
                     <span>{{
-                      getEventLabel(item.type, customTypeNameById)
+                      getEventLabel(item.actionId, customEventNameById)
                     }}</span>
                     for
                     <span class="font-bold text-emerald-700">{{
@@ -353,7 +349,7 @@
                     "
                   >
                     {{ formatDueLabel(item.diffDays) }} •
-                    <span v-if="item.kind === 'recurring'">
+                    <span v-if="item.type === 'recurring'">
                       every {{ item.days }} days
                     </span>
                     <span v-else>one-off</span>
@@ -465,14 +461,14 @@
               <div
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
-                {{ getEventIcon(event.type) }}
+                {{ getEventIcon(event.actionId) }}
               </div>
               <div class="min-w-0 flex-1">
                 <p
                   class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
                   <span>{{
-                    getEventLabel(event.type, customTypeNameById)
+                    getEventLabel(event.actionId, customEventNameById)
                   }}</span>
                   for
                   <span class="font-bold text-emerald-700">{{
