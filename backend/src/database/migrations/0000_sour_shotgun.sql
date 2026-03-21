@@ -23,7 +23,7 @@ CREATE TABLE `users` (
 	`verification_expires` integer,
 	`password_reset_token` text,
 	`password_reset_expires` integer,
-	`mfa_enabled` integer DEFAULT false NOT NULL,
+	`mfa_enabled` integer DEFAULT 0 NOT NULL,
 	`mfa_token` text,
 	`mfa_expires` integer,
 	`custom_events` text,
