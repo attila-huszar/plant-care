@@ -326,13 +326,19 @@
                 <div class="flex items-center justify-between gap-4">
                   <div class="min-w-0">
                     <p
-                      class="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                      class="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
                     >
-                      Email-based MFA
+                      <span>Email-based MFA</span>
+                      <span
+                        v-if="userStore.profile?.email"
+                        class="max-w-full rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 shadow-sm dark:bg-slate-800/60 dark:text-slate-200"
+                        :title="userStore.profile.email"
+                      >
+                        {{ userStore.profile.email }}
+                      </span>
                     </p>
                     <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                      Receive a 6-digit code by email on login (expires in 10
-                      minutes).
+                      Receive a 6-digit code by email on login.
                     </p>
                   </div>
 
