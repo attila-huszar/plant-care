@@ -3,7 +3,7 @@
   import { useDark, useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
   import { useElfsightVoice } from '@/composables'
-  import type { CareTimelinePayload } from '@/types'
+  import type { ScheduleCompletionPayload } from '@/types'
   import { useAuthStore, useUserStore } from '../../auth/stores'
   import {
     DashboardHeader,
@@ -69,17 +69,19 @@
     void Promise.all([plantsStore.getPlants(), userStore.bootstrap()])
   })
 
-  const handleCare = async (payload: CareTimelinePayload) => {
+  const handleScheduleCompletion = async (
+    payload: ScheduleCompletionPayload,
+  ) => {
     const event = await plantsStore.addEvent({
       plantId: payload.plantId,
-      type: payload.type,
+      actionId: payload.actionId,
       ...(payload.notes ? { notes: payload.notes } : {}),
       date: new Date().toISOString(),
     })
 
     if (!event) return
 
-    if (payload.kind === 'date') {
+    if (payload.type === 'date') {
       await plantsStore.removeSchedule(payload.plantId, payload.scheduleId)
     }
   }
@@ -115,7 +117,7 @@
           :events="plantsStore.events"
           :custom-events="userStore.customEvents"
           :show-history-card="showHistoryCard"
-          @care="handleCare"
+          @complete-schedule="handleScheduleCompletion"
         />
       </div>
     </main>

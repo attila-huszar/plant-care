@@ -11,14 +11,14 @@
   import type { ScheduleActionId } from '@plant-care/shared'
   import { ChevronIcon } from '@/assets/svg'
 
-  type ActionTypeOption = {
+  type ActionOption = {
     id: ScheduleActionId
     label: string
   }
 
   const props = defineProps<{
     modelValue: ScheduleActionId
-    options: ActionTypeOption[]
+    options: ActionOption[]
     label?: string
   }>()
 
@@ -28,18 +28,18 @@
 
   const query = ref('')
 
-  const selected = computed<ActionTypeOption | null>(
+  const selected = computed<ActionOption | null>(
     () => props.options.find((o) => o.id === props.modelValue) ?? null,
   )
 
-  const filtered = computed<ActionTypeOption[]>(() => {
+  const filtered = computed<ActionOption[]>(() => {
     const q = query.value.trim().toLowerCase()
     return q
       ? props.options.filter((o) => o.label.toLowerCase().includes(q))
       : props.options
   })
 
-  const update = (opt: ActionTypeOption | null) => {
+  const update = (opt: ActionOption | null) => {
     if (!opt) return
     emit('update:modelValue', opt.id)
     query.value = ''
@@ -67,7 +67,7 @@
   }
 
   const displayValue = (o: unknown): string =>
-    (o as ActionTypeOption | null)?.label ?? ''
+    (o as ActionOption | null)?.label ?? ''
 </script>
 
 <template>

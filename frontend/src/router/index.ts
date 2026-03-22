@@ -76,11 +76,10 @@ router.beforeEach(async (to) => {
     })
   await authInitPromise
 
-  if (authStore.isAuthenticated) {
+  if (authStore.isAuthenticated && !userStore.isReady) {
     await userStore.bootstrap()
   }
 
-  const isAuthed = authStore.isAuthenticated && userStore.isReady
   const isPublic = to.matched.some(
     (record) => Boolean(record.meta.public) || Boolean(record.meta.publicOnly),
   )
@@ -88,11 +87,11 @@ router.beforeEach(async (to) => {
     Boolean(record.meta.publicOnly),
   )
 
-  if (isPublicOnly && isAuthed) {
+  if (authStore.isAuthenticated && isPublicOnly) {
     return { name: 'dashboard' }
   }
 
-  if (!isPublic && !isAuthed) {
+  if (!authStore.isAuthenticated && !isPublic) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 

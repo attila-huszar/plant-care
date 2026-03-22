@@ -9,7 +9,7 @@ export const plantsTable = sqliteTable('plants', {
     .notNull()
     .references(() => usersTable.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  schedules: text('care_rules', { mode: 'json' })
+  schedules: text('schedules', { mode: 'json' })
     .notNull()
     .default('[]')
     .$type<Schedule[]>(),

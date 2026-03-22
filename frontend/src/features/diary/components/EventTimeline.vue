@@ -10,13 +10,13 @@
   import type { CustomEvent, Event, Plant } from '@plant-care/shared'
   import {
     buildCustomEventsMap,
-    buildUpcomingCareItems,
+    buildUpcomingSchedules,
     formatDueLabel,
     formatRelativeDay,
     getEventIcon,
     getEventLabel,
   } from '@/features/diary/utils'
-  import type { CareTimelinePayload } from '@/types'
+  import type { ScheduleCompletionPayload, ScheduleItem } from '@/types'
   import { CalendarIcon, CheckIcon } from '@/assets/svg'
 
   const props = withDefaults(
@@ -33,24 +33,22 @@
   )
 
   const emit = defineEmits<{
-    care: [payload: CareTimelinePayload]
+    'complete-schedule': [payload: ScheduleCompletionPayload]
   }>()
 
-  const customTypeNameById = computed(() => {
+  const customActionNameById = computed(() => {
     return buildCustomEventsMap(props.customEvents)
   })
 
-  const upcomingCareAll = computed(() => {
-    return buildUpcomingCareItems(props.plants, props.events)
+  const upcomingSchedulesAll = computed(() => {
+    return buildUpcomingSchedules(props.plants, props.events)
   })
 
-  const upcomingCare = computed(() => {
-    return upcomingCareAll.value.slice(0, 6)
+  const upcomingSchedules = computed(() => {
+    return upcomingSchedulesAll.value.slice(0, 6)
   })
 
-  const getUpcomingItemClasses = (
-    item: (typeof upcomingCare.value)[number],
-  ) => {
+  const getUpcomingItemClasses = (item: ScheduleItem) => {
     if (item.diffDays < 0) {
       return 'border border-amber-200/80 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-950/20'
     }
@@ -122,9 +120,7 @@
 
   const completingKeys = ref<Set<string>>(new Set())
   const isCompleteDialogOpen = ref(false)
-  const pendingCompleteItem = ref<(typeof upcomingCare.value)[number] | null>(
-    null,
-  )
+  const pendingCompleteItem = ref<ScheduleItem | null>(null)
   const pendingNotes = ref('')
 
   const isCompleting = (key: string) => {
@@ -143,7 +139,7 @@
     completingKeys.value = next
   }
 
-  const canCompleteItem = (item: (typeof upcomingCare.value)[number]) => {
+  const canCompleteItem = (item: ScheduleItem) => {
     return item.diffDays <= 0
   }
 
@@ -153,10 +149,26 @@
     pendingNotes.value = ''
   }
 
-  const openCompleteDialog = (item: (typeof upcomingCare.value)[number]) => {
+  const openCompleteDialog = (item: ScheduleItem) => {
     pendingCompleteItem.value = item
     pendingNotes.value = item.notes?.trim() ?? ''
     isCompleteDialogOpen.value = true
+  }
+
+  const emitScheduleCompletion = (item: ScheduleItem, notes?: string) => {
+    emit('complete-schedule', {
+      plantId: item.plantId,
+      actionId: item.actionId,
+      type: item.type,
+      scheduleId: item.scheduleId,
+      ...(notes ? { notes } : {}),
+    })
+  }
+
+  const clearCompletingLater = (key: string) => {
+    window.setTimeout(() => {
+      unmarkCompleting(key)
+    }, 700)
   }
 
   const confirmComplete = () => {
@@ -168,39 +180,23 @@
     const notes = pendingNotes.value.trim()
     markCompleting(item.key)
 
-    emit('care', {
-      plantId: item.plantId,
-      type: item.type,
-      kind: item.kind,
-      scheduleId: item.scheduleId,
-      ...(notes ? { notes } : {}),
-    })
+    emitScheduleCompletion(item, notes || undefined)
 
     closeCompleteDialog()
 
-    window.setTimeout(() => {
-      unmarkCompleting(item.key)
-    }, 700)
+    clearCompletingLater(item.key)
   }
 
-  const completeItemQuick = (item: (typeof upcomingCare.value)[number]) => {
+  const completeItemQuick = (item: ScheduleItem) => {
     if (!canCompleteItem(item)) return
     if (isCompleting(item.key)) return
 
-    const notes = item.notes?.trim() || undefined
+    const notes = item.notes?.trim()
     markCompleting(item.key)
 
-    emit('care', {
-      plantId: item.plantId,
-      type: item.type,
-      kind: item.kind,
-      scheduleId: item.scheduleId,
-      ...(notes ? { notes } : {}),
-    })
+    emitScheduleCompletion(item, notes || undefined)
 
-    window.setTimeout(() => {
-      unmarkCompleting(item.key)
-    }, 700)
+    clearCompletingLater(item.key)
   }
 </script>
 
@@ -241,11 +237,11 @@
                   <DialogTitle
                     class="text-lg font-bold text-slate-900 dark:text-slate-100"
                   >
-                    Mark as done
+                    Record Care
                   </DialogTitle>
 
                   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Add optional notes for this schedule.
+                    Add an optional note about what you did.
                   </p>
 
                   <div class="mt-4">
@@ -276,7 +272,7 @@
                       class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-500 active:scale-95"
                       @click="confirmComplete"
                     >
-                      Mark as done
+                      Record Care
                     </button>
                   </div>
                 </div>
@@ -306,20 +302,20 @@
       >
         <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Upcoming care
+            Coming Up
           </h3>
         </div>
 
-        <div v-if="upcomingCareAll.length === 0" class="px-4 py-4">
+        <div v-if="upcomingSchedulesAll.length === 0" class="px-4 py-4">
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            No upcoming care items. Add a schedule when creating a plant.
+            No care reminders yet. Add one when creating or editing a plant.
           </p>
         </div>
 
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
           <div class="space-y-2">
             <div
-              v-for="item in upcomingCare"
+              v-for="item in upcomingSchedules"
               :key="item.key"
               class="flex items-start gap-3 rounded-xl px-3 py-3"
               :class="getUpcomingItemClasses(item)"
@@ -328,14 +324,14 @@
                 <div
                   class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                 >
-                  {{ getEventIcon(item.type) }}
+                  {{ getEventIcon(item.actionId) }}
                 </div>
                 <div class="min-w-0 flex-1">
                   <p
                     class="text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
                     <span>{{
-                      getEventLabel(item.type, customTypeNameById)
+                      getEventLabel(item.actionId, customActionNameById)
                     }}</span>
                     for
                     <span class="font-bold text-emerald-700">{{
@@ -353,10 +349,10 @@
                     "
                   >
                     {{ formatDueLabel(item.diffDays) }} •
-                    <span v-if="item.kind === 'recurring'">
+                    <span v-if="item.type === 'recurring'">
                       every {{ item.days }} days
                     </span>
-                    <span v-else>one-off</span>
+                    <span v-else>one-time</span>
                   </p>
                   <div v-if="item.notes" class="mt-1">
                     <p
@@ -377,8 +373,8 @@
                 class="ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 @click.stop="openCompleteDialog(item)"
                 :disabled="isCompleting(item.key)"
-                aria-label="Add notes"
-                title="Add notes"
+                aria-label="Add note"
+                title="Add note"
               >
                 <span aria-hidden="true">⋯</span>
               </button>
@@ -452,7 +448,7 @@
           class="flex min-h-60 flex-1 flex-col items-center justify-center gap-4 px-4 pb-6 text-center opacity-60"
         >
           <CalendarIcon class="size-12 text-slate-400" aria-hidden="true" />
-          <p class="text-sm">No events recorded yet.</p>
+          <p class="text-sm">No care entries yet.</p>
         </div>
 
         <div v-else class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
@@ -465,14 +461,14 @@
               <div
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-lg shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
-                {{ getEventIcon(event.type) }}
+                {{ getEventIcon(event.actionId) }}
               </div>
               <div class="min-w-0 flex-1">
                 <p
                   class="text-sm font-medium text-slate-900 dark:text-slate-100"
                 >
                   <span>{{
-                    getEventLabel(event.type, customTypeNameById)
+                    getEventLabel(event.actionId, customActionNameById)
                   }}</span>
                   for
                   <span class="font-bold text-emerald-700">{{

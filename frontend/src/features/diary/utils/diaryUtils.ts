@@ -1,7 +1,7 @@
 import { DEFAULT_TASK_ICON, scheduleActionsMeta } from '@/constants'
 import { getBuiltinScheduleAction } from '@plant-care/shared'
 import type { CustomEvent, Event, Plant } from '@plant-care/shared'
-import type { UpcomingItem } from '@/types'
+import type { ScheduleItem } from '@/types'
 import { MS_PER_DAY, startOfDayMs } from './dateFormat'
 
 export const buildCustomEventsMap = (customEvents: readonly CustomEvent[]) => {
@@ -34,7 +34,7 @@ const buildLatestEventsMap = (events: readonly Event[]) => {
   for (const event of events) {
     const ms = new Date(event.date).getTime()
     if (!Number.isFinite(ms)) continue
-    const key = `${event.plantId}:${event.type}`
+    const key = `${event.plantId}:${event.actionId}`
     const prev = map.get(key)
     if (prev === undefined || ms > prev) map.set(key, ms)
   }
@@ -56,33 +56,33 @@ const buildLatestNotesMap = (events: readonly Event[]) => {
   for (const { event } of datedEvents) {
     const notes = event.notes?.trim()
     if (!notes) continue
-    const key = `${event.plantId}:${event.type}`
+    const key = `${event.plantId}:${event.actionId}`
     if (!map.has(key)) map.set(key, notes)
   }
   return map
 }
 
-export const buildUpcomingCareItems = (
+export const buildUpcomingSchedules = (
   plants: readonly Plant[],
   events: readonly Event[],
-): UpcomingItem[] => {
+): ScheduleItem[] => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const todayMs = today.getTime()
 
-  const latestEventMsByPlantAndType = buildLatestEventsMap(events)
-  const latestNotesByPlantAndType = buildLatestNotesMap(events)
+  const latestEventMsByPlantAndActionId = buildLatestEventsMap(events)
+  const latestNotesByPlantAndActionId = buildLatestNotesMap(events)
 
-  const items: UpcomingItem[] = []
+  const items: ScheduleItem[] = []
 
   for (const plant of plants) {
     for (const schedule of plant.schedules) {
-      if (schedule.kind === 'recurring') {
+      if (schedule.type === 'recurring') {
         if (schedule.days <= 0) continue
 
         const key = `${plant.id}:${schedule.id}`
-        const lastEventKey = `${plant.id}:${schedule.type}`
-        const lastEventMs = latestEventMsByPlantAndType.get(lastEventKey)
+        const lastEventKey = `${plant.id}:${schedule.actionId}`
+        const lastEventMs = latestEventMsByPlantAndActionId.get(lastEventKey)
         const baseMs = startOfDayMs(lastEventMs ?? todayMs)
 
         const dueBase = new Date(baseMs)
@@ -96,13 +96,13 @@ export const buildUpcomingCareItems = (
           plantId: plant.id,
           plantName: plant.name,
           scheduleId: schedule.id,
-          type: schedule.type,
+          actionId: schedule.actionId,
           notes:
             schedule.notes?.trim() ||
-            latestNotesByPlantAndType.get(lastEventKey),
+            latestNotesByPlantAndActionId.get(lastEventKey),
           dueDate,
           diffDays,
-          kind: 'recurring',
+          type: 'recurring',
           days: schedule.days,
         })
         continue
@@ -120,13 +120,13 @@ export const buildUpcomingCareItems = (
         plantId: plant.id,
         plantName: plant.name,
         scheduleId: schedule.id,
-        type: schedule.type,
+        actionId: schedule.actionId,
         notes:
           schedule.notes?.trim() ||
-          latestNotesByPlantAndType.get(`${plant.id}:${schedule.type}`),
+          latestNotesByPlantAndActionId.get(`${plant.id}:${schedule.actionId}`),
         dueDate,
         diffDays,
-        kind: 'date',
+        type: 'date',
       })
     }
   }

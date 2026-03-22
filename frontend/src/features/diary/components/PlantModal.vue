@@ -71,9 +71,9 @@
 
     if (plant.value) {
       for (const schedule of plant.value.schedules) {
-        const exists = options.some((o) => o.id === schedule.type)
+        const exists = options.some((o) => o.id === schedule.actionId)
         if (!exists) {
-          options.push({ id: schedule.type, label: schedule.type })
+          options.push({ id: schedule.actionId, label: schedule.actionId })
         }
       }
     }
@@ -81,7 +81,7 @@
     return options
   })
 
-  const customTypeNameById = computed(() => {
+  const customActionNameById = computed(() => {
     return buildCustomEventsMap(userStore.customEvents)
   })
 
@@ -92,13 +92,13 @@
     )
   })
 
-  const latestNotesByType = computed(() => {
+  const latestNotesByActionId = computed(() => {
     const map = new Map<string, string>()
 
     for (const event of sortedHistory.value) {
       const notes = event.notes?.trim()
       if (!notes) continue
-      if (!map.has(event.type)) map.set(event.type, notes)
+      if (!map.has(event.actionId)) map.set(event.actionId, notes)
     }
 
     return map
@@ -106,7 +106,7 @@
 
   type DraftScheduleRow = {
     id: string
-    kind: 'recurring' | 'date'
+    type: 'recurring' | 'date'
     actionId: ScheduleActionId
     days: string
     date: string
@@ -129,14 +129,17 @@
 
     scheduleRows.value = plant.value.schedules.map((schedule) => ({
       id: schedule.id,
-      kind: schedule.kind,
-      actionId: schedule.type,
-      days: schedule.kind === 'recurring' ? String(schedule.days) : '7',
+      type: schedule.type,
+      actionId: schedule.actionId,
+      days: schedule.type === 'recurring' ? String(schedule.days) : '7',
       date:
-        schedule.kind === 'date'
+        schedule.type === 'date'
           ? toDateInputValue(new Date(schedule.date))
           : '',
-      notes: schedule.notes ?? latestNotesByType.value.get(schedule.type) ?? '',
+      notes:
+        schedule.notes ??
+        latestNotesByActionId.value.get(schedule.actionId) ??
+        '',
     }))
   }
 
@@ -209,7 +212,7 @@
   const addScheduleRow = () => {
     scheduleRows.value.push({
       id: crypto.randomUUID(),
-      kind: 'recurring',
+      type: 'recurring',
       actionId: 'water',
       days: '7',
       date: '',
@@ -222,28 +225,34 @@
   }
 
   const ensureDateDefault = (row: DraftScheduleRow) => {
-    if (row.kind !== 'date') return
+    if (row.type !== 'date') return
     if (row.date) return
     row.date = toDateInputValue(new Date())
   }
 
-  const setRowKind = (
+  const setRowType = (
     row: DraftScheduleRow,
-    kind: DraftScheduleRow['kind'],
+    type: DraftScheduleRow['type'],
   ) => {
-    row.kind = kind
+    row.type = type
     ensureDateDefault(row)
   }
 
   const save = async () => {
     saveError.value = null
 
+    const trimmedDraftName = draftName.value.trim()
+    if (isAddMode.value && !trimmedDraftName) {
+      saveError.value = 'Plant name is required.'
+      return
+    }
+
     scheduleRows.value = scheduleRows.value.map((row) => ({
       ...row,
       actionId: row.actionId.trim(),
     }))
 
-    const customTypeIds = new Set(userStore.customEvents.map((t) => t.id))
+    const customActionIds = new Set(userStore.customEvents.map((t) => t.id))
     const idByLabelLower = new Map<string, string>()
     for (const opt of actionOptions.value) {
       idByLabelLower.set(opt.label.toLowerCase(), opt.id)
@@ -259,7 +268,8 @@
       }
 
       const input = row.actionId
-      const cached = resolvedActionIdByInput.get(input)
+      const inputKey = input.toLowerCase()
+      const cached = resolvedActionIdByInput.get(inputKey)
       if (cached) {
         resolvedRows.push({ ...row, actionId: cached })
         continue
@@ -267,20 +277,20 @@
 
       const normalized = idByLabelLower.get(input.toLowerCase()) ?? input
 
-      if (builtinActionIds.has(normalized) || customTypeIds.has(normalized)) {
-        resolvedActionIdByInput.set(input, normalized)
+      if (builtinActionIds.has(normalized) || customActionIds.has(normalized)) {
+        resolvedActionIdByInput.set(inputKey, normalized)
         resolvedRows.push({ ...row, actionId: normalized })
         continue
       }
 
       if (safeValidate(uuidSchema, normalized)) {
         saveError.value =
-          'A schedule uses an unknown custom event type. Please pick an existing type or create a new one.'
+          'One reminder uses a custom care action that no longer exists. Please pick an existing one or create a new one.'
         return
       }
 
       if (normalized.length > 60) {
-        saveError.value = 'Schedule type must be 60 characters or less.'
+        saveError.value = 'Care action names must be 60 characters or less.'
         return
       }
 
@@ -290,18 +300,18 @@
         return
       }
 
-      resolvedActionIdByInput.set(input, created.data.id)
+      resolvedActionIdByInput.set(inputKey, created.data.id)
       resolvedRows.push({ ...row, actionId: created.data.id })
     }
 
     scheduleRows.value = resolvedRows
 
-    const lastCadenceIndexByType = new Map<string, number>()
+    const lastCadenceIndexByActionId = new Map<string, number>()
     for (let i = 0; i < scheduleRows.value.length; i += 1) {
       const row = scheduleRows.value[i]
-      if (row.kind !== 'recurring') continue
+      if (row.type !== 'recurring') continue
       if (!row.actionId) continue
-      lastCadenceIndexByType.set(row.actionId, i)
+      lastCadenceIndexByActionId.set(row.actionId, i)
     }
 
     const schedules: Schedule[] = []
@@ -311,17 +321,17 @@
       if (!row.actionId) continue
       const notes = row.notes.trim()
 
-      if (row.kind === 'recurring') {
-        const lastIndex = lastCadenceIndexByType.get(row.actionId)
+      if (row.type === 'recurring') {
+        const lastIndex = lastCadenceIndexByActionId.get(row.actionId)
         if (lastIndex !== i) continue
 
         const days = toDays(row.days)
         if (!days) continue
 
         schedules.push({
-          kind: 'recurring',
+          type: 'recurring',
           id: row.id,
-          type: row.actionId,
+          actionId: row.actionId,
           days,
           notes,
         })
@@ -332,20 +342,17 @@
       if (!iso) continue
 
       schedules.push({
-        kind: 'date',
+        type: 'date',
         id: row.id,
-        type: row.actionId,
+        actionId: row.actionId,
         date: iso,
         notes,
       })
     }
 
     if (isAddMode.value) {
-      const name = draftName.value.trim()
-      if (!name) return
-
       const result = await plantsStore.addPlant({
-        name,
+        name: trimmedDraftName,
         schedules,
       })
       if (result) emit('close')
@@ -457,7 +464,7 @@
                       v-if="isAddMode"
                       class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                     >
-                      Set up your plant and optionally add care reminders.
+                      Set up your plant and add care reminders if you want.
                     </p>
                   </div>
                   <button
@@ -485,6 +492,13 @@
                   @submit.prevent="save"
                   class="space-y-5"
                 >
+                  <div
+                    v-if="saveError"
+                    class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                  >
+                    {{ saveError }}
+                  </div>
+
                   <div class="space-y-4">
                     <div>
                       <label
@@ -508,7 +522,7 @@
                     :action-options="actionOptions"
                     :add-schedule-row="addScheduleRow"
                     :remove-schedule-row="removeScheduleRow"
-                    :set-row-kind="setRowKind"
+                    :set-row-type="setRowType"
                   />
 
                   <div class="flex flex-col gap-3 pt-2 sm:flex-row">
@@ -548,7 +562,7 @@
                             : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                         "
                       >
-                        Schedules
+                        Care plan
                       </button>
                     </Tab>
 
@@ -575,7 +589,7 @@
                           :action-options="actionOptions"
                           :add-schedule-row="addScheduleRow"
                           :remove-schedule-row="removeScheduleRow"
-                          :set-row-kind="setRowKind"
+                          :set-row-type="setRowType"
                         />
 
                         <div
@@ -609,7 +623,7 @@
                           v-if="sortedHistory.length === 0"
                           class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950/30 dark:text-slate-300"
                         >
-                          No events recorded yet.
+                          No care entries yet.
                         </div>
 
                         <div
@@ -624,7 +638,7 @@
                             <div
                               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
                             >
-                              {{ getEventIcon(event.type) }}
+                              {{ getEventIcon(event.actionId) }}
                             </div>
 
                             <div class="min-w-0 flex-1">
@@ -636,8 +650,8 @@
                                 >
                                   {{
                                     getEventLabel(
-                                      event.type,
-                                      customTypeNameById,
+                                      event.actionId,
+                                      customActionNameById,
                                     )
                                   }}
                                 </p>

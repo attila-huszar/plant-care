@@ -1,20 +1,17 @@
 import type { Plant, Schedule } from '@plant-care/shared'
 
-export type UpcomingItem = {
+export type ScheduleItem = {
   key: string
   plantId: Plant['id']
   plantName: Plant['name']
   scheduleId: Schedule['id']
-  type: string
+  actionId: Schedule['actionId']
   notes?: string
   dueDate: Date
   diffDays: number
-} & ({ kind: 'recurring'; days: number } | { kind: 'date' })
+} & ({ type: 'recurring'; days: number } | { type: 'date' })
 
-export type CareTimelinePayload = {
-  plantId: Plant['id']
-  type: Schedule['type']
-  kind: Schedule['kind']
-  scheduleId: Schedule['id']
-  notes?: string
-}
+export type ScheduleCompletionPayload = Pick<
+  ScheduleItem,
+  'plantId' | 'actionId' | 'type' | 'scheduleId' | 'notes'
+>

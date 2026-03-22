@@ -2,22 +2,23 @@ import { z } from 'zod'
 import { idSchema } from './commonSchemas'
 
 const plantNameSchema = z.string().trim().min(1).max(60)
-const eventTypeSchema = z.string().trim().min(1).max(60)
+const actionIdSchema = z.string().trim().min(1).max(60)
+const customEventNameSchema = z.string().trim().min(1).max(60)
 const notesSchema = z.string().trim().max(1000)
 const imageUrlSchema = z.string().trim().max(2048)
 
-export const scheduleSchema = z.discriminatedUnion('kind', [
+export const scheduleSchema = z.discriminatedUnion('type', [
   z.object({
-    kind: z.literal('recurring'),
     id: z.uuid(),
-    type: eventTypeSchema,
+    type: z.literal('recurring'),
+    actionId: actionIdSchema,
     days: z.int().positive(),
     notes: notesSchema.optional(),
   }),
   z.object({
-    kind: z.literal('date'),
     id: z.uuid(),
-    type: eventTypeSchema,
+    type: z.literal('date'),
+    actionId: actionIdSchema,
     date: z.iso.datetime(),
     notes: notesSchema.optional(),
   }),
@@ -26,7 +27,7 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
 export const schedulesSchema = z.array(scheduleSchema)
 
 const eventBaseSchema = z.object({
-  type: eventTypeSchema,
+  actionId: actionIdSchema,
   date: z.iso.datetime(),
   notes: notesSchema.optional(),
 })
@@ -40,7 +41,7 @@ const plantBaseSchema = z.strictObject({
 export const createEventRequestSchema = eventBaseSchema
 
 export const createCustomEventRequestSchema = z.object({
-  name: eventTypeSchema,
+  name: customEventNameSchema,
 })
 
 export const createPlantRequestSchema = plantBaseSchema.extend({
@@ -52,14 +53,14 @@ export const updatePlantRequestSchema = plantBaseSchema.partial()
 export const eventSchema = z.strictObject({
   id: idSchema,
   plantId: idSchema,
-  type: eventTypeSchema,
+  actionId: actionIdSchema,
   date: z.iso.datetime(),
   notes: notesSchema.nullable(),
 })
 
 export const customEventSchema = z.strictObject({
   id: z.uuid(),
-  name: eventTypeSchema,
+  name: customEventNameSchema,
 })
 
 export const plantSchema = plantBaseSchema.extend({
